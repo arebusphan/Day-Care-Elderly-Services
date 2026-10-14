@@ -12,3 +12,6 @@ Thumbs.db
 
 .vercel
 .vercel/
+
+# Project docs are kept out of the shared repo
+docs/
