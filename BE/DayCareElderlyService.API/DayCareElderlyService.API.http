@@ -1,6 +1,96 @@
-@DayCareElderlyService.API_HostAddress = http://localhost:5075
+@HostAddress = http://localhost:5075
+@AdminEmail = admin@daycare.com
+@AdminPassword = Admin@123456
 
-GET {{DayCareElderlyService.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Đăng ký tài khoản (Register - Quyền mặc định: FamilyMember)
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
 
-###
+{
+  "email": "user.test@gmail.com",
+  "password": "Password@123",
+  "confirmPassword": "Password@123",
+  "fullName": "Nguyễn Văn Thử Nghiệm",
+  "phoneNumber": "0987654321"
+}
+
+### 2. Đăng nhập tài khoản Admin (Lấy JWT token)
+# @name adminLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{AdminEmail}}",
+  "password": "{{AdminPassword}}"
+}
+
+### Lưu token từ response vào biến
+@authToken = {{adminLogin.response.body.data.token}}
+
+### 3. Lấy thông tin tài khoản hiện tại (Me)
+GET {{HostAddress}}/api/auth/me
+Authorization: Bearer {{authToken}}
+
+### 4. Đổi mật khẩu
+POST {{HostAddress}}/api/auth/change-password
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{AdminPassword}}",
+  "newPassword": "Admin@NewPass123",
+  "confirmNewPassword": "Admin@NewPass123"
+}
+
+###################################################################
+### ADMIN - QUẢN LÝ NGƯỜI DÙNG (USER CRUD)
+###################################################################
+
+### 5. Admin: Lấy danh sách quyền có sẵn (để hiển thị combobox/checkbox phân quyền)
+GET {{HostAddress}}/api/admin/users/roles
+Authorization: Bearer {{authToken}}
+
+### 6. Admin: Lấy danh sách người dùng (Phân trang & Tìm kiếm)
+GET {{HostAddress}}/api/admin/users?pageNumber=1&pageSize=10&search=
+Authorization: Bearer {{authToken}}
+
+### 7. Admin: Tạo người dùng mới và chỉ định quyền
+# @name createUser
+POST {{HostAddress}}/api/admin/users
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "email": "staff.care@daycare.com",
+  "password": "Staff@123456",
+  "fullName": "Trần Thị Điều Dưỡng",
+  "phoneNumber": "0912345678",
+  "isActive": true,
+  "roles": ["Staff"]
+}
+
+@newUserId = {{createUser.response.body.data.userId}}
+
+### 8. Admin: Xem chi tiết người dùng
+GET {{HostAddress}}/api/admin/users/{{newUserId}}
+Authorization: Bearer {{authToken}}
+
+### 9. Admin: Cập nhật thông tin người dùng và quyền
+PUT {{HostAddress}}/api/admin/users/{{newUserId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Trần Thị Điều Dưỡng (Trưởng nhóm)",
+  "phoneNumber": "0912345679",
+  "isActive": true,
+  "roles": ["Staff"]
+}
+
+### 10. Admin: Khóa / Mở khóa tài khoản (Toggle Status)
+PATCH {{HostAddress}}/api/admin/users/{{newUserId}}/toggle-status
+Authorization: Bearer {{authToken}}
+
+### 11. Admin: Xóa người dùng
+DELETE {{HostAddress}}/api/admin/users/{{newUserId}}
+Authorization: Bearer {{authToken}}
