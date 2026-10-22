@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a210ff0ca799fdfdf1f69b0609512afeaa50ef89")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3e7cdbcfe9e134728cfad0a5c97f33fa6b3dc7a5")]
 [assembly: System.Reflection.AssemblyProductAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

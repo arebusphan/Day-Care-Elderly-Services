@@ -33,6 +33,9 @@ export function getRoleDashboardPath(targetUser?: UserDto | null): string {
   if (roles.includes("admin")) {
     return "/dashboard/admin";
   }
+  if (roles.includes("center") || roles.includes("centermanager")) {
+    return "/dashboard/center";
+  }
   if (roles.includes("staff")) {
     return "/dashboard/staff";
   }

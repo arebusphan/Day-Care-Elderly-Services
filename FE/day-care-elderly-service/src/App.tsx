@@ -8,6 +8,7 @@ import Home from "./components/Home";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 import FamilyDashboard from "./pages/family/FamilyDashboard";
+import CenterDashboard from "./pages/center/CenterDashboard";
 import "./App.css";
 
 function App() {
@@ -37,6 +38,19 @@ function App() {
           <Route
             path="/admin"
             element={<Navigate to="/dashboard/admin" replace />}
+          />
+
+          <Route
+            path="/dashboard/center"
+            element={
+              <ProtectedRoute allowedRoles={["Admin", "Staff", "Center", "CenterManager"]}>
+                <CenterDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/center"
+            element={<Navigate to="/dashboard/center" replace />}
           />
 
           <Route

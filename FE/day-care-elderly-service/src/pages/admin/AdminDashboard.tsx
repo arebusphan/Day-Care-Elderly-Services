@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import UserManagementView from "./UserManagementView";
 
 export const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -89,9 +90,17 @@ export const AdminDashboard: React.FC = () => {
           <h1 className="text-base font-bold text-slate-800">{activeItem.label}</h1>
         </header>
 
-        {/* Vùng nội dung để trống */}
+        {/* Vùng nội dung */}
         <div className="flex-1 p-6">
-          <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50" />
+          {activeTab === "users" ? (
+            <UserManagementView />
+          ) : (
+            <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50 flex items-center justify-center">
+              <p className="text-slate-400 text-sm">
+                Nội dung <span className="font-semibold">{activeItem.label}</span> sẽ được hiển thị tại đây
+              </p>
+            </div>
+          )}
         </div>
       </main>
     </div>

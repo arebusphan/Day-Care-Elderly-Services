@@ -142,6 +142,7 @@ public static class DbInitializer
             var defaultRoles = new List<Role>
             {
                 new() { RoleName = "Admin", Description = "Quản trị viên toàn quyền hệ thống" },
+                new() { RoleName = "Center", Description = "Quản lý trung tâm chăm sóc" },
                 new() { RoleName = "Staff", Description = "Nhân viên chăm sóc và điều dưỡng" },
                 new() { RoleName = "FamilyMember", Description = "Thành viên gia đình của người cao tuổi" }
             };
