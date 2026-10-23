@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DayCareElderlyService.BLL")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3e7cdbcfe9e134728cfad0a5c97f33fa6b3dc7a5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+296290ade66f8b19aec8ca91d330e474e179f55c")]
 [assembly: System.Reflection.AssemblyProductAttribute("DayCareElderlyService.BLL")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DayCareElderlyService.BLL")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
