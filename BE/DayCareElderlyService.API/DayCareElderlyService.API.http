@@ -94,3 +94,205 @@ Authorization: Bearer {{authToken}}
 ### 11. Admin: Xóa người dùng
 DELETE {{HostAddress}}/api/admin/users/{{newUserId}}
 Authorization: Bearer {{authToken}}
+
+########## CARE LOG ##########
+# Staff: tài khoản role Staff có dòng trong bảng Staff (JobTitle "Điều dưỡng" hoặc "Hộ lý").
+# Chỉ ghi được cho cụ cùng trung tâm, đã check-in hôm nay, care log hôm nay chưa chốt.
+# Family: chỉ xem cụ có ElderlyFamilyRelationships.CanViewCareLogs = true, không thấy mục isInternal.
+@NurseEmail = nurse@test.vn
+@CaregiverEmail = caregiver@test.vn
+@FamilyEmail = family@test.vn
+@StaffPassword = Test@123456
+@elderlyId = 00000000-0000-0000-0000-000000000000
+
+### CL-1. Đăng nhập điều dưỡng
+# @name nurseLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{NurseEmail}}",
+  "password": "{{StaffPassword}}"
+}
+
+###
+@nurseToken = {{nurseLogin.response.body.data.token}}
+
+### CL-2. Đăng nhập hộ lý
+# @name caregiverLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{CaregiverEmail}}",
+  "password": "{{StaffPassword}}"
+}
+
+###
+@caregiverToken = {{caregiverLogin.response.body.data.token}}
+
+### CL-3. Staff: Cụ đã check-in hôm nay
+GET {{HostAddress}}/api/staff/elderly/today
+Authorization: Bearer {{nurseToken}}
+
+### CL-3b. Staff: Lịch hoạt động hôm nay (isAssignedToMe = mình được phân công)
+GET {{HostAddress}}/api/staff/activities/today
+Authorization: Bearer {{caregiverToken}}
+
+### CL-4. Staff: Care log 1 ngày của cụ (bỏ date = hôm nay)
+GET {{HostAddress}}/api/staff/care-logs/{{elderlyId}}?date=2026-10-23
+Authorization: Bearer {{nurseToken}}
+
+### CL-5. Staff: Ghi 1 mục (careType: MEAL, HYGIENE, NAP, MOOD, ACTIVITY, NOTE; data là JSON tự do;
+# centerActivityId không bắt buộc, lấy từ CL-3b để gắn mục với hoạt động trong lịch)
+POST {{HostAddress}}/api/staff/care-logs/{{elderlyId}}
+Authorization: Bearer {{caregiverToken}}
+Content-Type: application/json
+
+{
+  "careType": "MEAL",
+  "description": "Ăn trưa hết 80% suất",
+  "notes": "Ăn chậm",
+  "data": { "mealPercent": 80 },
+  "isInternal": false,
+  "centerActivityId": null
+}
+
+### CL-5b. Staff: Đính kèm ảnh cho 1 mục hôm nay (field "files", jpg/png/webp, tối đa 5MB/ảnh, 5 ảnh/mục).
+# careLogId lấy từ data.careLogId của CL-5. Ảnh lưu trên Cloudinary, link nằm ở photos[].url của mỗi mục.
+POST {{HostAddress}}/api/staff/care-logs/entries/00000000-0000-0000-0000-000000000000/photos
+Authorization: Bearer {{caregiverToken}}
+Content-Type: multipart/form-data; boundary=CareLogBoundary
+
+--CareLogBoundary
+Content-Disposition: form-data; name="files"; filename="bua-trua.jpg"
+Content-Type: image/jpeg
+
+< ./bua-trua.jpg
+--CareLogBoundary--
+
+### CL-5c. Staff: Xoá 1 ảnh (photoId lấy từ photos[].photoId)
+DELETE {{HostAddress}}/api/staff/care-logs/photos/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{caregiverToken}}
+
+### CL-6. Điều dưỡng: Đo chỉ số (nhập ít nhất 1). Vượt ngưỡng -> tạo sự cố VITALS_ALERT + báo gia đình
+POST {{HostAddress}}/api/staff/care-logs/{{elderlyId}}/vitals
+Authorization: Bearer {{nurseToken}}
+Content-Type: application/json
+
+{
+  "systolicBp": 150,
+  "diastolicBp": 90,
+  "heartRate": 78,
+  "spO2": 97,
+  "temperature": 36.8,
+  "bloodGlucose": 6.2,
+  "notes": "Đo sau khi nghỉ 10 phút"
+}
+
+### CL-7. Staff: Thuốc đến hạn hôm nay
+GET {{HostAddress}}/api/staff/doses/today
+Authorization: Bearer {{nurseToken}}
+
+### CL-8. Điều dưỡng: Ghi nhận cho uống thuốc (status: Given / Refused / Missed; Refused, Missed cần notes)
+PATCH {{HostAddress}}/api/staff/doses/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{nurseToken}}
+Content-Type: application/json
+
+{
+  "status": "Refused",
+  "notes": "Cụ kêu đắng, không chịu uống"
+}
+
+### CL-9. Staff: Báo sự cố (incidentType STROKE / LOST = khẩn cấp, luôn Critical; severity: Low, Medium, High, Critical)
+# @name createIncident
+POST {{HostAddress}}/api/staff/incidents
+Authorization: Bearer {{caregiverToken}}
+Content-Type: application/json
+
+{
+  "elderlyId": "{{elderlyId}}",
+  "incidentType": "Té ngã",
+  "severity": "High",
+  "description": "Trượt chân ở nhà vệ sinh, không chấn thương"
+}
+
+###
+@incidentId = {{createIncident.response.body.data.incidentId}}
+
+### CL-10. Staff: Sự cố / cảnh báo của trung tâm (status: Open, InProgress, Resolved; days mặc định 30)
+GET {{HostAddress}}/api/staff/incidents?status=Open&days=30
+Authorization: Bearer {{caregiverToken}}
+
+### CL-11. Staff: Nhận xử lý / đóng sự cố (Resolved cần resolutionNotes)
+PATCH {{HostAddress}}/api/staff/incidents/{{incidentId}}
+Authorization: Bearer {{caregiverToken}}
+Content-Type: application/json
+
+{
+  "status": "Resolved",
+  "resolutionNotes": "Đã kiểm tra, cụ ổn"
+}
+
+### CL-12. Điều dưỡng: Xong phần y tế trong ngày
+POST {{HostAddress}}/api/staff/care-logs/{{elderlyId}}/medical-done
+Authorization: Bearer {{nurseToken}}
+Content-Type: application/json
+
+{
+  "notes": "Chỉ số ổn định"
+}
+
+### CL-13. Hộ lý: Chốt care log (cần xong phần y tế trước; sau khi chốt không ghi thêm được)
+POST {{HostAddress}}/api/staff/care-logs/{{elderlyId}}/close
+Authorization: Bearer {{caregiverToken}}
+Content-Type: application/json
+
+{
+  "notes": "Cụ về lúc 17h"
+}
+
+### CL-14. Đăng nhập gia đình
+# @name familyLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{FamilyEmail}}",
+  "password": "{{StaffPassword}}"
+}
+
+###
+@familyToken = {{familyLogin.response.body.data.token}}
+
+### CL-15. Gia đình: Care log 1 ngày (bỏ date = hôm nay)
+GET {{HostAddress}}/api/family/care-logs/{{elderlyId}}
+Authorization: Bearer {{familyToken}}
+
+### CL-16. Gia đình: Lịch sử theo ngày (mặc định 30 ngày, tối đa 92 ngày)
+GET {{HostAddress}}/api/family/care-logs/{{elderlyId}}/history?from=2026-10-01&to=2026-10-23
+Authorization: Bearer {{familyToken}}
+
+### CL-17. Gia đình: Chỉ số + lịch sử uống thuốc (days mặc định 30, tối đa 90)
+GET {{HostAddress}}/api/family/care-logs/{{elderlyId}}/health?days=30
+Authorization: Bearer {{familyToken}}
+
+### CL-18. Gia đình: Sự cố / cảnh báo của các cụ nhà mình
+GET {{HostAddress}}/api/family/incidents?days=30
+Authorization: Bearer {{familyToken}}
+
+### CL-19. Thông báo của tài khoản đang đăng nhập (mọi role; unreadCount dùng cho badge)
+# @name myNotifications
+GET {{HostAddress}}/api/notifications?unreadOnly=false&take=50
+Authorization: Bearer {{familyToken}}
+
+###
+@notificationId = {{myNotifications.response.body.data.items[0].notificationId}}
+
+### CL-20. Đánh dấu 1 thông báo đã đọc
+PATCH {{HostAddress}}/api/notifications/{{notificationId}}/read
+Authorization: Bearer {{familyToken}}
+
+### CL-21. Đánh dấu tất cả đã đọc
+POST {{HostAddress}}/api/notifications/read-all
+Authorization: Bearer {{familyToken}}
