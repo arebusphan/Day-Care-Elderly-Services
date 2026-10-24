@@ -21,6 +21,10 @@ public partial class CareLog
 
     public string? Notes { get; set; }
 
+    public string? Data { get; set; }
+
+    public bool IsInternal { get; set; }
+
     public virtual ICollection<CareLogPhoto> CareLogPhotos { get; set; } = new List<CareLogPhoto>();
 
     public virtual CenterActivity? CenterActivity { get; set; }
