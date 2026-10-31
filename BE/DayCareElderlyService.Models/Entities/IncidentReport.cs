@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
@@ -33,5 +33,5 @@ public partial class IncidentReport
 
     public virtual ElderlyMember Elderly { get; set; } = null!;
 
-    public virtual Staff ReportedByNavigation { get; set; } = null!;
+    public virtual User ReportedByNavigation { get; set; } = null!;
 }

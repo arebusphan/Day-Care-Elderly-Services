@@ -138,6 +138,118 @@ public static class DbInitializer
             await context.Database.ExecuteSqlRawAsync(syncPackagesSql);
             logger?.LogInformation("Đã kiểm tra và đồng bộ cấu trúc bảng ServicePackages, ServiceRegistrations, Payments thành công.");
 
+            // 2.5. Tự động chuyển quan hệ Staff sang User, tạo bảng StaffLeaves và xóa bảng Staff an toàn
+            var syncStaffSql = @"
+                -- Tạo bảng StaffLeaves nếu chưa có
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffLeaves')
+                BEGIN
+                    CREATE TABLE StaffLeaves (
+                        LeaveId UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_StaffLeaves_LeaveId DEFAULT (NEWSEQUENTIALID()),
+                        UserId UNIQUEIDENTIFIER NOT NULL,
+                        LeaveDate DATE NOT NULL,
+                        Reason NVARCHAR(500) NULL,
+                        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_StaffLeaves_CreatedAt DEFAULT (SYSDATETIME()),
+                        CONSTRAINT PK_StaffLeaves PRIMARY KEY (LeaveId),
+                        CONSTRAINT FK_StaffLeaves_Users FOREIGN KEY (UserId) REFERENCES Users(UserId) ON DELETE CASCADE,
+                        CONSTRAINT UQ_StaffLeaves_User_Date UNIQUE (UserId, LeaveDate)
+                    );
+                    CREATE INDEX IX_StaffLeaves_UserId ON StaffLeaves(UserId);
+                    CREATE INDEX IX_StaffLeaves_LeaveDate ON StaffLeaves(LeaveDate);
+                END
+
+                -- Đồng bộ dữ liệu và chuyển Foreign Key nếu bảng Staff còn tồn tại
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Staff')
+                BEGIN
+                    -- ActivityAssignments
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityAssignments')
+                    BEGIN
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_ActivityAssignments_Staff')
+                            ALTER TABLE ActivityAssignments DROP CONSTRAINT FK_ActivityAssignments_Staff;
+
+                        UPDATE a SET a.StaffId = s.UserId
+                        FROM ActivityAssignments a INNER JOIN Staff s ON a.StaffId = s.StaffId;
+
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_ActivityAssignments_Users')
+                            ALTER TABLE ActivityAssignments ADD CONSTRAINT FK_ActivityAssignments_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId);
+                    END
+
+                    -- AttendanceRecords
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AttendanceRecords')
+                    BEGIN
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedInBy')
+                            ALTER TABLE AttendanceRecords DROP CONSTRAINT FK_AttendanceRecords_CheckedInBy;
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedOutBy')
+                            ALTER TABLE AttendanceRecords DROP CONSTRAINT FK_AttendanceRecords_CheckedOutBy;
+
+                        UPDATE a SET a.CheckedInBy = s.UserId FROM AttendanceRecords a INNER JOIN Staff s ON a.CheckedInBy = s.StaffId;
+                        UPDATE a SET a.CheckedOutBy = s.UserId FROM AttendanceRecords a INNER JOIN Staff s ON a.CheckedOutBy = s.StaffId;
+
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedInBy_Users')
+                            ALTER TABLE AttendanceRecords ADD CONSTRAINT FK_AttendanceRecords_CheckedInBy_Users FOREIGN KEY (CheckedInBy) REFERENCES Users(UserId);
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedOutBy_Users')
+                            ALTER TABLE AttendanceRecords ADD CONSTRAINT FK_AttendanceRecords_CheckedOutBy_Users FOREIGN KEY (CheckedOutBy) REFERENCES Users(UserId);
+                    END
+
+                    -- CareLogs
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CareLogs')
+                    BEGIN
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_CareLogs_Staff')
+                            ALTER TABLE CareLogs DROP CONSTRAINT FK_CareLogs_Staff;
+
+                        UPDATE c SET c.StaffId = s.UserId FROM CareLogs c INNER JOIN Staff s ON c.StaffId = s.StaffId;
+
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_CareLogs_Users')
+                            ALTER TABLE CareLogs ADD CONSTRAINT FK_CareLogs_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId);
+                    END
+
+                    -- IncidentReports
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'IncidentReports')
+                    BEGIN
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_IncidentReports_Staff')
+                            ALTER TABLE IncidentReports DROP CONSTRAINT FK_IncidentReports_Staff;
+
+                        UPDATE i SET i.ReportedBy = s.UserId FROM IncidentReports i INNER JOIN Staff s ON i.ReportedBy = s.StaffId;
+
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_IncidentReports_Users')
+                            ALTER TABLE IncidentReports ADD CONSTRAINT FK_IncidentReports_Users FOREIGN KEY (ReportedBy) REFERENCES Users(UserId);
+                    END
+
+                    -- MedicationRecords
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MedicationRecords')
+                    BEGIN
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_MedicationRecords_Staff')
+                            ALTER TABLE MedicationRecords DROP CONSTRAINT FK_MedicationRecords_Staff;
+
+                        UPDATE m SET m.StaffId = s.UserId FROM MedicationRecords m INNER JOIN Staff s ON m.StaffId = s.StaffId;
+
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_MedicationRecords_Users')
+                            ALTER TABLE MedicationRecords ADD CONSTRAINT FK_MedicationRecords_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId);
+                    END
+
+                    -- StaffShifts
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffShifts')
+                    BEGIN
+                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Staff')
+                            ALTER TABLE StaffShifts DROP CONSTRAINT FK_StaffShifts_Staff;
+
+                        UPDATE ss SET ss.StaffId = s.UserId FROM StaffShifts ss INNER JOIN Staff s ON ss.StaffId = s.StaffId;
+
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Users_Staff')
+                            ALTER TABLE StaffShifts ADD CONSTRAINT FK_StaffShifts_Users_Staff FOREIGN KEY (StaffId) REFERENCES Users(UserId);
+                    END
+
+                    -- Gỡ ràng buộc của bảng Staff và xóa bảng Staff
+                    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_Staff_Centers')
+                        ALTER TABLE Staff DROP CONSTRAINT FK_Staff_Centers;
+                    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_Staff_Users')
+                        ALTER TABLE Staff DROP CONSTRAINT FK_Staff_Users;
+
+                    DROP TABLE Staff;
+                END
+            ";
+            await context.Database.ExecuteSqlRawAsync(syncStaffSql);
+            logger?.LogInformation("Đã kiểm tra và đồng bộ quan hệ Staff sang User, bảng StaffLeaves hoàn tất.");
+
             // 3. Ensure Roles
             var defaultRoles = new List<Role>
             {

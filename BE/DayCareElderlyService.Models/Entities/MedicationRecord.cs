@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
@@ -21,5 +21,5 @@ public partial class MedicationRecord
 
     public virtual MedicationPlan MedicationPlan { get; set; } = null!;
 
-    public virtual Staff Staff { get; set; } = null!;
+    public virtual User Staff { get; set; } = null!;
 }

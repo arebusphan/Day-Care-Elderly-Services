@@ -60,10 +60,14 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IElderlyService, ElderlyService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
+<<<<<<< Updated upstream
 builder.Services.AddScoped<ICareLogService, CareLogService>();
 builder.Services.AddScoped<IFamilyCareLogService, FamilyCareLogService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSingleton<IImageStorageService, CloudinaryImageStorageService>();
+=======
+builder.Services.AddScoped<ICenterStaffService, CenterStaffService>();
+>>>>>>> Stashed changes
 
 // 4. CORS
 builder.Services.AddCors(options =>

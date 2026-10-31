@@ -52,7 +52,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ServiceRegistration> ServiceRegistrations { get; set; }
 
-    public virtual DbSet<Staff> Staff { get; set; }
+    public virtual DbSet<StaffLeave> StaffLeaves { get; set; }
 
     public virtual DbSet<StaffShift> StaffShifts { get; set; }
 
@@ -85,10 +85,10 @@ public partial class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ActivityAssignments_Activities");
 
-            entity.HasOne(d => d.Staff).WithMany(p => p.ActivityAssignments)
+            entity.HasOne(d => d.Staff).WithMany()
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ActivityAssignments_Staff");
+                .HasConstraintName("FK_ActivityAssignments_Users");
         });
 
         modelBuilder.Entity<ActivityTemplate>(entity =>
@@ -120,13 +120,13 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.Notes).HasMaxLength(1000);
 
-            entity.HasOne(d => d.CheckedInByNavigation).WithMany(p => p.AttendanceRecordCheckedInByNavigations)
+            entity.HasOne(d => d.CheckedInByNavigation).WithMany()
                 .HasForeignKey(d => d.CheckedInBy)
-                .HasConstraintName("FK_AttendanceRecords_CheckedInBy");
+                .HasConstraintName("FK_AttendanceRecords_CheckedInBy_Users");
 
-            entity.HasOne(d => d.CheckedOutByNavigation).WithMany(p => p.AttendanceRecordCheckedOutByNavigations)
+            entity.HasOne(d => d.CheckedOutByNavigation).WithMany()
                 .HasForeignKey(d => d.CheckedOutBy)
-                .HasConstraintName("FK_AttendanceRecords_CheckedOutBy");
+                .HasConstraintName("FK_AttendanceRecords_CheckedOutBy_Users");
 
             entity.HasOne(d => d.Elderly).WithMany(p => p.AttendanceRecords)
                 .HasForeignKey(d => d.ElderlyId)
@@ -158,10 +158,10 @@ public partial class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CareLogs_Elderly");
 
-            entity.HasOne(d => d.Staff).WithMany(p => p.CareLogs)
+            entity.HasOne(d => d.Staff).WithMany()
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CareLogs_Staff");
+                .HasConstraintName("FK_CareLogs_Users");
         });
 
         modelBuilder.Entity<CareLogPhoto>(entity =>
@@ -310,10 +310,10 @@ public partial class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_IncidentReports_Elderly");
 
-            entity.HasOne(d => d.ReportedByNavigation).WithMany(p => p.IncidentReports)
+            entity.HasOne(d => d.ReportedByNavigation).WithMany()
                 .HasForeignKey(d => d.ReportedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_IncidentReports_Staff");
+                .HasConstraintName("FK_IncidentReports_Users");
         });
 
         modelBuilder.Entity<MedicalSupply>(entity =>
@@ -369,10 +369,10 @@ public partial class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MedicationRecords_Plans");
 
-            entity.HasOne(d => d.Staff).WithMany(p => p.MedicationRecords)
+            entity.HasOne(d => d.Staff).WithMany()
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MedicationRecords_Staff");
+                .HasConstraintName("FK_MedicationRecords_Users");
         });
 
         modelBuilder.Entity<Notification>(entity =>
@@ -507,30 +507,26 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_ServiceRegistrations_Package");
         });
 
-        modelBuilder.Entity<Staff>(entity =>
+        modelBuilder.Entity<StaffLeave>(entity =>
         {
-            entity.HasIndex(e => e.CenterId, "IX_Staff_CenterId");
+            entity.HasKey(e => e.LeaveId);
 
-            entity.HasIndex(e => e.EmployeeCode, "UQ_Staff_EmployeeCode").IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.LeaveDate }, "UQ_StaffLeaves_User_Date").IsUnique();
 
-            entity.HasIndex(e => e.UserId, "UQ_Staff_UserId").IsUnique();
+            entity.HasIndex(e => e.UserId, "IX_StaffLeaves_UserId");
 
-            entity.Property(e => e.StaffId).HasDefaultValueSql("(newsequentialid())");
-            entity.Property(e => e.EmployeeCode).HasMaxLength(30);
-            entity.Property(e => e.EmploymentStatus)
-                .HasMaxLength(30)
-                .HasDefaultValue("Active");
-            entity.Property(e => e.JobTitle).HasMaxLength(100);
+            entity.HasIndex(e => e.LeaveDate, "IX_StaffLeaves_LeaveDate");
 
-            entity.HasOne(d => d.Center).WithMany(p => p.Staff)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Staff_Centers");
+            entity.Property(e => e.LeaveId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysdatetime())");
 
-            entity.HasOne(d => d.User).WithOne(p => p.Staff)
-                .HasForeignKey<Staff>(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Staff_Users");
+            entity.HasOne(d => d.User).WithMany(p => p.StaffLeaves)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_StaffLeaves_Users");
         });
 
         modelBuilder.Entity<StaffShift>(entity =>
@@ -554,10 +550,10 @@ public partial class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StaffShifts_Users");
 
-            entity.HasOne(d => d.Staff).WithMany(p => p.StaffShifts)
+            entity.HasOne(d => d.Staff).WithMany()
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StaffShifts_Staff");
+                .HasConstraintName("FK_StaffShifts_Users_Staff");
         });
 
         modelBuilder.Entity<SupplyTransaction>(entity =>

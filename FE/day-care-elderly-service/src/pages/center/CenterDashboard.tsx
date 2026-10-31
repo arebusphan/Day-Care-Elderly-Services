@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import ShiftCalendarView from "./ShiftCalendarView";
+import CenterStaffView from "./CenterStaffView";
 
 export const CenterDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -87,6 +88,8 @@ export const CenterDashboard: React.FC = () => {
         <div className="flex-1 p-6">
           {activeTab === "shift-assignment" ? (
             <ShiftCalendarView />
+          ) : activeTab === "staff-list" ? (
+            <CenterStaffView />
           ) : (
             <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50 flex items-center justify-center">
               <p className="text-slate-400 text-sm">

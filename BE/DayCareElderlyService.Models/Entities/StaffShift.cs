@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
@@ -27,5 +27,5 @@ public partial class StaffShift
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
-    public virtual Staff Staff { get; set; } = null!;
+    public virtual User Staff { get; set; } = null!;
 }

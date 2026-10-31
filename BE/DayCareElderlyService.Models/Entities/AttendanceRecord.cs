@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
@@ -25,9 +25,9 @@ public partial class AttendanceRecord
 
     public DateTime CreatedAt { get; set; }
 
-    public virtual Staff? CheckedInByNavigation { get; set; }
+    public virtual User? CheckedInByNavigation { get; set; }
 
-    public virtual Staff? CheckedOutByNavigation { get; set; }
+    public virtual User? CheckedOutByNavigation { get; set; }
 
     public virtual ElderlyMember Elderly { get; set; } = null!;
 

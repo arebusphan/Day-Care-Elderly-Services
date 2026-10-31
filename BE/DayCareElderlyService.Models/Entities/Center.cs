@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
@@ -31,5 +31,5 @@ public partial class Center
 
     public virtual ICollection<ServicePackage> ServicePackages { get; set; } = new List<ServicePackage>();
 
-    public virtual ICollection<Staff> Staff { get; set; } = new List<Staff>();
+
 }
