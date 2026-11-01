@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class ActivityTemplate
 {
-    public Guid ActivityTemplateId { get; set; }
+    public int ActivityTemplateId { get; set; }
 
-    public Guid CenterId { get; set; }
+    public int CenterId { get; set; }
 
     public string ActivityName { get; set; } = null!;
 

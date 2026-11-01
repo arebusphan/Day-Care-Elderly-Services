@@ -8,8 +8,8 @@ namespace DayCareElderlyService.BLL.Services.Interfaces;
 /// </summary>
 public interface IFamilyCareLogService
 {
-    Task<ApiResponse<CareLogDayDto>> GetDayAsync(Guid userId, Guid elderlyId, DateOnly? date);
-    Task<ApiResponse<List<CareLogDaySummaryDto>>> GetHistoryAsync(Guid userId, Guid elderlyId, DateOnly? from, DateOnly? to);
-    Task<ApiResponse<HealthHistoryDto>> GetHealthAsync(Guid userId, Guid elderlyId, int days);
-    Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(Guid userId, int days);
+    Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date);
+    Task<ApiResponse<List<CareLogDaySummaryDto>>> GetHistoryAsync(int userId, int elderlyId, DateOnly? from, DateOnly? to);
+    Task<ApiResponse<HealthHistoryDto>> GetHealthAsync(int userId, int elderlyId, int days);
+    Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, int days);
 }

@@ -4,8 +4,8 @@ namespace DayCareElderlyService.BLL.DTOs.Elderly;
 
 public class ElderlyProfileDto
 {
-    public Guid ElderlyId { get; set; }
-    public Guid CenterId { get; set; }
+    public int ElderlyId { get; set; }
+    public int CenterId { get; set; }
     public string CenterName { get; set; } = string.Empty;
 
     // 1. Thông tin cá nhân

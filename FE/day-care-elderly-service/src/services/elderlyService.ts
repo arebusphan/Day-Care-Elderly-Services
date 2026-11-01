@@ -15,19 +15,19 @@ export const elderlyService = {
   },
 
   // Lấy chi tiết hồ sơ người cao tuổi theo ID
-  getElderlyProfileById: async (id: string): Promise<ApiResponse<ElderlyProfileDto>> => {
+  getElderlyProfileById: async (id: number): Promise<ApiResponse<ElderlyProfileDto>> => {
     const response = await api.get<ApiResponse<ElderlyProfileDto>>(`/api/family/elderly/${id}`);
     return response.data;
   },
 
   // Chỉnh sửa hồ sơ người cao tuổi
-  updateElderlyProfile: async (id: string, data: CreateElderlyProfileDto): Promise<ApiResponse<ElderlyProfileDto>> => {
+  updateElderlyProfile: async (id: number, data: CreateElderlyProfileDto): Promise<ApiResponse<ElderlyProfileDto>> => {
     const response = await api.put<ApiResponse<ElderlyProfileDto>>(`/api/family/elderly/${id}`, data);
     return response.data;
   },
 
   // Xóa hồ sơ người cao tuổi
-  deleteElderlyProfile: async (id: string): Promise<ApiResponse<boolean>> => {
+  deleteElderlyProfile: async (id: number): Promise<ApiResponse<boolean>> => {
     const response = await api.delete<ApiResponse<boolean>>(`/api/family/elderly/${id}`);
     return response.data;
   },

@@ -1,4 +1,4 @@
--- SCRIPT THÊM CỘT CHO BẢNG CareLogs (API care log)
+-- SCRIPT THÊM CỘT CHO BẢNG CareLogs VÀ BẢNG CareLogPhotos (API care log)
 USE [DayCareElderlyDB];
 GO
 
@@ -19,3 +19,20 @@ BEGIN
     END
 END
 GO
+
+-- 3. Tạo bảng CareLogPhotos lưu trữ ảnh đính kèm của nhật ký chăm sóc
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CareLogPhotos')
+BEGIN
+    CREATE TABLE CareLogPhotos (
+        CareLogPhotoId UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_CareLogPhotos_CareLogPhotoId DEFAULT (NEWSEQUENTIALID()),
+        CareLogId UNIQUEIDENTIFIER NOT NULL,
+        FileUrl NVARCHAR(1000) NOT NULL,
+        UploadedAt DATETIME2(0) NOT NULL CONSTRAINT DF_CareLogPhotos_UploadedAt DEFAULT (SYSDATETIME()),
+        CONSTRAINT PK_CareLogPhotos PRIMARY KEY (CareLogPhotoId),
+        CONSTRAINT FK_CareLogPhotos_CareLogs FOREIGN KEY (CareLogId) REFERENCES CareLogs(CareLogId) ON DELETE CASCADE
+    );
+    CREATE INDEX IX_CareLogPhotos_CareLogId ON CareLogPhotos(CareLogId);
+    PRINT 'Da tao bang CareLogPhotos';
+END
+GO
+

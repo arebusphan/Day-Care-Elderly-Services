@@ -98,7 +98,7 @@ public class ElderlyService : IElderlyService
         return gender;
     }
 
-    public async Task<ApiResponse<ElderlyProfileDto>> CreateElderlyProfileAsync(Guid userId, CreateElderlyProfileDto dto)
+    public async Task<ApiResponse<ElderlyProfileDto>> CreateElderlyProfileAsync(int userId, CreateElderlyProfileDto dto)
     {
         await EnsureColumnsAsync();
 
@@ -115,7 +115,6 @@ public class ElderlyService : IElderlyService
         {
             familyMember = new FamilyMember
             {
-                FamilyMemberId = Guid.NewGuid(),
                 UserId = userId,
                 Address = dto.Address,
                 EmergencyContact = dto.EmergencyContactPhone
@@ -130,7 +129,6 @@ public class ElderlyService : IElderlyService
         {
             center = new Center
             {
-                CenterId = Guid.NewGuid(),
                 CenterName = "Trung Tâm Chăm Sóc Người Cao Tuổi DayCare",
                 Address = "123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
                 PhoneNumber = "02838123456",
@@ -145,7 +143,6 @@ public class ElderlyService : IElderlyService
         // 4. Lưu trực tiếp các trường chuẩn vào Entity (không lưu JSON vào MedicalNotes)
         var elderly = new ElderlyMember
         {
-            ElderlyId = Guid.NewGuid(),
             CenterId = center.CenterId,
             FullName = dto.FullName.Trim(),
             DateOfBirth = dto.DateOfBirth,
@@ -164,6 +161,7 @@ public class ElderlyService : IElderlyService
         };
 
         await _context.ElderlyMembers.AddAsync(elderly);
+        await _context.SaveChangesAsync();
 
         // 5. Tạo liên kết ElderlyFamilyRelationship
         var relationship = new ElderlyFamilyRelationship
@@ -183,7 +181,7 @@ public class ElderlyService : IElderlyService
         return ApiResponse<ElderlyProfileDto>.Ok(resultDto, "Tạo hồ sơ người cao tuổi thành công.");
     }
 
-    public async Task<ApiResponse<List<ElderlyProfileDto>>> GetMyElderlyProfilesAsync(Guid userId)
+    public async Task<ApiResponse<List<ElderlyProfileDto>>> GetMyElderlyProfilesAsync(int userId)
     {
         await EnsureColumnsAsync();
 
@@ -210,7 +208,7 @@ public class ElderlyService : IElderlyService
         return ApiResponse<List<ElderlyProfileDto>>.Ok(list);
     }
 
-    public async Task<ApiResponse<ElderlyProfileDto>> GetElderlyProfileByIdAsync(Guid userId, Guid elderlyId)
+    public async Task<ApiResponse<ElderlyProfileDto>> GetElderlyProfileByIdAsync(int userId, int elderlyId)
     {
         await EnsureColumnsAsync();
 
@@ -235,7 +233,7 @@ public class ElderlyService : IElderlyService
         return ApiResponse<ElderlyProfileDto>.Ok(dto);
     }
 
-    public async Task<ApiResponse<ElderlyProfileDto>> UpdateElderlyProfileAsync(Guid userId, Guid elderlyId, UpdateElderlyProfileDto dto)
+    public async Task<ApiResponse<ElderlyProfileDto>> UpdateElderlyProfileAsync(int userId, int elderlyId, UpdateElderlyProfileDto dto)
     {
         await EnsureColumnsAsync();
 
@@ -279,7 +277,7 @@ public class ElderlyService : IElderlyService
         return ApiResponse<ElderlyProfileDto>.Ok(resultDto, "Cập nhật hồ sơ người cao tuổi thành công.");
     }
 
-    public async Task<ApiResponse<bool>> DeleteElderlyProfileAsync(Guid userId, Guid elderlyId)
+    public async Task<ApiResponse<bool>> DeleteElderlyProfileAsync(int userId, int elderlyId)
     {
         var familyMember = await _context.FamilyMembers.FirstOrDefaultAsync(f => f.UserId == userId);
         if (familyMember == null)

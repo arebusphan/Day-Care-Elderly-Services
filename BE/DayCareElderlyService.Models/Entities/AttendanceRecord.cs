@@ -5,11 +5,11 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class AttendanceRecord
 {
-    public Guid AttendanceId { get; set; }
+    public int AttendanceId { get; set; }
 
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
 
-    public Guid RegistrationId { get; set; }
+    public int RegistrationId { get; set; }
 
     public DateOnly AttendanceDate { get; set; }
 
@@ -17,9 +17,9 @@ public partial class AttendanceRecord
 
     public DateTime? CheckOutAt { get; set; }
 
-    public Guid? CheckedInBy { get; set; }
+    public int? CheckedInBy { get; set; }
 
-    public Guid? CheckedOutBy { get; set; }
+    public int? CheckedOutBy { get; set; }
 
     public string? Notes { get; set; }
 

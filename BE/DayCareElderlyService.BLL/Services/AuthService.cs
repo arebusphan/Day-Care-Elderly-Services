@@ -46,7 +46,6 @@ public class AuthService : IAuthService
 
         var user = new User
         {
-            UserId = Guid.NewGuid(),
             Email = email,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             FullName = request.FullName.Trim(),
@@ -100,7 +99,7 @@ public class AuthService : IAuthService
         return ApiResponse<AuthResponseDto>.Ok(response, "Đăng nhập thành công.");
     }
 
-    public async Task<ApiResponse<UserDto>> GetCurrentUserAsync(Guid userId)
+    public async Task<ApiResponse<UserDto>> GetCurrentUserAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdWithRolesAsync(userId);
         if (user == null)
@@ -111,7 +110,7 @@ public class AuthService : IAuthService
         return ApiResponse<UserDto>.Ok(MapToUserDto(user));
     }
 
-    public async Task<ApiResponse> ChangePasswordAsync(Guid userId, ChangePasswordDto request)
+    public async Task<ApiResponse> ChangePasswordAsync(int userId, ChangePasswordDto request)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null)

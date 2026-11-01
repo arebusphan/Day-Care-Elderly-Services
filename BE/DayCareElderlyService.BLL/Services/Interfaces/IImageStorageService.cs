@@ -13,5 +13,5 @@ public interface IImageStorageService
     Task DeleteAsync(string publicId);
 
     /// <summary>publicId đầy đủ (gồm thư mục gốc) của ảnh care log</summary>
-    string CareLogPhotoPublicId(Guid photoId);
+    string CareLogPhotoPublicId(int photoId);
 }

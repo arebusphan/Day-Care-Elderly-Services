@@ -43,29 +43,29 @@ public class StaffCareLogController : ControllerBase
     /// <summary>
     /// Care log 1 ngày của 1 cụ (mặc định hôm nay), gồm cả mục nội bộ
     /// </summary>
-    [HttpGet("care-logs/{elderlyId:guid}")]
+    [HttpGet("care-logs/{elderlyId:int}")]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status200OK)]
-    public Task<IActionResult> GetDay(Guid elderlyId, [FromQuery] DateOnly? date) =>
+    public Task<IActionResult> GetDay(int elderlyId, [FromQuery] DateOnly? date) =>
         RunAsync(userId => _careLogService.GetDayAsync(userId, elderlyId, date), "lấy care log");
 
     /// <summary>
     /// Ghi 1 mục care log: MEAL, HYGIENE, NAP, MOOD, ACTIVITY, NOTE
     /// </summary>
-    [HttpPost("care-logs/{elderlyId:guid}")]
+    [HttpPost("care-logs/{elderlyId:int}")]
     [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> AddEntry(Guid elderlyId, [FromBody] CreateCareLogEntryDto dto) =>
+    public Task<IActionResult> AddEntry(int elderlyId, [FromBody] CreateCareLogEntryDto dto) =>
         RunAsync(userId => _careLogService.AddEntryAsync(userId, elderlyId, dto), "ghi care log");
 
     /// <summary>
     /// Đính kèm ảnh cho 1 mục care log hôm nay (jpg/png/webp, tối đa 5MB/ảnh, 5 ảnh/mục). Ảnh lưu trên Cloudinary.
     /// </summary>
-    [HttpPost("care-logs/entries/{careLogId:guid}/photos")]
+    [HttpPost("care-logs/entries/{careLogId:int}/photos")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(30 * 1024 * 1024)]
     [ProducesResponseType(typeof(ApiResponse<List<CareLogPhotoDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<List<CareLogPhotoDto>>), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UploadPhotos(Guid careLogId, [FromForm] List<IFormFile> files)
+    public async Task<IActionResult> UploadPhotos(int careLogId, [FromForm] List<IFormFile> files)
     {
         var uploads = files.Select(f => new PhotoUploadFile
         {
@@ -91,37 +91,37 @@ public class StaffCareLogController : ControllerBase
     /// <summary>
     /// Xoá 1 ảnh của care log hôm nay (chưa chốt). Xoá cả trên Cloudinary.
     /// </summary>
-    [HttpDelete("care-logs/photos/{photoId:guid}")]
+    [HttpDelete("care-logs/photos/{photoId:int}")]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> DeletePhoto(Guid photoId) =>
+    public Task<IActionResult> DeletePhoto(int photoId) =>
         RunAsync(userId => _careLogService.DeletePhotoAsync(userId, photoId), "xoá ảnh");
 
     /// <summary>
     /// Đo chỉ số (điều dưỡng). Vượt ngưỡng thì tạo sự cố VITALS_ALERT và báo gia đình.
     /// </summary>
-    [HttpPost("care-logs/{elderlyId:guid}/vitals")]
+    [HttpPost("care-logs/{elderlyId:int}/vitals")]
     [ProducesResponseType(typeof(ApiResponse<VitalsResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<VitalsResultDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> RecordVitals(Guid elderlyId, [FromBody] RecordVitalsDto dto) =>
+    public Task<IActionResult> RecordVitals(int elderlyId, [FromBody] RecordVitalsDto dto) =>
         RunAsync(userId => _careLogService.RecordVitalsAsync(userId, elderlyId, dto), "ghi chỉ số");
 
     /// <summary>
     /// Điều dưỡng xác nhận xong phần y tế trong ngày
     /// </summary>
-    [HttpPost("care-logs/{elderlyId:guid}/medical-done")]
+    [HttpPost("care-logs/{elderlyId:int}/medical-done")]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> MarkMedicalDone(Guid elderlyId, [FromBody] CareLogNoteDto? dto) =>
+    public Task<IActionResult> MarkMedicalDone(int elderlyId, [FromBody] CareLogNoteDto? dto) =>
         RunAsync(userId => _careLogService.MarkMedicalDoneAsync(userId, elderlyId, dto ?? new CareLogNoteDto()), "xác nhận xong phần y tế");
 
     /// <summary>
     /// Hộ lý chốt care log trong ngày (sau khi điều dưỡng xong phần y tế). Sau khi chốt không ghi thêm được.
     /// </summary>
-    [HttpPost("care-logs/{elderlyId:guid}/close")]
+    [HttpPost("care-logs/{elderlyId:int}/close")]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> CloseDay(Guid elderlyId, [FromBody] CareLogNoteDto? dto) =>
+    public Task<IActionResult> CloseDay(int elderlyId, [FromBody] CareLogNoteDto? dto) =>
         RunAsync(userId => _careLogService.CloseDayAsync(userId, elderlyId, dto ?? new CareLogNoteDto()), "chốt care log");
 
     /// <summary>
@@ -135,10 +135,10 @@ public class StaffCareLogController : ControllerBase
     /// <summary>
     /// Ghi nhận cho uống thuốc (điều dưỡng): Given / Refused / Missed
     /// </summary>
-    [HttpPatch("doses/{medicationRecordId:guid}")]
+    [HttpPatch("doses/{medicationRecordId:int}")]
     [ProducesResponseType(typeof(ApiResponse<DoseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<DoseDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> UpdateDose(Guid medicationRecordId, [FromBody] UpdateDoseDto dto) =>
+    public Task<IActionResult> UpdateDose(int medicationRecordId, [FromBody] UpdateDoseDto dto) =>
         RunAsync(userId => _careLogService.UpdateDoseAsync(userId, medicationRecordId, dto), "ghi nhận thuốc");
 
     /// <summary>
@@ -161,27 +161,27 @@ public class StaffCareLogController : ControllerBase
     /// <summary>
     /// Nhận xử lý (InProgress) hoặc đóng (Resolved + resolutionNotes) sự cố
     /// </summary>
-    [HttpPatch("incidents/{incidentId:guid}")]
+    [HttpPatch("incidents/{incidentId:int}")]
     [ProducesResponseType(typeof(ApiResponse<IncidentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<IncidentDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> UpdateIncident(Guid incidentId, [FromBody] UpdateIncidentDto dto) =>
+    public Task<IActionResult> UpdateIncident(int incidentId, [FromBody] UpdateIncidentDto dto) =>
         RunAsync(userId => _careLogService.UpdateIncidentAsync(userId, incidentId, dto), "cập nhật sự cố");
 
-    private Guid? GetCurrentUserId()
+    private int? GetCurrentUserId()
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue("sub")
                  ?? User.FindFirstValue("id")
                  ?? User.FindFirst("nameid")?.Value;
 
-        if (Guid.TryParse(idStr, out var id))
+        if (int.TryParse(idStr, out var id))
         {
             return id;
         }
         return null;
     }
 
-    private async Task<IActionResult> RunAsync<T>(Func<Guid, Task<ApiResponse<T>>> action, string actionName)
+    private async Task<IActionResult> RunAsync<T>(Func<int, Task<ApiResponse<T>>> action, string actionName)
     {
         try
         {

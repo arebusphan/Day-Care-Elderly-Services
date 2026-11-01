@@ -1,7 +1,7 @@
 import api from "./api";
 
 export interface CenterStaff {
-  userId: string;
+  userId: number;
   fullName: string;
   email: string;
   phoneNumber: string | null;
@@ -33,8 +33,8 @@ export interface DeactivationWarning {
 }
 
 export interface StaffLeave {
-  leaveId: string;
-  userId: string;
+  leaveId: number;
+  userId: number;
   leaveDate: string;
   reason: string | null;
   createdAt: string;
@@ -84,31 +84,31 @@ export const centerStaffService = {
   },
 
   /** Kiểm tra cảnh báo trước khi ngừng hoạt động */
-  async checkDeactivation(userId: string): Promise<ApiResponse<DeactivationWarning>> {
+  async checkDeactivation(userId: number): Promise<ApiResponse<DeactivationWarning>> {
     const res = await api.get(`${BASE}/${userId}/deactivation-check`);
     return res.data;
   },
 
   /** Bật/tắt trạng thái hoạt động */
-  async toggleStatus(userId: string): Promise<ApiResponse<boolean>> {
+  async toggleStatus(userId: number): Promise<ApiResponse<boolean>> {
     const res = await api.patch(`${BASE}/${userId}/toggle-status`);
     return res.data;
   },
 
   /** Lấy danh sách ngày nghỉ */
-  async getLeaves(userId: string): Promise<ApiResponse<StaffLeave[]>> {
+  async getLeaves(userId: number): Promise<ApiResponse<StaffLeave[]>> {
     const res = await api.get(`${BASE}/${userId}/leaves`);
     return res.data;
   },
 
   /** Thêm ngày nghỉ */
-  async addLeave(userId: string, dto: CreateStaffLeaveDto): Promise<ApiResponse<StaffLeave>> {
+  async addLeave(userId: number, dto: CreateStaffLeaveDto): Promise<ApiResponse<StaffLeave>> {
     const res = await api.post(`${BASE}/${userId}/leaves`, dto);
     return res.data;
   },
 
   /** Xóa ngày nghỉ */
-  async deleteLeave(userId: string, leaveId: string): Promise<ApiResponse<boolean>> {
+  async deleteLeave(userId: number, leaveId: number): Promise<ApiResponse<boolean>> {
     const res = await api.delete(`${BASE}/${userId}/leaves/${leaveId}`);
     return res.data;
   },

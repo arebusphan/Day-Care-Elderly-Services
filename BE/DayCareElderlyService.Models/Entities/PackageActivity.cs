@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class PackageActivity
 {
-    public Guid PackageActivityId { get; set; }
+    public int PackageActivityId { get; set; }
 
-    public Guid PackageId { get; set; }
+    public int PackageId { get; set; }
 
-    public Guid ActivityTemplateId { get; set; }
+    public int ActivityTemplateId { get; set; }
 
     public byte? DayOfWeek { get; set; }
 

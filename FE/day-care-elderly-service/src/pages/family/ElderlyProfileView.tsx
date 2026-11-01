@@ -28,7 +28,7 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
     allergies: "",
     medicalHistory: "",
     medicalNotes: "",
-    mobilityStatus: "Bình thường",
+    mobilityStatus: "Normal",
     careNotes: "",
   });
 
@@ -103,7 +103,7 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
       allergies: "",
       medicalHistory: "",
       medicalNotes: "",
-      mobilityStatus: "Bình thường",
+      mobilityStatus: "Normal",
       careNotes: "",
     });
     setFormErrors({});
@@ -127,7 +127,7 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
       allergies: current.allergies || "",
       medicalHistory: current.medicalHistory || "",
       medicalNotes: getCleanMedicalNotes(current.medicalNotes),
-      mobilityStatus: current.mobilityStatus === "Cần hỗ trợ" ? "Cần hỗ trợ" : "Bình thường",
+      mobilityStatus: current.mobilityStatus === "Support" || current.mobilityStatus === "Cần hỗ trợ" ? "Support" : "Normal",
       careNotes: getCleanCareNotes(current.careNotes),
     });
     setFormErrors({});
@@ -474,15 +474,15 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
                   </span>
                   <span
                     className={`inline-block px-3 py-1 rounded-full font-bold text-xs ${
-                      current.mobilityStatus === "Cần hỗ trợ"
+                      current.mobilityStatus === "Support" || current.mobilityStatus === "Cần hỗ trợ"
                         ? "bg-amber-100 text-amber-800 border border-amber-300"
                         : "bg-emerald-100 text-emerald-800 border border-emerald-300"
                     }`}
                   >
-                    {current.mobilityStatus}
+                    {current.mobilityStatus === "Support" || current.mobilityStatus === "Cần hỗ trợ" ? "Support" : "Normal"}
                   </span>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    {current.mobilityStatus === "Cần hỗ trợ"
+                    {current.mobilityStatus === "Support" || current.mobilityStatus === "Cần hỗ trợ"
                       ? "Cần điều dưỡng hỗ trợ di chuyển, sinh hoạt hoặc lên xuống giường."
                       : "Người cao tuổi có thể tự đi lại bình thường trong sinh hoạt hàng ngày."}
                   </p>
@@ -751,7 +751,7 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <label
                         className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
-                          formData.mobilityStatus === "Bình thường"
+                          formData.mobilityStatus === "Normal" || formData.mobilityStatus === "Bình thường"
                             ? "border-blue-500 bg-blue-50/40 text-blue-900"
                             : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
                         }`}
@@ -759,13 +759,13 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
                         <input
                           type="radio"
                           name="mobilityStatus"
-                          value="Bình thường"
-                          checked={formData.mobilityStatus === "Bình thường"}
+                          value="Normal"
+                          checked={formData.mobilityStatus === "Normal" || formData.mobilityStatus === "Bình thường"}
                           onChange={handleInputChange}
                           className="mt-0.5"
                         />
                         <div>
-                          <span className="font-bold block">Bình thường</span>
+                          <span className="font-bold block">Normal (Bình thường)</span>
                           <span className="text-[11px] text-slate-500">
                             Cụ có thể tự đi lại, tự vận động trong sinh hoạt
                           </span>
@@ -774,7 +774,7 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
 
                       <label
                         className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
-                          formData.mobilityStatus === "Cần hỗ trợ"
+                          formData.mobilityStatus === "Support" || formData.mobilityStatus === "Cần hỗ trợ"
                             ? "border-amber-500 bg-amber-50/40 text-amber-900"
                             : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
                         }`}
@@ -782,13 +782,13 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
                         <input
                           type="radio"
                           name="mobilityStatus"
-                          value="Cần hỗ trợ"
-                          checked={formData.mobilityStatus === "Cần hỗ trợ"}
+                          value="Support"
+                          checked={formData.mobilityStatus === "Support" || formData.mobilityStatus === "Cần hỗ trợ"}
                           onChange={handleInputChange}
                           className="mt-0.5"
                         />
                         <div>
-                          <span className="font-bold block">Cần hỗ trợ</span>
+                          <span className="font-bold block">Support (Cần hỗ trợ)</span>
                           <span className="text-[11px] text-slate-500">
                             Cần gậy chống, xe lăn hoặc người dìu đỡ
                           </span>

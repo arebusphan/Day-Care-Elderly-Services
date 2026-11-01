@@ -81,7 +81,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> GetCurrentUser()
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
         {
             return Unauthorized(ApiResponse<UserDto>.Fail("Không xác thực được người dùng."));
         }
@@ -114,7 +114,7 @@ public class AuthController : ControllerBase
         }
 
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
         {
             return Unauthorized(ApiResponse.Fail("Không xác thực được người dùng."));
         }

@@ -5,7 +5,7 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 /// </summary>
 public class ActivityTodayDto
 {
-    public Guid CenterActivityId { get; set; }
+    public int CenterActivityId { get; set; }
     public string ActivityName { get; set; } = string.Empty;
     public DateOnly ActivityDate { get; set; }
     public TimeOnly StartTime { get; set; }

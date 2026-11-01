@@ -5,8 +5,8 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 /// </summary>
 public class IncidentDto
 {
-    public Guid IncidentId { get; set; }
-    public Guid ElderlyId { get; set; }
+    public int IncidentId { get; set; }
+    public int ElderlyId { get; set; }
     public string ElderlyName { get; set; } = string.Empty;
     public string IncidentType { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;

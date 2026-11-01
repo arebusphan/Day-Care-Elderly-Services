@@ -27,25 +27,25 @@ public class FamilyCareLogController : ControllerBase
     /// <summary>
     /// Care log 1 ngày của cụ (mặc định hôm nay)
     /// </summary>
-    [HttpGet("care-logs/{elderlyId:guid}")]
+    [HttpGet("care-logs/{elderlyId:int}")]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status200OK)]
-    public Task<IActionResult> GetDay(Guid elderlyId, [FromQuery] DateOnly? date) =>
+    public Task<IActionResult> GetDay(int elderlyId, [FromQuery] DateOnly? date) =>
         RunAsync(userId => _familyCareLogService.GetDayAsync(userId, elderlyId, date), "lấy care log");
 
     /// <summary>
     /// Lịch sử care log theo ngày (mặc định 30 ngày gần nhất, tối đa 92 ngày)
     /// </summary>
-    [HttpGet("care-logs/{elderlyId:guid}/history")]
+    [HttpGet("care-logs/{elderlyId:int}/history")]
     [ProducesResponseType(typeof(ApiResponse<List<CareLogDaySummaryDto>>), StatusCodes.Status200OK)]
-    public Task<IActionResult> GetHistory(Guid elderlyId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to) =>
+    public Task<IActionResult> GetHistory(int elderlyId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to) =>
         RunAsync(userId => _familyCareLogService.GetHistoryAsync(userId, elderlyId, from, to), "lấy lịch sử care log");
 
     /// <summary>
     /// Các lần đo chỉ số và lịch sử uống thuốc trong N ngày gần nhất (mặc định 30)
     /// </summary>
-    [HttpGet("care-logs/{elderlyId:guid}/health")]
+    [HttpGet("care-logs/{elderlyId:int}/health")]
     [ProducesResponseType(typeof(ApiResponse<HealthHistoryDto>), StatusCodes.Status200OK)]
-    public Task<IActionResult> GetHealth(Guid elderlyId, [FromQuery] int days = 30) =>
+    public Task<IActionResult> GetHealth(int elderlyId, [FromQuery] int days = 30) =>
         RunAsync(userId => _familyCareLogService.GetHealthAsync(userId, elderlyId, days), "lấy lịch sử sức khỏe");
 
     /// <summary>
@@ -56,21 +56,21 @@ public class FamilyCareLogController : ControllerBase
     public Task<IActionResult> GetIncidents([FromQuery] int days = 30) =>
         RunAsync(userId => _familyCareLogService.GetIncidentsAsync(userId, days), "lấy danh sách sự cố");
 
-    private Guid? GetCurrentUserId()
+    private int? GetCurrentUserId()
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue("sub")
                  ?? User.FindFirstValue("id")
                  ?? User.FindFirst("nameid")?.Value;
 
-        if (Guid.TryParse(idStr, out var id))
+        if (int.TryParse(idStr, out var id))
         {
             return id;
         }
         return null;
     }
 
-    private async Task<IActionResult> RunAsync<T>(Func<Guid, Task<ApiResponse<T>>> action, string actionName)
+    private async Task<IActionResult> RunAsync<T>(Func<int, Task<ApiResponse<T>>> action, string actionName)
     {
         try
         {

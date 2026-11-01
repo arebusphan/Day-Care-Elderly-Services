@@ -7,10 +7,10 @@ namespace DayCareElderlyService.BLL.DTOs.Billing;
 public class CreateServiceRegistrationDto
 {
     [Required(ErrorMessage = "Vui lòng chọn gói dịch vụ")]
-    public Guid PackageId { get; set; }
+    public int PackageId { get; set; }
 
     [Required(ErrorMessage = "Vui lòng chọn người cao tuổi")]
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
 
     [Required(ErrorMessage = "Vui lòng chọn hình thức đăng ký")]
     public string RegistrationType { get; set; } = "monthly"; // "monthly" | "daily"

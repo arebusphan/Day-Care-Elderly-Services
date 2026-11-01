@@ -15,7 +15,7 @@ public class NotificationService : INotificationService
         _context = context;
     }
 
-    public async Task<ApiResponse<NotificationListDto>> GetMyNotificationsAsync(Guid userId, bool unreadOnly, int take)
+    public async Task<ApiResponse<NotificationListDto>> GetMyNotificationsAsync(int userId, bool unreadOnly, int take)
     {
         var query = _context.Notifications.Where(n => n.UserId == userId);
         if (unreadOnly)
@@ -45,7 +45,7 @@ public class NotificationService : INotificationService
         return ApiResponse<NotificationListDto>.Ok(result, "Lấy danh sách thông báo thành công.");
     }
 
-    public async Task<ApiResponse<NotificationDto>> MarkAsReadAsync(Guid userId, Guid notificationId)
+    public async Task<ApiResponse<NotificationDto>> MarkAsReadAsync(int userId, int notificationId)
     {
         var notification = await _context.Notifications
             .FirstOrDefaultAsync(n => n.NotificationId == notificationId && n.UserId == userId);
@@ -74,7 +74,7 @@ public class NotificationService : INotificationService
         return ApiResponse<NotificationDto>.Ok(dto, "Đã đánh dấu đã đọc.");
     }
 
-    public async Task<ApiResponse<int>> MarkAllAsReadAsync(Guid userId)
+    public async Task<ApiResponse<int>> MarkAllAsReadAsync(int userId)
     {
         var count = await _context.Notifications
             .Where(n => n.UserId == userId && !n.IsRead)

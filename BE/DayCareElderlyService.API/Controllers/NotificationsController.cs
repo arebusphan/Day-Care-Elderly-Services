@@ -35,10 +35,10 @@ public class NotificationsController : ControllerBase
     /// <summary>
     /// Đánh dấu 1 thông báo đã đọc
     /// </summary>
-    [HttpPatch("{notificationId:guid}/read")]
+    [HttpPatch("{notificationId:int}/read")]
     [ProducesResponseType(typeof(ApiResponse<NotificationDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<NotificationDto>), StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> MarkAsRead(Guid notificationId) =>
+    public Task<IActionResult> MarkAsRead(int notificationId) =>
         RunAsync(userId => _notificationService.MarkAsReadAsync(userId, notificationId), "đánh dấu đã đọc");
 
     /// <summary>
@@ -49,21 +49,21 @@ public class NotificationsController : ControllerBase
     public Task<IActionResult> MarkAllAsRead() =>
         RunAsync(userId => _notificationService.MarkAllAsReadAsync(userId), "đánh dấu tất cả đã đọc");
 
-    private Guid? GetCurrentUserId()
+    private int? GetCurrentUserId()
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue("sub")
                  ?? User.FindFirstValue("id")
                  ?? User.FindFirst("nameid")?.Value;
 
-        if (Guid.TryParse(idStr, out var id))
+        if (int.TryParse(idStr, out var id))
         {
             return id;
         }
         return null;
     }
 
-    private async Task<IActionResult> RunAsync<T>(Func<Guid, Task<ApiResponse<T>>> action, string actionName)
+    private async Task<IActionResult> RunAsync<T>(Func<int, Task<ApiResponse<T>>> action, string actionName)
     {
         try
         {

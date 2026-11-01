@@ -16,7 +16,7 @@ public static class DbInitializer
 
         try
         {
-            // 1. Tự động đồng bộ các cột mới của bảng ElderlyMembers
+            // 1. Đồng bộ các cột mới của bảng ElderlyMembers
             var syncElderlySql = @"
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ElderlyMembers')
                 BEGIN
@@ -33,22 +33,22 @@ public static class DbInitializer
                         ALTER TABLE ElderlyMembers ADD MedicalHistory NVARCHAR(1000) NULL;
 
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ElderlyMembers' AND COLUMN_NAME = 'MobilityStatus')
-                        ALTER TABLE ElderlyMembers ADD MobilityStatus NVARCHAR(50) NULL DEFAULT N'Bình thường';
+                        ALTER TABLE ElderlyMembers ADD MobilityStatus NVARCHAR(50) NULL DEFAULT 'Normal';
 
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ElderlyMembers' AND COLUMN_NAME = 'CareNotes')
                         ALTER TABLE ElderlyMembers ADD CareNotes NVARCHAR(1000) NULL;
 
-                    -- Nới lỏng CHECK constraint CK_ElderlyMembers_Gender để chấp nhận cả Male, Female, Nam, Nữ
+                    -- Nới lỏng CHECK constraint Gender
                     IF EXISTS (SELECT * FROM sys.check_constraints WHERE name = 'CK_ElderlyMembers_Gender')
                     BEGIN
                         ALTER TABLE ElderlyMembers DROP CONSTRAINT CK_ElderlyMembers_Gender;
-                        ALTER TABLE ElderlyMembers ADD CONSTRAINT CK_ElderlyMembers_Gender CHECK (Gender IN ('Male', 'Female', 'Other', N'Nam', N'Nữ', N'Khác'));
+                        ALTER TABLE ElderlyMembers ADD CONSTRAINT CK_ElderlyMembers_Gender CHECK (Gender IN ('Male', 'Female', 'Other'));
                     END
                 END
             ";
             await context.Database.ExecuteSqlRawAsync(syncElderlySql);
 
-            // 2. Tự động đồng bộ các cột cho ServicePackages, ServiceRegistrations, Payments
+            // 2. Đồng bộ các cột cho ServicePackages, ServiceRegistrations, Payments
             var syncPackagesSql = @"
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ServicePackages')
                 BEGIN
@@ -118,7 +118,6 @@ public static class DbInitializer
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'InvoiceVatNo')
                         ALTER TABLE Payments ADD InvoiceVatNo NVARCHAR(50) NULL;
 
-                    -- Mở rộng độ dài cột PaymentMethod để lưu đủ phương thức thanh toán dài
                     IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaymentMethod' AND CHARACTER_MAXIMUM_LENGTH < 100)
                         ALTER TABLE Payments ALTER COLUMN PaymentMethod NVARCHAR(100) NOT NULL;
                 END
@@ -127,7 +126,7 @@ public static class DbInitializer
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ServiceRegistrations' AND COLUMN_NAME = 'EndDate' AND IS_NULLABLE = 'NO')
                     ALTER TABLE ServiceRegistrations ALTER COLUMN EndDate DATE NULL;
 
-                -- Gỡ bỏ các CHECK constraint cũ trên Payments và ServiceRegistrations nếu có
+                -- Gỡ bỏ các CHECK constraint cũ trên Payments và ServiceRegistrations
                 DECLARE @dropCheckSql NVARCHAR(MAX) = N'';
                 SELECT @dropCheckSql += N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)) + N'.' + QUOTENAME(OBJECT_NAME(parent_object_id)) + N' DROP CONSTRAINT ' + QUOTENAME(name) + N'; '
                 FROM sys.check_constraints
@@ -136,320 +135,316 @@ public static class DbInitializer
                     EXEC sp_executesql @dropCheckSql;
             ";
             await context.Database.ExecuteSqlRawAsync(syncPackagesSql);
-            logger?.LogInformation("Đã kiểm tra và đồng bộ cấu trúc bảng ServicePackages, ServiceRegistrations, Payments thành công.");
+            logger?.LogInformation("Đã đồng bộ cấu trúc bảng ServicePackages, ServiceRegistrations, Payments.");
 
-            // 2.5. Tự động chuyển quan hệ Staff sang User, tạo bảng StaffLeaves và xóa bảng Staff an toàn
+            // 2.5. Đồng bộ bảng StaffSchedules, DailySchedulePlans, StaffCareAssignments (INT identity)
             var syncStaffSql = @"
-                -- Tạo bảng StaffLeaves nếu chưa có
-                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffLeaves')
+                -- Tạo bảng StaffSchedules nếu chưa có
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffSchedules')
                 BEGIN
-                    CREATE TABLE StaffLeaves (
-                        LeaveId UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_StaffLeaves_LeaveId DEFAULT (NEWSEQUENTIALID()),
-                        UserId UNIQUEIDENTIFIER NOT NULL,
-                        LeaveDate DATE NOT NULL,
-                        Reason NVARCHAR(500) NULL,
-                        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_StaffLeaves_CreatedAt DEFAULT (SYSDATETIME()),
-                        CONSTRAINT PK_StaffLeaves PRIMARY KEY (LeaveId),
-                        CONSTRAINT FK_StaffLeaves_Users FOREIGN KEY (UserId) REFERENCES Users(UserId) ON DELETE CASCADE,
-                        CONSTRAINT UQ_StaffLeaves_User_Date UNIQUE (UserId, LeaveDate)
+                    CREATE TABLE StaffSchedules (
+                        ScheduleId INT IDENTITY(1,1) NOT NULL,
+                        StaffId INT NOT NULL,
+                        WorkDate DATE NOT NULL,
+                        IsWorking BIT NOT NULL CONSTRAINT DF_StaffSchedules_IsWorking DEFAULT (1),
+                        Note NVARCHAR(500) NULL,
+                        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_StaffSchedules_CreatedAt DEFAULT (SYSDATETIME()),
+                        CONSTRAINT PK_StaffSchedules PRIMARY KEY (ScheduleId),
+                        CONSTRAINT FK_StaffSchedules_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId) ON DELETE CASCADE,
+                        CONSTRAINT UQ_StaffSchedules_Staff_Date UNIQUE (StaffId, WorkDate)
                     );
-                    CREATE INDEX IX_StaffLeaves_UserId ON StaffLeaves(UserId);
-                    CREATE INDEX IX_StaffLeaves_LeaveDate ON StaffLeaves(LeaveDate);
+                    CREATE INDEX IX_StaffSchedules_StaffId ON StaffSchedules(StaffId);
+                    CREATE INDEX IX_StaffSchedules_WorkDate ON StaffSchedules(WorkDate);
                 END
 
-                -- Đồng bộ dữ liệu và chuyển Foreign Key nếu bảng Staff còn tồn tại
+                -- Tạo bảng DailySchedulePlans nếu chưa có
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DailySchedulePlans')
+                BEGIN
+                    CREATE TABLE DailySchedulePlans (
+                        PlanId INT IDENTITY(1,1) NOT NULL,
+                        CenterId INT NOT NULL,
+                        PlanDate DATE NOT NULL,
+                        Status NVARCHAR(30) NOT NULL CONSTRAINT DF_DailySchedulePlans_Status DEFAULT ('Draft'),
+                        ConfirmedAt DATETIME2(0) NULL,
+                        ConfirmedBy INT NULL,
+                        TotalStaff INT NOT NULL DEFAULT 0,
+                        TotalElderly INT NOT NULL DEFAULT 0,
+                        Notes NVARCHAR(1000) NULL,
+                        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_DailySchedulePlans_CreatedAt DEFAULT (SYSDATETIME()),
+                        UpdatedAt DATETIME2(0) NULL,
+                        CONSTRAINT PK_DailySchedulePlans PRIMARY KEY (PlanId),
+                        CONSTRAINT FK_DailySchedulePlans_Centers FOREIGN KEY (CenterId) REFERENCES Centers(CenterId),
+                        CONSTRAINT FK_DailySchedulePlans_Users FOREIGN KEY (ConfirmedBy) REFERENCES Users(UserId),
+                        CONSTRAINT UQ_DailySchedulePlans_Center_Date UNIQUE (CenterId, PlanDate)
+                    );
+                    CREATE INDEX IX_DailySchedulePlans_PlanDate ON DailySchedulePlans(PlanDate);
+                END
+
+                -- Tạo bảng StaffCareAssignments nếu chưa có
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffCareAssignments')
+                BEGIN
+                    CREATE TABLE StaffCareAssignments (
+                        AssignmentId INT IDENTITY(1,1) NOT NULL,
+                        PlanId INT NOT NULL,
+                        StaffId INT NOT NULL,
+                        ElderlyId INT NOT NULL,
+                        Notes NVARCHAR(500) NULL,
+                        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_StaffCareAssignments_CreatedAt DEFAULT (SYSDATETIME()),
+                        CONSTRAINT PK_StaffCareAssignments PRIMARY KEY (AssignmentId),
+                        CONSTRAINT FK_StaffCareAssignments_Plans FOREIGN KEY (PlanId) REFERENCES DailySchedulePlans(PlanId) ON DELETE CASCADE,
+                        CONSTRAINT FK_StaffCareAssignments_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId),
+                        CONSTRAINT FK_StaffCareAssignments_Elderly FOREIGN KEY (ElderlyId) REFERENCES ElderlyMembers(ElderlyId),
+                        CONSTRAINT UQ_StaffCareAssignments_Plan_Elderly UNIQUE (PlanId, ElderlyId)
+                    );
+                    CREATE INDEX IX_StaffCareAssignments_Plan_Staff ON StaffCareAssignments(PlanId, StaffId);
+                END
+
+                -- Dọn dẹp bảng StaffLeaves nếu còn tồn tại
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffLeaves')
+                BEGIN
+                    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffLeaves_Users')
+                        ALTER TABLE StaffLeaves DROP CONSTRAINT FK_StaffLeaves_Users;
+                    DROP TABLE StaffLeaves;
+                END
+
+                -- Dọn dẹp bảng StaffShifts nếu còn tồn tại
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffShifts')
+                BEGIN
+                    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Staff')
+                        ALTER TABLE StaffShifts DROP CONSTRAINT FK_StaffShifts_Staff;
+                    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Users_Staff')
+                        ALTER TABLE StaffShifts DROP CONSTRAINT FK_StaffShifts_Users_Staff;
+                    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Users')
+                        ALTER TABLE StaffShifts DROP CONSTRAINT FK_StaffShifts_Users;
+                    DROP TABLE StaffShifts;
+                END
+
+                -- Dọn dẹp bảng Staff cũ nếu còn tồn tại
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Staff')
                 BEGIN
-                    -- ActivityAssignments
-                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityAssignments')
-                    BEGIN
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_ActivityAssignments_Staff')
-                            ALTER TABLE ActivityAssignments DROP CONSTRAINT FK_ActivityAssignments_Staff;
-
-                        UPDATE a SET a.StaffId = s.UserId
-                        FROM ActivityAssignments a INNER JOIN Staff s ON a.StaffId = s.StaffId;
-
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_ActivityAssignments_Users')
-                            ALTER TABLE ActivityAssignments ADD CONSTRAINT FK_ActivityAssignments_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId);
-                    END
-
-                    -- AttendanceRecords
-                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AttendanceRecords')
-                    BEGIN
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedInBy')
-                            ALTER TABLE AttendanceRecords DROP CONSTRAINT FK_AttendanceRecords_CheckedInBy;
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedOutBy')
-                            ALTER TABLE AttendanceRecords DROP CONSTRAINT FK_AttendanceRecords_CheckedOutBy;
-
-                        UPDATE a SET a.CheckedInBy = s.UserId FROM AttendanceRecords a INNER JOIN Staff s ON a.CheckedInBy = s.StaffId;
-                        UPDATE a SET a.CheckedOutBy = s.UserId FROM AttendanceRecords a INNER JOIN Staff s ON a.CheckedOutBy = s.StaffId;
-
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedInBy_Users')
-                            ALTER TABLE AttendanceRecords ADD CONSTRAINT FK_AttendanceRecords_CheckedInBy_Users FOREIGN KEY (CheckedInBy) REFERENCES Users(UserId);
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AttendanceRecords_CheckedOutBy_Users')
-                            ALTER TABLE AttendanceRecords ADD CONSTRAINT FK_AttendanceRecords_CheckedOutBy_Users FOREIGN KEY (CheckedOutBy) REFERENCES Users(UserId);
-                    END
-
-                    -- CareLogs
-                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CareLogs')
-                    BEGIN
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_CareLogs_Staff')
-                            ALTER TABLE CareLogs DROP CONSTRAINT FK_CareLogs_Staff;
-
-                        UPDATE c SET c.StaffId = s.UserId FROM CareLogs c INNER JOIN Staff s ON c.StaffId = s.StaffId;
-
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_CareLogs_Users')
-                            ALTER TABLE CareLogs ADD CONSTRAINT FK_CareLogs_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId);
-                    END
-
-                    -- IncidentReports
-                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'IncidentReports')
-                    BEGIN
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_IncidentReports_Staff')
-                            ALTER TABLE IncidentReports DROP CONSTRAINT FK_IncidentReports_Staff;
-
-                        UPDATE i SET i.ReportedBy = s.UserId FROM IncidentReports i INNER JOIN Staff s ON i.ReportedBy = s.StaffId;
-
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_IncidentReports_Users')
-                            ALTER TABLE IncidentReports ADD CONSTRAINT FK_IncidentReports_Users FOREIGN KEY (ReportedBy) REFERENCES Users(UserId);
-                    END
-
-                    -- MedicationRecords
-                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MedicationRecords')
-                    BEGIN
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_MedicationRecords_Staff')
-                            ALTER TABLE MedicationRecords DROP CONSTRAINT FK_MedicationRecords_Staff;
-
-                        UPDATE m SET m.StaffId = s.UserId FROM MedicationRecords m INNER JOIN Staff s ON m.StaffId = s.StaffId;
-
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_MedicationRecords_Users')
-                            ALTER TABLE MedicationRecords ADD CONSTRAINT FK_MedicationRecords_Users FOREIGN KEY (StaffId) REFERENCES Users(UserId);
-                    END
-
-                    -- StaffShifts
-                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'StaffShifts')
-                    BEGIN
-                        IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Staff')
-                            ALTER TABLE StaffShifts DROP CONSTRAINT FK_StaffShifts_Staff;
-
-                        UPDATE ss SET ss.StaffId = s.UserId FROM StaffShifts ss INNER JOIN Staff s ON ss.StaffId = s.StaffId;
-
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StaffShifts_Users_Staff')
-                            ALTER TABLE StaffShifts ADD CONSTRAINT FK_StaffShifts_Users_Staff FOREIGN KEY (StaffId) REFERENCES Users(UserId);
-                    END
-
-                    -- Gỡ ràng buộc của bảng Staff và xóa bảng Staff
                     IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_Staff_Centers')
                         ALTER TABLE Staff DROP CONSTRAINT FK_Staff_Centers;
                     IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_Staff_Users')
                         ALTER TABLE Staff DROP CONSTRAINT FK_Staff_Users;
-
                     DROP TABLE Staff;
                 END
             ";
             await context.Database.ExecuteSqlRawAsync(syncStaffSql);
-            logger?.LogInformation("Đã kiểm tra và đồng bộ quan hệ Staff sang User, bảng StaffLeaves hoàn tất.");
+            logger?.LogInformation("Đã đồng bộ bảng StaffSchedules, DailySchedulePlans, StaffCareAssignments.");
 
-            // 3. Ensure Roles
+            // 2.6. Đồng bộ CareLogs và tạo bảng CareLogPhotos
+            var syncCareLogsSql = @"
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CareLogs')
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CareLogs' AND COLUMN_NAME = 'Data')
+                        ALTER TABLE CareLogs ADD Data NVARCHAR(MAX) NULL;
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CareLogs' AND COLUMN_NAME = 'IsInternal')
+                        ALTER TABLE CareLogs ADD IsInternal BIT NOT NULL CONSTRAINT DF_CareLogs_IsInternal DEFAULT 0;
+                END
+
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CareLogPhotos')
+                BEGIN
+                    CREATE TABLE CareLogPhotos (
+                        CareLogPhotoId INT IDENTITY(1,1) NOT NULL,
+                        CareLogId INT NOT NULL,
+                        FileUrl NVARCHAR(1000) NOT NULL,
+                        UploadedAt DATETIME2(0) NOT NULL CONSTRAINT DF_CareLogPhotos_UploadedAt DEFAULT (SYSDATETIME()),
+                        CONSTRAINT PK_CareLogPhotos PRIMARY KEY (CareLogPhotoId),
+                        CONSTRAINT FK_CareLogPhotos_CareLogs FOREIGN KEY (CareLogId) REFERENCES CareLogs(CareLogId) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IX_CareLogPhotos_CareLogId ON CareLogPhotos(CareLogId);
+                END
+            ";
+            await context.Database.ExecuteSqlRawAsync(syncCareLogsSql);
+            logger?.LogInformation("Đã đồng bộ bảng CareLogs, CareLogPhotos.");
+
+            // 3. Seed Roles
             var defaultRoles = new List<Role>
             {
-                new() { RoleName = "Admin", Description = "Quản trị viên toàn quyền hệ thống" },
-                new() { RoleName = "Center", Description = "Quản lý trung tâm chăm sóc" },
-                new() { RoleName = "Staff", Description = "Nhân viên chăm sóc và điều dưỡng" },
+                new() { RoleName = "Admin",        Description = "Quản trị viên toàn quyền hệ thống" },
+                new() { RoleName = "Center",       Description = "Quản lý trung tâm chăm sóc" },
+                new() { RoleName = "Staff",        Description = "Nhân viên chăm sóc và điều dưỡng" },
                 new() { RoleName = "FamilyMember", Description = "Thành viên gia đình của người cao tuổi" }
             };
 
             foreach (var role in defaultRoles)
             {
                 if (!await context.Roles.AnyAsync(r => r.RoleName == role.RoleName))
-                {
                     await context.Roles.AddAsync(role);
-                }
             }
             await context.SaveChangesAsync();
 
-            // 4. Ensure Default Center
-            var defaultCenterId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var center = await context.Centers.FirstOrDefaultAsync(c => c.CenterId == defaultCenterId);
+            // 4. Seed Default Center (INT identity — let DB assign ID)
+            var center = await context.Centers.FirstOrDefaultAsync();
             if (center == null)
             {
                 center = new Center
                 {
-                    CenterId = defaultCenterId,
-                    CenterName = "Trung Tâm Chăm Sóc Người Cao Tuổi Day Care",
-                    Address = "Số 123 Đường Hạnh Phúc, Quận Cầu Giấy, Hà Nội",
+                    CenterName  = "Trung Tâm Chăm Sóc Người Cao Tuổi Day Care",
+                    Address     = "Số 123 Đường Hạnh Phúc, Quận Cầu Giấy, Hà Nội",
                     PhoneNumber = "1900 6868",
-                    Email = "contact@daycare-elderly.vn",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    Email       = "contact@daycare-elderly.vn",
+                    IsActive    = true,
+                    CreatedAt   = DateTime.UtcNow
                 };
                 await context.Centers.AddAsync(center);
                 await context.SaveChangesAsync();
-                logger?.LogInformation("Đã khởi tạo Trung Tâm Day Care mặc định.");
+                logger?.LogInformation("Đã tạo trung tâm mặc định (CenterId = {Id}).", center.CenterId);
             }
 
-            // 5. Ensure Default Admin User
+            // 5. Seed Default Admin User
             var adminEmail = "admin@daycare.com";
             if (!await context.Users.AnyAsync(u => u.Email == adminEmail))
             {
                 var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Admin");
-
                 var adminUser = new User
                 {
-                    UserId = Guid.NewGuid(),
-                    Email = adminEmail,
+                    Email        = adminEmail,
                     PasswordHash = passwordHasher.HashPassword("Admin@123456"),
-                    FullName = "Hệ Thống Quản Trị Viên",
-                    PhoneNumber = "0901234567",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    FullName     = "Hệ Thống Quản Trị Viên",
+                    PhoneNumber  = "0901234567",
+                    IsActive     = true,
+                    CreatedAt    = DateTime.UtcNow
                 };
-
                 if (adminRole != null)
-                {
                     adminUser.Roles.Add(adminRole);
-                }
 
                 await context.Users.AddAsync(adminUser);
                 await context.SaveChangesAsync();
-                logger?.LogInformation("Tài khoản Admin mặc định (admin@daycare.com / Admin@123456) đã được khởi tạo.");
+                logger?.LogInformation("Tài khoản Admin mặc định (admin@daycare.com / Admin@123456) đã được tạo.");
             }
 
-            // 6. Ensure 5 Real Service Packages in Database
-            var defaultPackages = new List<ServicePackage>
+            // 6. Seed 5 Service Packages (INT identity — upsert by name)
+            var packagesToSeed = new List<ServicePackage>
             {
                 new()
                 {
-                    PackageId = Guid.Parse("22222222-0001-0000-0000-000000000001"),
-                    CenterId = defaultCenterId,
-                    PackageName = "Cơ bản",
-                    Description = "Dành cho người cao tuổi khỏe mạnh hoặc giảm nhẹ vận động, cần giao lưu và sinh hoạt ban ngày.",
-                    Price = 6000000,
-                    BillingPeriod = "Monthly",
-                    PricePerDay = 300000,
-                    PriceMonth3Days = 3300000,
+                    CenterId           = center.CenterId,
+                    PackageName        = "Cơ bản",
+                    Description        = "Dành cho người cao tuổi khỏe mạnh hoặc giảm nhẹ vận động, cần giao lưu và sinh hoạt ban ngày.",
+                    Price              = 6000000,
+                    BillingPeriod      = "Monthly",
+                    PricePerDay        = 300000,
+                    PriceMonth3Days    = 3300000,
                     PriceMonthFullWeek = 6000000,
-                    Highlights = "Chăm sóc bán trú 07:00 – 17:00;3 bữa ăn dinh dưỡng đầy đủ;Kiểm tra sức khỏe cơ bản mỗi sáng;Hoạt động thể dục dưỡng sinh, giải trí nhẹ",
-                    IncludedServices = "Bán trú tiêu chuẩn;Bữa sáng, bữa trưa, bữa phụ chiều;Theo dõi chỉ số sinh tồn;Nhật ký theo dõi hàng ngày",
-                    TargetAudience = "Người cao tuổi tự chủ sinh hoạt, cần môi trường giao lưu kết bạn",
-                    PricingNote = "Phụ phí hỗ trợ tăng cường nếu cụ cần hỗ trợ di chuyển.",
-                    TotalSlots = 45,
+                    Highlights         = "Chăm sóc bán trú 07:00 – 17:00;3 bữa ăn dinh dưỡng đầy đủ;Kiểm tra sức khỏe cơ bản mỗi sáng;Hoạt động thể dục dưỡng sinh, giải trí nhẹ",
+                    IncludedServices   = "Bán trú tiêu chuẩn;Bữa sáng, bữa trưa, bữa phụ chiều;Theo dõi chỉ số sinh tồn;Nhật ký theo dõi hàng ngày",
+                    TargetAudience     = "Người cao tuổi tự chủ sinh hoạt, cần môi trường giao lưu kết bạn",
+                    PricingNote        = "Phụ phí hỗ trợ tăng cường nếu cụ cần hỗ trợ di chuyển.",
+                    TotalSlots         = 45,
                     EndOfLifeRoomIncluded = false,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    IsActive           = true,
+                    CreatedAt          = DateTime.UtcNow
                 },
                 new()
                 {
-                    PackageId = Guid.Parse("22222222-0002-0000-0000-000000000002"),
-                    CenterId = defaultCenterId,
-                    PackageName = "Phục hồi chức năng",
-                    Description = "Dành cho người cao tuổi yếu vận động, sau phẫu thuật xương khớp, cần phục hồi tầm vận động và thể lực.",
-                    Price = 9000000,
-                    BillingPeriod = "Monthly",
-                    PricePerDay = 450000,
-                    PriceMonth3Days = 4950000,
+                    CenterId           = center.CenterId,
+                    PackageName        = "Phục hồi chức năng",
+                    Description        = "Dành cho người cao tuổi yếu vận động, sau phẫu thuật xương khớp, cần phục hồi tầm vận động và thể lực.",
+                    Price              = 9000000,
+                    BillingPeriod      = "Monthly",
+                    PricePerDay        = 450000,
+                    PriceMonth3Days    = 4950000,
                     PriceMonthFullWeek = 9000000,
-                    Highlights = "Tập vật lý trị liệu 1-kèm-2;Tập dáng đi, thăng bằng và sức cơ;Dụng cụ chuyên dụng và xe đạp trợ lực;Báo cáo tiến triển phục hồi hằng tuần",
-                    IncludedServices = "Toàn bộ quyền lợi Gói Cơ bản;Vật lý trị liệu chuyên biệt 5 buổi/tuần;Dụng cụ tập phục hồi;Bác sĩ PHCN đánh giá tiến độ",
-                    TargetAudience = "Người cao tuổi sau phẫu thuật khớp, sau bó bột hoặc suy giảm cơ lực",
-                    PricingNote = "",
-                    TotalSlots = 20,
+                    Highlights         = "Tập vật lý trị liệu 1-kèm-2;Tập dáng đi, thăng bằng và sức cơ;Dụng cụ chuyên dụng và xe đạp trợ lực;Báo cáo tiến triển phục hồi hằng tuần",
+                    IncludedServices   = "Toàn bộ quyền lợi Gói Cơ bản;Vật lý trị liệu chuyên biệt 5 buổi/tuần;Dụng cụ tập phục hồi;Bác sĩ PHCN đánh giá tiến độ",
+                    TargetAudience     = "Người cao tuổi sau phẫu thuật khớp, sau bó bột hoặc suy giảm cơ lực",
+                    PricingNote        = "",
+                    TotalSlots         = 20,
                     EndOfLifeRoomIncluded = false,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    IsActive           = true,
+                    CreatedAt          = DateTime.UtcNow
                 },
                 new()
                 {
-                    PackageId = Guid.Parse("22222222-0003-0000-0000-000000000003"),
-                    CenterId = defaultCenterId,
-                    PackageName = "Sa sút trí tuệ",
-                    Description = "Dành cho người cao tuổi hay quên, lú lẫn, Alzheimer, cần môi trường an toàn và giám sát chuyên biệt.",
-                    Price = 10000000,
-                    BillingPeriod = "Monthly",
-                    PricePerDay = 500000,
-                    PriceMonth3Days = 5500000,
+                    CenterId           = center.CenterId,
+                    PackageName        = "Sa sút trí tuệ",
+                    Description        = "Dành cho người cao tuổi hay quên, lú lẫn, Alzheimer, cần môi trường an toàn và giám sát chuyên biệt.",
+                    Price              = 10000000,
+                    BillingPeriod      = "Monthly",
+                    PricePerDay        = 500000,
+                    PriceMonth3Days    = 5500000,
                     PriceMonthFullWeek = 10000000,
-                    Highlights = "Khuôn viên khép kín, an toàn tuyệt đối 24/7;Liệu pháp âm nhạc, mùi hương, gợi nhớ ký ức;Điều dưỡng viên chuyên trách sa sút trí tuệ;Lịch sinh hoạt cố định giúp tâm lý an ổn",
-                    IncludedServices = "Toàn bộ quyền lợi Gói Cơ bản;Điều dưỡng chuyên trách hỗ trợ 1-1;Liệu pháp kích thích nhận thức;Vườn an toàn khép kín",
-                    TargetAudience = "Người cao tuổi mắc bệnh Alzheimer, suy giảm trí nhớ từ nhẹ đến trung bình",
-                    PricingNote = "",
-                    TotalSlots = 15,
+                    Highlights         = "Khuôn viên khép kín, an toàn tuyệt đối 24/7;Liệu pháp âm nhạc, mùi hương, gợi nhớ ký ức;Điều dưỡng viên chuyên trách sa sút trí tuệ;Lịch sinh hoạt cố định giúp tâm lý an ổn",
+                    IncludedServices   = "Toàn bộ quyền lợi Gói Cơ bản;Điều dưỡng chuyên trách hỗ trợ 1-1;Liệu pháp kích thích nhận thức;Vườn an toàn khép kín",
+                    TargetAudience     = "Người cao tuổi mắc bệnh Alzheimer, suy giảm trí nhớ từ nhẹ đến trung bình",
+                    PricingNote        = "",
+                    TotalSlots         = 15,
                     EndOfLifeRoomIncluded = false,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    IsActive           = true,
+                    CreatedAt          = DateTime.UtcNow
                 },
                 new()
                 {
-                    PackageId = Guid.Parse("22222222-0004-0000-0000-000000000004"),
-                    CenterId = defaultCenterId,
-                    PackageName = "Sau tai biến",
-                    Description = "Dành cho người cao tuổi có di chứng tai biến mạch máu não, liệt nửa người, rối loạn nuốt hoặc phát âm.",
-                    Price = 11000000,
-                    BillingPeriod = "Monthly",
-                    PricePerDay = 550000,
-                    PriceMonth3Days = 6050000,
+                    CenterId           = center.CenterId,
+                    PackageName        = "Sau tai biến",
+                    Description        = "Dành cho người cao tuổi có di chứng tai biến mạch máu não, liệt nửa người, rối loạn nuốt hoặc phát âm.",
+                    Price              = 11000000,
+                    BillingPeriod      = "Monthly",
+                    PricePerDay        = 550000,
+                    PriceMonth3Days    = 6050000,
                     PriceMonthFullWeek = 11000000,
-                    Highlights = "Tập chống co cứng cơ và phục hồi chức năng vận động;Âm ngữ trị liệu, tập nuốt an toàn;Y học cổ truyền: bấm huyệt, ngâm chân thảo mộc;Theo dõi chỉ số huyết áp, tim mạch liên tục",
-                    IncludedServices = "Toàn bộ quyền lợi Gói Cơ bản;Phục hồi chức năng tai biến chuyên sâu;Âm ngữ trị liệu và tập nuốt;Bấm huyệt thư giãn cơ",
-                    TargetAudience = "Người cao tuổi sau đột quỵ/tai biến dưới 1 năm",
-                    PricingNote = "",
-                    TotalSlots = 12,
+                    Highlights         = "Tập chống co cứng cơ và phục hồi chức năng vận động;Âm ngữ trị liệu, tập nuốt an toàn;Y học cổ truyền: bấm huyệt, ngâm chân thảo mộc;Theo dõi chỉ số huyết áp, tim mạch liên tục",
+                    IncludedServices   = "Toàn bộ quyền lợi Gói Cơ bản;Phục hồi chức năng tai biến chuyên sâu;Âm ngữ trị liệu và tập nuốt;Bấm huyệt thư giãn cơ",
+                    TargetAudience     = "Người cao tuổi sau đột quỵ/tai biến dưới 1 năm",
+                    PricingNote        = "",
+                    TotalSlots         = 12,
                     EndOfLifeRoomIncluded = false,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    IsActive           = true,
+                    CreatedAt          = DateTime.UtcNow
                 },
                 new()
                 {
-                    PackageId = Guid.Parse("22222222-0005-0000-0000-000000000005"),
-                    CenterId = defaultCenterId,
-                    PackageName = "Giai đoạn cuối",
-                    Description = "Dành cho người cao tuổi cần chăm sóc giảm nhẹ, tạo sự thoải mái tối đa và đồng hành tinh thần những năm tháng cuối đời.",
-                    Price = 14000000,
-                    BillingPeriod = "Monthly",
-                    PricePerDay = 700000,
-                    PriceMonth3Days = 7700000,
+                    CenterId           = center.CenterId,
+                    PackageName        = "Giai đoạn cuối",
+                    Description        = "Dành cho người cao tuổi cần chăm sóc giảm nhẹ, tạo sự thoải mái tối đa và đồng hành tinh thần những năm tháng cuối đời.",
+                    Price              = 14000000,
+                    BillingPeriod      = "Monthly",
+                    PricePerDay        = 700000,
+                    PriceMonth3Days    = 7700000,
                     PriceMonthFullWeek = 14000000,
-                    Highlights = "Phòng VIP 1–2 người yên tĩnh đã bao gồm trọn gói;Chăm sóc giảm nhẹ, xoa bóp lăn trở chống loét từng giờ;Đồng hành tinh thần, kết nối gia đình mọi lúc;Chế độ dinh dưỡng đặc biệt, nấu theo yêu cầu của cụ",
-                    IncludedServices = "Toàn bộ quyền lợi Gói Cơ bản;Phòng VIP 1–2 người riêng tư (đã bao gồm);Chăm sóc giảm đau, giảm nhẹ;Điều dưỡng túc trực 24/7",
-                    TargetAudience = "Người cao tuổi sức khỏe suy kiệt cần chăm sóc an dưỡng thoải mái",
-                    PricingNote = "Lưu ý: Dịch vụ chăm sóc thoải mái, không thay thế cơ sở y tế chuyên khoa.",
-                    TotalSlots = 8,
+                    Highlights         = "Phòng VIP 1–2 người yên tĩnh đã bao gồm trọn gói;Chăm sóc giảm nhẹ, xoa bóp lăn trở chống loét từng giờ;Đồng hành tinh thần, kết nối gia đình mọi lúc;Chế độ dinh dưỡng đặc biệt, nấu theo yêu cầu của cụ",
+                    IncludedServices   = "Toàn bộ quyền lợi Gói Cơ bản;Phòng VIP 1–2 người riêng tư (đã bao gồm);Chăm sóc giảm đau, giảm nhẹ;Điều dưỡng túc trực 24/7",
+                    TargetAudience     = "Người cao tuổi sức khỏe suy kiệt cần chăm sóc an dưỡng thoải mái",
+                    PricingNote        = "Lưu ý: Dịch vụ chăm sóc thoải mái, không thay thế cơ sở y tế chuyên khoa.",
+                    TotalSlots         = 8,
                     EndOfLifeRoomIncluded = true,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    IsActive           = true,
+                    CreatedAt          = DateTime.UtcNow
                 }
             };
 
-            foreach (var pkg in defaultPackages)
+            foreach (var pkg in packagesToSeed)
             {
-                var existing = await context.ServicePackages.FirstOrDefaultAsync(p => p.PackageId == pkg.PackageId);
+                var existing = await context.ServicePackages
+                    .FirstOrDefaultAsync(p => p.PackageName == pkg.PackageName && p.CenterId == center.CenterId);
                 if (existing == null)
                 {
                     await context.ServicePackages.AddAsync(pkg);
                 }
                 else
                 {
-                    // Cập nhật thông tin chi tiết nếu đã tồn tại
-                    existing.PackageName = pkg.PackageName;
-                    existing.Description = pkg.Description;
-                    existing.PricePerDay = pkg.PricePerDay;
-                    existing.PriceMonth3Days = pkg.PriceMonth3Days;
+                    existing.Description        = pkg.Description;
+                    existing.Price              = pkg.Price;
+                    existing.PricePerDay        = pkg.PricePerDay;
+                    existing.PriceMonth3Days    = pkg.PriceMonth3Days;
                     existing.PriceMonthFullWeek = pkg.PriceMonthFullWeek;
-                    existing.Highlights = pkg.Highlights;
-                    existing.IncludedServices = pkg.IncludedServices;
-                    existing.TargetAudience = pkg.TargetAudience;
-                    existing.PricingNote = pkg.PricingNote;
-                    existing.TotalSlots = pkg.TotalSlots;
+                    existing.Highlights         = pkg.Highlights;
+                    existing.IncludedServices   = pkg.IncludedServices;
+                    existing.TargetAudience     = pkg.TargetAudience;
+                    existing.PricingNote        = pkg.PricingNote;
+                    existing.TotalSlots         = pkg.TotalSlots;
                     existing.EndOfLifeRoomIncluded = pkg.EndOfLifeRoomIncluded;
-                    existing.IsActive = true;
+                    existing.IsActive           = true;
                 }
             }
             await context.SaveChangesAsync();
-            logger?.LogInformation("Đã khởi tạo và cập nhật 5 gói dịch vụ thực tế trong cơ sở dữ liệu.");
+            logger?.LogInformation("Đã seed 5 gói dịch vụ thực tế.");
         }
         catch (Exception ex)
         {
-            logger?.LogWarning(ex, "Lỗi trong quá trình khởi tạo dữ liệu mặc định: {Message}", ex.Message);
+            logger?.LogWarning(ex, "Lỗi trong quá trình seed dữ liệu mặc định: {Message}", ex.Message);
         }
     }
 }

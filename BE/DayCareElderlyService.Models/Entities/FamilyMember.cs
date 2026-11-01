@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class FamilyMember
 {
-    public Guid FamilyMemberId { get; set; }
+    public int FamilyMemberId { get; set; }
 
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     public string? Address { get; set; }
 

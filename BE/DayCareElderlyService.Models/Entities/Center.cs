@@ -5,7 +5,7 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class Center
 {
-    public Guid CenterId { get; set; }
+    public int CenterId { get; set; }
 
     public string CenterName { get; set; } = null!;
 
@@ -31,5 +31,5 @@ public partial class Center
 
     public virtual ICollection<ServicePackage> ServicePackages { get; set; } = new List<ServicePackage>();
 
-
+    public virtual ICollection<DailySchedulePlan> DailySchedulePlans { get; set; } = new List<DailySchedulePlan>();
 }

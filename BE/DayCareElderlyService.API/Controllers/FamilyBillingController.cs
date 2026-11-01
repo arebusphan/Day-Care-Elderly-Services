@@ -21,14 +21,14 @@ public class FamilyBillingController : ControllerBase
         _logger = logger;
     }
 
-    private Guid? GetCurrentUserId()
+    private int? GetCurrentUserId()
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue("sub")
                  ?? User.FindFirstValue("id")
                  ?? User.FindFirst("nameid")?.Value;
 
-        if (Guid.TryParse(idStr, out var id))
+        if (int.TryParse(idStr, out var id))
         {
             return id;
         }

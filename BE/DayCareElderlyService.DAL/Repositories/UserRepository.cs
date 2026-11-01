@@ -18,14 +18,14 @@ public class UserRepository : Repository<User>, IUserRepository
             .FirstOrDefaultAsync(u => u.Email.ToLower() == email.Trim().ToLower());
     }
 
-    public async Task<User?> GetByIdWithRolesAsync(Guid userId)
+    public async Task<User?> GetByIdWithRolesAsync(int userId)
     {
         return await _dbSet
             .Include(u => u.Roles)
             .FirstOrDefaultAsync(u => u.UserId == userId);
     }
 
-    public async Task<bool> EmailExistsAsync(string email, Guid? excludeUserId = null)
+    public async Task<bool> EmailExistsAsync(string email, int? excludeUserId = null)
     {
         var normalizedEmail = email.Trim().ToLower();
         return await _dbSet.AnyAsync(u => 

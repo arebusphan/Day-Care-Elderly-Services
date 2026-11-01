@@ -818,6 +818,26 @@ const VARIABLE_SCHEDULES: VariableSchedule = {
 // DỮ LIỆU PHÒNG & GIƯỜNG — FAKE DATA
 // =====================================================================
 
+interface BedBooking {
+  startDate: string;
+  endDate: string;
+  daysOfWeek: number[];
+  elderlyName: string;
+}
+
+interface BedData {
+  id: string;
+  label: string;
+  bookings: BedBooking[];
+}
+
+interface RoomData {
+  id: string;
+  name: string;
+  type: "large" | "small";
+  beds: BedData[];
+}
+
 function createRooms(
   prefix: string,
   largeRoomConfigs: number[],
@@ -1114,7 +1134,7 @@ function calculatePrice(
     packagePrice = pkg.pricePerDay * numDays;
     packagePriceLabel = `${formatCurrency(pkg.pricePerDay)} × ${numDays} ngày`;
 
-    if (isBasic && mobilityStatus === "Cần hỗ trợ") {
+    if (isBasic && (mobilityStatus === "Support" || mobilityStatus === "Cần hỗ trợ")) {
       supportSurcharge = 75000 * numDays;
       supportLabel = `75.000 đ × ${numDays} ngày`;
     }
@@ -1136,7 +1156,7 @@ function calculatePrice(
           : "Tháng, Thứ 3-5-7";
     }
 
-    if (isBasic && mobilityStatus === "Cần hỗ trợ") {
+    if (isBasic && (mobilityStatus === "Support" || mobilityStatus === "Cần hỗ trợ")) {
       if (monthlyPattern === "all") {
         supportSurcharge = 1500000;
         supportLabel = "Phụ phí hỗ trợ, cả tuần";
@@ -1835,15 +1855,15 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
             {elderlyProfiles.map((el) => (
               <option key={el.elderlyId} value={el.elderlyId}>
                 {el.fullName}{" "}
-                {el.mobilityStatus === "Cần hỗ trợ"
-                  ? "(Cần hỗ trợ di chuyển)"
-                  : "(Tự lập)"}
+                {el.mobilityStatus === "Support" || el.mobilityStatus === "Cần hỗ trợ"
+                  ? "(Support - Cần hỗ trợ)"
+                  : "(Normal - Tự lập)"}
               </option>
             ))}
           </select>
           {selectedElderly &&
             selectedPackage?.id === "basic" &&
-            selectedElderly.mobilityStatus === "Cần hỗ trợ" && (
+            (selectedElderly.mobilityStatus === "Support" || selectedElderly.mobilityStatus === "Cần hỗ trợ") && (
               <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3 mt-3">
                 Lưu ý: Gói Cơ bản sẽ có phụ phí hỗ trợ tăng cường cho người cần
                 hỗ trợ di chuyển.

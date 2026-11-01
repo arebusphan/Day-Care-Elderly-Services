@@ -5,7 +5,7 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 /// </summary>
 public class CareLogDayDto
 {
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
     public string ElderlyName { get; set; } = string.Empty;
     public DateOnly Date { get; set; }
     public bool IsMedicalDone { get; set; }

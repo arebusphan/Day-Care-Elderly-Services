@@ -21,14 +21,14 @@ public class CenterStaffController : ControllerBase
         _staffService = staffService;
     }
 
-    private Guid? GetCurrentUserId()
+    private int? GetCurrentUserId()
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue("sub")
                  ?? User.FindFirstValue("id")
                  ?? User.FindFirst("nameid")?.Value;
 
-        if (Guid.TryParse(idStr, out var id))
+        if (int.TryParse(idStr, out var id))
         {
             return id;
         }
@@ -75,9 +75,9 @@ public class CenterStaffController : ControllerBase
     /// <summary>
     /// Kiểm tra cảnh báo lịch tương lai trước khi ngừng hoạt động nhân viên
     /// </summary>
-    [HttpGet("{id:guid}/deactivation-check")]
+    [HttpGet("{id:int}/deactivation-check")]
     [ProducesResponseType(typeof(ApiResponse<DeactivationWarningDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CheckDeactivationWarning(Guid id)
+    public async Task<IActionResult> CheckDeactivationWarning(int id)
     {
         var result = await _staffService.CheckDeactivationWarningAsync(id);
         if (!result.Success)
@@ -91,12 +91,12 @@ public class CenterStaffController : ControllerBase
     /// <summary>
     /// Đổi trạng thái Đang hoạt động / Ngừng hoạt động (IsActive)
     /// </summary>
-    [HttpPatch("{id:guid}/toggle-status")]
+    [HttpPatch("{id:int}/toggle-status")]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ToggleStaffStatus(Guid id)
+    public async Task<IActionResult> ToggleStaffStatus(int id)
     {
-        var currentUserId = GetCurrentUserId() ?? Guid.Empty;
+        var currentUserId = GetCurrentUserId() ?? 0;
         var result = await _staffService.ToggleStaffStatusAsync(id, currentUserId);
         if (!result.Success)
         {
@@ -107,23 +107,23 @@ public class CenterStaffController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách ngày nghỉ của nhân viên
+    /// Lấy danh sách lịch làm việc của nhân viên
     /// </summary>
-    [HttpGet("{id:guid}/leaves")]
-    [ProducesResponseType(typeof(ApiResponse<List<StaffLeaveDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetStaffLeaves(Guid id)
+    [HttpGet("{id:int}/schedules")]
+    [ProducesResponseType(typeof(ApiResponse<List<StaffScheduleDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetStaffSchedules(int id)
     {
-        var result = await _staffService.GetStaffLeavesAsync(id);
+        var result = await _staffService.GetStaffSchedulesAsync(id);
         return Ok(result);
     }
 
     /// <summary>
-    /// Thêm ngày nghỉ cho nhân viên
+    /// Thêm/cập nhật lịch làm việc cho nhân viên (ngày đó có đi hay không)
     /// </summary>
-    [HttpPost("{id:guid}/leaves")]
-    [ProducesResponseType(typeof(ApiResponse<StaffLeaveDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<StaffLeaveDto>), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> AddStaffLeave(Guid id, [FromBody] CreateStaffLeaveDto dto)
+    [HttpPost("{id:int}/schedules")]
+    [ProducesResponseType(typeof(ApiResponse<StaffScheduleDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<StaffScheduleDto>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SetStaffSchedule(int id, [FromBody] CreateStaffScheduleDto dto)
     {
         if (!ModelState.IsValid)
         {
@@ -131,10 +131,10 @@ public class CenterStaffController : ControllerBase
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage)
                 .ToList();
-            return BadRequest(ApiResponse<StaffLeaveDto>.Fail("Dữ liệu không hợp lệ.", errors));
+            return BadRequest(ApiResponse<StaffScheduleDto>.Fail("Dữ liệu không hợp lệ.", errors));
         }
 
-        var result = await _staffService.AddStaffLeaveAsync(id, dto);
+        var result = await _staffService.SetStaffScheduleAsync(id, dto);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -144,14 +144,14 @@ public class CenterStaffController : ControllerBase
     }
 
     /// <summary>
-    /// Xóa ngày nghỉ của nhân viên
+    /// Xóa lịch làm việc của nhân viên
     /// </summary>
-    [HttpDelete("{id:guid}/leaves/{leaveId:guid}")]
+    [HttpDelete("{id:int}/schedules/{scheduleId:int}")]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DeleteStaffLeave(Guid id, Guid leaveId)
+    public async Task<IActionResult> DeleteStaffSchedule(int id, int scheduleId)
     {
-        var result = await _staffService.DeleteStaffLeaveAsync(id, leaveId);
+        var result = await _staffService.DeleteStaffScheduleAsync(id, scheduleId);
         if (!result.Success)
         {
             return BadRequest(result);

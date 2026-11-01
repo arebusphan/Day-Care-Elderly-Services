@@ -21,14 +21,14 @@ public class FamilyElderlyController : ControllerBase
         _logger = logger;
     }
 
-    private Guid? GetCurrentUserId()
+    private int? GetCurrentUserId()
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue("sub")
                  ?? User.FindFirstValue("id")
                  ?? User.FindFirst("nameid")?.Value;
 
-        if (Guid.TryParse(idStr, out var id))
+        if (int.TryParse(idStr, out var id))
         {
             return id;
         }
@@ -106,10 +106,10 @@ public class FamilyElderlyController : ControllerBase
     /// <summary>
     /// Lấy chi tiết hồ sơ người cao tuổi theo ID
     /// </summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<ElderlyProfileDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<ElderlyProfileDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetElderlyProfileById(Guid id)
+    public async Task<IActionResult> GetElderlyProfileById(int id)
     {
         try
         {
@@ -138,11 +138,11 @@ public class FamilyElderlyController : ControllerBase
     /// <summary>
     /// Chỉnh sửa hồ sơ người cao tuổi
     /// </summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<ElderlyProfileDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<ElderlyProfileDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<ElderlyProfileDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateElderlyProfile(Guid id, [FromBody] UpdateElderlyProfileDto dto)
+    public async Task<IActionResult> UpdateElderlyProfile(int id, [FromBody] UpdateElderlyProfileDto dto)
     {
         try
         {
@@ -180,10 +180,10 @@ public class FamilyElderlyController : ControllerBase
     /// <summary>
     /// Xóa hồ sơ người cao tuổi
     /// </summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DeleteElderlyProfile(Guid id)
+    public async Task<IActionResult> DeleteElderlyProfile(int id)
     {
         try
         {

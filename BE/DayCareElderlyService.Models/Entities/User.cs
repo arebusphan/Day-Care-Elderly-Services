@@ -5,7 +5,7 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class User
 {
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     public string Email { get; set; } = null!;
 
@@ -27,9 +27,11 @@ public partial class User
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
-    public virtual ICollection<StaffLeave> StaffLeaves { get; set; } = new List<StaffLeave>();
+    public virtual ICollection<StaffSchedule> StaffSchedules { get; set; } = new List<StaffSchedule>();
 
-    public virtual ICollection<StaffShift> StaffShifts { get; set; } = new List<StaffShift>();
+    public virtual ICollection<StaffCareAssignment> StaffCareAssignments { get; set; } = new List<StaffCareAssignment>();
+
+    public virtual ICollection<DailyCareGroup> DailyCareGroups { get; set; } = new List<DailyCareGroup>();
 
     public virtual ICollection<SupplyTransaction> SupplyTransactions { get; set; } = new List<SupplyTransaction>();
 

@@ -1,7 +1,7 @@
 export interface CreateElderlyProfileDto {
   fullName: string;
   dateOfBirth: string; // YYYY-MM-DD
-  gender: string; // "Nam" | "Nữ"
+  gender: string; // "Male" | "Female" | "Other"
   relationship: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
@@ -9,13 +9,13 @@ export interface CreateElderlyProfileDto {
   allergies?: string;
   medicalHistory?: string;
   medicalNotes?: string;
-  mobilityStatus: string; // "Bình thường" | "Cần hỗ trợ"
+  mobilityStatus: string; // "Normal" | "Support"
   careNotes?: string;
 }
 
 export interface ElderlyProfileDto {
-  elderlyId: string;
-  centerId: string;
+  elderlyId: number;
+  centerId: number;
   centerName: string;
   fullName: string;
   dateOfBirth?: string;

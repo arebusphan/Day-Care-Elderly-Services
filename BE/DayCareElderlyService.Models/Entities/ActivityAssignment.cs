@@ -5,11 +5,11 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class ActivityAssignment
 {
-    public Guid AssignmentId { get; set; }
+    public int AssignmentId { get; set; }
 
-    public Guid CenterActivityId { get; set; }
+    public int CenterActivityId { get; set; }
 
-    public Guid StaffId { get; set; }
+    public int StaffId { get; set; }
 
     public string? AssignmentRole { get; set; }
 

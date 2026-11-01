@@ -12,5 +12,5 @@ public class VitalsResultDto
     public string? Severity { get; set; }
 
     /// <summary>Sự cố VITALS_ALERT được tạo (nếu có)</summary>
-    public Guid? IncidentId { get; set; }
+    public int? IncidentId { get; set; }
 }

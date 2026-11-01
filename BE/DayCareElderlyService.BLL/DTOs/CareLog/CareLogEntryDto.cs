@@ -7,17 +7,17 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 /// </summary>
 public class CareLogEntryDto
 {
-    public Guid CareLogId { get; set; }
-    public Guid ElderlyId { get; set; }
+    public int CareLogId { get; set; }
+    public int ElderlyId { get; set; }
     public string CareType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? Notes { get; set; }
     public JsonElement? Data { get; set; }
     public bool IsInternal { get; set; }
-    public Guid? CenterActivityId { get; set; }
+    public int? CenterActivityId { get; set; }
     public string? ActivityName { get; set; }
     public DateTime RecordedAt { get; set; }
-    public Guid StaffId { get; set; }
+    public int StaffId { get; set; }
     public string StaffName { get; set; } = string.Empty;
     public string JobTitle { get; set; } = string.Empty;
     public List<CareLogPhotoDto> Photos { get; set; } = new();

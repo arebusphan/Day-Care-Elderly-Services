@@ -9,7 +9,7 @@ namespace DayCareElderlyService.BLL.Services.Interfaces;
 public interface IBillingService
 {
     Task<ApiResponse<List<ServicePackageDto>>> GetActivePackagesAsync();
-    Task<ApiResponse<ServiceRegistrationResultDto>> RegisterServicePackageAsync(Guid userId, CreateServiceRegistrationDto dto);
-    Task<ApiResponse<List<InvoiceDto>>> GetMyInvoicesAsync(Guid userId);
-    Task<ApiResponse<InvoiceDto>> GetInvoiceByIdAsync(Guid userId, string invoiceNo);
+    Task<ApiResponse<ServiceRegistrationResultDto>> RegisterServicePackageAsync(int userId, CreateServiceRegistrationDto dto);
+    Task<ApiResponse<List<InvoiceDto>>> GetMyInvoicesAsync(int userId);
+    Task<ApiResponse<InvoiceDto>> GetInvoiceByIdAsync(int userId, string invoiceNo);
 }

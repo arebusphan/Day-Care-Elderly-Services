@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class CenterActivity
 {
-    public Guid CenterActivityId { get; set; }
+    public int CenterActivityId { get; set; }
 
-    public Guid CenterId { get; set; }
+    public int CenterId { get; set; }
 
-    public Guid? PackageActivityId { get; set; }
+    public int? PackageActivityId { get; set; }
 
     public string ActivityName { get; set; } = null!;
 
@@ -23,7 +23,7 @@ public partial class CenterActivity
 
     public string Status { get; set; } = null!;
 
-    public Guid CreatedBy { get; set; }
+    public int CreatedBy { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

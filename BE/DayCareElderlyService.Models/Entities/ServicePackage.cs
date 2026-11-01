@@ -5,9 +5,9 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class ServicePackage
 {
-    public Guid PackageId { get; set; }
+    public int PackageId { get; set; }
 
-    public Guid CenterId { get; set; }
+    public int CenterId { get; set; }
 
     public string PackageName { get; set; } = null!;
 

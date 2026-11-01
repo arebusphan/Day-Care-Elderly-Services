@@ -8,7 +8,7 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 public class CreateIncidentDto
 {
     [Required(ErrorMessage = "Vui lòng chọn người cao tuổi.")]
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
 
     [Required(ErrorMessage = "Vui lòng nhập loại sự cố.")]
     [StringLength(100, ErrorMessage = "Loại sự cố tối đa 100 ký tự.")]

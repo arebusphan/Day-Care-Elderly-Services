@@ -296,3 +296,48 @@ Authorization: Bearer {{familyToken}}
 ### CL-21. Đánh dấu tất cả đã đọc
 POST {{HostAddress}}/api/notifications/read-all
 Authorization: Bearer {{familyToken}}
+
+
+###################################################################
+### CHỨC NĂNG CHIA LỊCH CHĂM SÓC (STAFF ASSIGNMENT - ROLE CENTER)
+###################################################################
+
+### SA-1. Center: Tự động chia lịch chăm sóc (Mặc định ngày mai; 1 staff max 10 bình thường + 4 cần hỗ trợ)
+POST {{HostAddress}}/api/center/staff-assignment/auto-assign
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "targetDate": "2026-11-02",
+  "notes": "Chia lịch tự động cho ngày làm việc tiếp theo"
+}
+
+### SA-2. Center: Xem lại chi tiết lịch chia của ngày
+GET {{HostAddress}}/api/center/staff-assignment?date=2026-11-02
+Authorization: Bearer {{authToken}}
+
+### SA-3. Center: Chỉnh sửa kế hoạch (chuyển cụ sang staff khác)
+PUT {{HostAddress}}/api/center/staff-assignment/reassign
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "planId": "00000000-0000-0000-0000-000000000000",
+  "elderlyId": "00000000-0000-0000-0000-000000000000",
+  "newStaffId": "00000000-0000-0000-0000-000000000000",
+  "notes": "Điều phối lại để cân bằng tải"
+}
+
+### SA-4. Center: Xác nhận lịch ngày mai (Trạng thái chuyển thành Confirmed)
+POST {{HostAddress}}/api/center/staff-assignment/confirm
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "planId": "00000000-0000-0000-0000-000000000000",
+  "notes": "Đã duyệt và xác nhận lịch ngày mai"
+}
+
+### SA-5. Staff: Xem group người cao tuổi mình được phân công quản lý trong ngày
+GET {{HostAddress}}/api/staff/my-group?date=2026-11-02
+Authorization: Bearer {{caregiverToken}}

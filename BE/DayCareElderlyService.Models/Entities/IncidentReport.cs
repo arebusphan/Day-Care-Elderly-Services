@@ -5,13 +5,13 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class IncidentReport
 {
-    public Guid IncidentId { get; set; }
+    public int IncidentId { get; set; }
 
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
 
-    public Guid CenterId { get; set; }
+    public int CenterId { get; set; }
 
-    public Guid ReportedBy { get; set; }
+    public int ReportedBy { get; set; }
 
     public string IncidentType { get; set; } = null!;
 

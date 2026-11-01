@@ -5,11 +5,11 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class ServiceRegistration
 {
-    public Guid RegistrationId { get; set; }
+    public int RegistrationId { get; set; }
 
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
 
-    public Guid PackageId { get; set; }
+    public int PackageId { get; set; }
 
     public DateOnly StartDate { get; set; }
 

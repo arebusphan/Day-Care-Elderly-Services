@@ -43,10 +43,10 @@ public class AdminUsersController : ControllerBase
     /// <summary>
     /// Lấy chi tiết thông tin người dùng theo ID (Role: Admin)
     /// </summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<UserDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<UserDetailDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetUserById(Guid id)
+    public async Task<IActionResult> GetUserById(int id)
     {
         var result = await _userService.GetUserByIdAsync(id);
         if (!result.Success)
@@ -86,11 +86,11 @@ public class AdminUsersController : ControllerBase
     /// <summary>
     /// Cập nhật thông tin người dùng và quyền (Role: Admin)
     /// </summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<UserDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<UserDetailDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<UserDetailDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserAdminDto dto)
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserAdminDto dto)
     {
         if (!ModelState.IsValid)
         {
@@ -113,10 +113,10 @@ public class AdminUsersController : ControllerBase
     /// <summary>
     /// Khóa / Mở khóa tài khoản người dùng (Role: Admin)
     /// </summary>
-    [HttpPatch("{id:guid}/toggle-status")]
+    [HttpPatch("{id:int}/toggle-status")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ToggleUserStatus(Guid id)
+    public async Task<IActionResult> ToggleUserStatus(int id)
     {
         var result = await _userService.ToggleUserStatusAsync(id);
         if (!result.Success)
@@ -130,10 +130,10 @@ public class AdminUsersController : ControllerBase
     /// <summary>
     /// Xóa người dùng (Role: Admin)
     /// </summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    public async Task<IActionResult> DeleteUser(int id)
     {
         var result = await _userService.DeleteUserAsync(id);
         if (!result.Success)

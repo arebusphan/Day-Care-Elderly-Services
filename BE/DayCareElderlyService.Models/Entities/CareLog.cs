@@ -5,13 +5,13 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class CareLog
 {
-    public Guid CareLogId { get; set; }
+    public int CareLogId { get; set; }
 
-    public Guid ElderlyId { get; set; }
+    public int ElderlyId { get; set; }
 
-    public Guid StaffId { get; set; }
+    public int StaffId { get; set; }
 
-    public Guid? CenterActivityId { get; set; }
+    public int? CenterActivityId { get; set; }
 
     public DateTime RecordedAt { get; set; }
 

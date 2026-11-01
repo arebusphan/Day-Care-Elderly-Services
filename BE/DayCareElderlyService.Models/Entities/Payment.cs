@@ -5,9 +5,9 @@ namespace DayCareElderlyService.Models.Entities;
 
 public partial class Payment
 {
-    public Guid PaymentId { get; set; }
+    public int PaymentId { get; set; }
 
-    public Guid RegistrationId { get; set; }
+    public int RegistrationId { get; set; }
 
     public decimal Amount { get; set; }
 

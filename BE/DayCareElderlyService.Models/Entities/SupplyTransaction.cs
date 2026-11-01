@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class SupplyTransaction
 {
-    public Guid SupplyTransactionId { get; set; }
+    public int SupplyTransactionId { get; set; }
 
-    public Guid SupplyId { get; set; }
+    public int SupplyId { get; set; }
 
     public string TransactionType { get; set; } = null!;
 
@@ -15,7 +15,7 @@ public partial class SupplyTransaction
 
     public DateTime OccurredAt { get; set; }
 
-    public Guid RecordedBy { get; set; }
+    public int RecordedBy { get; set; }
 
     public string? Notes { get; set; }
 

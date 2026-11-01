@@ -4,7 +4,7 @@ namespace DayCareElderlyService.BLL.DTOs.CenterStaff;
 
 public class CenterStaffDto
 {
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     public string FullName { get; set; } = string.Empty;
 
@@ -22,9 +22,9 @@ public class CenterStaffDto
     public string TodayStatus { get; set; } = "Đi làm";
 
     /// <summary>
-    /// Lý do nếu nghỉ hôm nay (ví dụ: Nghỉ phép, Chủ nhật...)
+    /// Ghi chú nếu nghỉ hôm nay (ví dụ: Nghỉ phép, Chủ nhật...)
     /// </summary>
-    public string? TodayReason { get; set; }
+    public string? TodayNote { get; set; }
 }
 
 public class CenterStaffFilterDto

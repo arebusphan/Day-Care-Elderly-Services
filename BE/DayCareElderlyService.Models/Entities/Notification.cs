@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class Notification
 {
-    public Guid NotificationId { get; set; }
+    public int NotificationId { get; set; }
 
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     public string Title { get; set; } = null!;
 
@@ -17,7 +17,7 @@ public partial class Notification
 
     public string? RelatedEntityType { get; set; }
 
-    public Guid? RelatedEntityId { get; set; }
+    public int? RelatedEntityId { get; set; }
 
     public bool IsRead { get; set; }
 

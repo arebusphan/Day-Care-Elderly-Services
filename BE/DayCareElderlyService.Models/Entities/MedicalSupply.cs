@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DayCareElderlyService.Models.Entities;
 
 public partial class MedicalSupply
 {
-    public Guid SupplyId { get; set; }
+    public int SupplyId { get; set; }
 
-    public Guid CenterId { get; set; }
+    public int CenterId { get; set; }
 
     public string SupplyName { get; set; } = null!;
 

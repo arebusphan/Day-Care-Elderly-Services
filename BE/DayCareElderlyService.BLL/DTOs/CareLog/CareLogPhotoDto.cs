@@ -5,8 +5,8 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 /// </summary>
 public class CareLogPhotoDto
 {
-    public Guid PhotoId { get; set; }
-    public Guid CareLogId { get; set; }
+    public int PhotoId { get; set; }
+    public int CareLogId { get; set; }
     public string Url { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; }
 }

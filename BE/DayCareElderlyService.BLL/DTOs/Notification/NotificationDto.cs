@@ -5,7 +5,7 @@ namespace DayCareElderlyService.BLL.DTOs.Notification;
 /// </summary>
 public class NotificationDto
 {
-    public Guid NotificationId { get; set; }
+    public int NotificationId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
 
@@ -14,7 +14,7 @@ public class NotificationDto
 
     /// <summary>Loại bản ghi liên quan: CareLog, IncidentReport, MedicationRecord</summary>
     public string? RelatedEntityType { get; set; }
-    public Guid? RelatedEntityId { get; set; }
+    public int? RelatedEntityId { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
 }

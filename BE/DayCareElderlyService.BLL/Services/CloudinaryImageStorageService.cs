@@ -25,7 +25,7 @@ public class CloudinaryImageStorageService : IImageStorageService
 
     public bool IsConfigured => _cloudinary != null;
 
-    public string CareLogPhotoPublicId(Guid photoId) => $"{_settings.Folder}/carelogs/{photoId:N}";
+    public string CareLogPhotoPublicId(int photoId) => $"{_settings.Folder}/carelogs/{photoId}";
 
     public async Task<string> UploadAsync(Stream content, string fileName, string publicId)
     {

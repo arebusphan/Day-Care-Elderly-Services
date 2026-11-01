@@ -37,7 +37,7 @@ public class CareLogService : ICareLogService
 
     // ===== Danh sách cụ & xem care log =====
 
-    public async Task<ApiResponse<List<StaffElderlyTodayDto>>> GetTodayElderlyAsync(Guid userId)
+    public async Task<ApiResponse<List<StaffElderlyTodayDto>>> GetTodayElderlyAsync(int userId)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -51,7 +51,7 @@ public class CareLogService : ICareLogService
         var attendances = await _context.AttendanceRecords
             .Include(a => a.Elderly)
             .Where(a => a.AttendanceDate == today && a.CheckInAt != null
-                     && a.Elderly.CenterId == staff.CenterId && a.Elderly.IsActive)
+                     && a.Elderly.IsActive)
             .ToListAsync();
 
         var elderlyIds = attendances.Select(a => a.ElderlyId).Distinct().ToList();
@@ -88,7 +88,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<List<StaffElderlyTodayDto>>.Ok(result, "Lấy danh sách người cao tuổi hôm nay thành công.");
     }
 
-    public async Task<ApiResponse<List<ActivityTodayDto>>> GetTodayActivitiesAsync(Guid userId)
+    public async Task<ApiResponse<List<ActivityTodayDto>>> GetTodayActivitiesAsync(int userId)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -98,8 +98,8 @@ public class CareLogService : ICareLogService
 
         var today = VietnamTime.Today;
         var activities = await _context.CenterActivities
-            .Include(a => a.ActivityAssignments).ThenInclude(x => x.Staff).ThenInclude(s => s.User)
-            .Where(a => a.CenterId == staff.CenterId && a.ActivityDate == today)
+            .Include(a => a.ActivityAssignments).ThenInclude(x => x.Staff)
+            .Where(a => a.ActivityDate == today)
             .OrderBy(a => a.StartTime)
             .ToListAsync();
 
@@ -112,7 +112,7 @@ public class CareLogService : ICareLogService
 
         var result = activities.Select(a =>
         {
-            var mine = a.ActivityAssignments.FirstOrDefault(x => x.StaffId == staff.StaffId);
+            var mine = a.ActivityAssignments.FirstOrDefault(x => x.StaffId == staff.UserId);
             return new ActivityTodayDto
             {
                 CenterActivityId = a.CenterActivityId,
@@ -124,7 +124,7 @@ public class CareLogService : ICareLogService
                 Status = a.Status,
                 IsAssignedToMe = mine != null,
                 MyAssignmentRole = mine?.AssignmentRole,
-                AssignedStaff = a.ActivityAssignments.Select(x => x.Staff.User.FullName).ToList(),
+                AssignedStaff = a.ActivityAssignments.Select(x => x.Staff.FullName).ToList(),
                 EntryCount = entryCounts.GetValueOrDefault(a.CenterActivityId)
             };
         }).ToList();
@@ -132,7 +132,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<List<ActivityTodayDto>>.Ok(result, "Lấy lịch hoạt động hôm nay thành công.");
     }
 
-    public async Task<ApiResponse<CareLogDayDto>> GetDayAsync(Guid userId, Guid elderlyId, DateOnly? date)
+    public async Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -152,7 +152,7 @@ public class CareLogService : ICareLogService
 
     // ===== Ghi care log =====
 
-    public async Task<ApiResponse<CareLogEntryDto>> AddEntryAsync(Guid userId, Guid elderlyId, CreateCareLogEntryDto dto)
+    public async Task<ApiResponse<CareLogEntryDto>> AddEntryAsync(int userId, int elderlyId, CreateCareLogEntryDto dto)
     {
         var careType = dto.CareType.Trim().ToUpperInvariant();
         if (!CareLogTypes.Manual.Contains(careType))
@@ -172,7 +172,7 @@ public class CareLogService : ICareLogService
         {
             var today = VietnamTime.Today;
             activity = await _context.CenterActivities.FirstOrDefaultAsync(a =>
-                a.CenterActivityId == dto.CenterActivityId && a.CenterId == staff!.CenterId && a.ActivityDate == today);
+                a.CenterActivityId == dto.CenterActivityId && a.ActivityDate == today);
             if (activity == null)
             {
                 return ApiResponse<CareLogEntryDto>.Fail("Không tìm thấy hoạt động hôm nay của trung tâm.");
@@ -190,7 +190,7 @@ public class CareLogService : ICareLogService
 
     // ===== Ảnh =====
 
-    public async Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(Guid userId, Guid careLogId, List<PhotoUploadFile> files)
+    public async Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files)
     {
         if (files.Count == 0)
         {
@@ -252,11 +252,10 @@ public class CareLogService : ICareLogService
         {
             foreach (var file in files)
             {
-                var photoId = Guid.NewGuid();
+                var photoId = Random.Shared.Next(100000, 999999);
                 var url = await _imageStorage.UploadAsync(file.Content, file.FileName, _imageStorage.CareLogPhotoPublicId(photoId));
                 photos.Add(new CareLogPhoto
                 {
-                    CareLogPhotoId = photoId,
                     CareLogId = log.CareLogId,
                     FileUrl = url,
                     UploadedAt = VietnamTime.Now
@@ -278,7 +277,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<List<CareLogPhotoDto>>.Ok(photos.Select(CareLogShared.ToPhotoDto).ToList(), "Tải ảnh thành công.");
     }
 
-    public async Task<ApiResponse<bool>> DeletePhotoAsync(Guid userId, Guid photoId)
+    public async Task<ApiResponse<bool>> DeletePhotoAsync(int userId, int photoId)
     {
         await CareLogSchema.EnsureColumnsAsync(_context);
         var photo = await _context.CareLogPhotos
@@ -307,7 +306,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<bool>.Ok(true, "Xoá ảnh thành công.");
     }
 
-    public async Task<ApiResponse<VitalsResultDto>> RecordVitalsAsync(Guid userId, Guid elderlyId, RecordVitalsDto dto)
+    public async Task<ApiResponse<VitalsResultDto>> RecordVitalsAsync(int userId, int elderlyId, RecordVitalsDto dto)
     {
         if (dto.SystolicBp == null && dto.DiastolicBp == null && dto.HeartRate == null
             && dto.SpO2 == null && dto.Temperature == null && dto.BloodGlucose == null)
@@ -319,11 +318,6 @@ public class CareLogService : ICareLogService
         if (error != null)
         {
             return ApiResponse<VitalsResultDto>.Fail(error);
-        }
-
-        if (!StaffTitles.IsNurse(staff!.JobTitle))
-        {
-            return ApiResponse<VitalsResultDto>.Fail("Chỉ điều dưỡng được đo chỉ số.");
         }
 
         var (warnings, severity) = CheckVitals(dto);
@@ -339,7 +333,7 @@ public class CareLogService : ICareLogService
             Severity = severity
         }, JsonOptions);
 
-        var log = NewLog(staff, elderly!.ElderlyId, CareLogTypes.Vitals, DescribeVitals(dto), dto.Notes, data, false);
+        var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.Vitals, DescribeVitals(dto), dto.Notes, data, false);
         await _context.CareLogs.AddAsync(log);
 
         IncidentReport? incident = null;
@@ -347,10 +341,9 @@ public class CareLogService : ICareLogService
         {
             incident = new IncidentReport
             {
-                IncidentId = Guid.NewGuid(),
                 ElderlyId = elderly.ElderlyId,
                 CenterId = elderly.CenterId,
-                ReportedBy = staff.StaffId,
+                ReportedBy = staff!.UserId,
                 IncidentType = IncidentTypes.VitalsAlert,
                 Severity = severity,
                 Description = "Chỉ số vượt ngưỡng: " + string.Join("; ", warnings),
@@ -381,7 +374,7 @@ public class CareLogService : ICareLogService
 
     // ===== Thuốc =====
 
-    public async Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(Guid userId)
+    public async Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(int userId)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -391,15 +384,14 @@ public class CareLogService : ICareLogService
 
         var (from, to) = VietnamTime.DayRange(VietnamTime.Today);
         var records = await CareLogShared.DoseQuery(_context)
-            .Where(r => r.MedicationPlan.Elderly.CenterId == staff.CenterId
-                     && r.ScheduledAt >= from && r.ScheduledAt < to)
+            .Where(r => r.ScheduledAt >= from && r.ScheduledAt < to)
             .OrderBy(r => r.ScheduledAt)
             .ToListAsync();
 
         return ApiResponse<List<DoseDto>>.Ok(records.Select(CareLogShared.ToDoseDto).ToList(), "Lấy danh sách thuốc hôm nay thành công.");
     }
 
-    public async Task<ApiResponse<DoseDto>> UpdateDoseAsync(Guid userId, Guid medicationRecordId, UpdateDoseDto dto)
+    public async Task<ApiResponse<DoseDto>> UpdateDoseAsync(int userId, int medicationRecordId, UpdateDoseDto dto)
     {
         var status = NormalizeStatus(dto.Status, DoseStatuses.Given, DoseStatuses.Refused, DoseStatuses.Missed);
         if (status == null)
@@ -425,11 +417,6 @@ public class CareLogService : ICareLogService
             return ApiResponse<DoseDto>.Fail(error);
         }
 
-        if (!StaffTitles.IsNurse(staff!.JobTitle))
-        {
-            return ApiResponse<DoseDto>.Fail("Chỉ điều dưỡng được ghi nhận cho uống thuốc.");
-        }
-
         if (record.Status != DoseStatuses.Pending)
         {
             return ApiResponse<DoseDto>.Fail($"Liều thuốc này đã được ghi nhận: {DoseStatuses.Label(record.Status)}.");
@@ -438,7 +425,7 @@ public class CareLogService : ICareLogService
         var now = VietnamTime.Now;
         record.Status = status;
         record.RecordedAt = now;
-        record.StaffId = staff.StaffId;
+        record.StaffId = staff!.UserId;
         record.Staff = staff;
         record.Notes = dto.Notes?.Trim();
 
@@ -469,7 +456,7 @@ public class CareLogService : ICareLogService
 
     // ===== Sự cố & cảnh báo =====
 
-    public async Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(Guid userId, string? status, int days)
+    public async Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, string? status, int days)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -479,7 +466,7 @@ public class CareLogService : ICareLogService
 
         var from = VietnamTime.Now.AddDays(-Math.Clamp(days, 1, 90));
         var query = CareLogShared.IncidentQuery(_context)
-            .Where(i => i.CenterId == staff.CenterId && i.ReportedAt >= from);
+            .Where(i => i.ReportedAt >= from);
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -490,7 +477,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<List<IncidentDto>>.Ok(incidents.Select(CareLogShared.ToIncidentDto).ToList(), "Lấy danh sách sự cố thành công.");
     }
 
-    public async Task<ApiResponse<IncidentDto>> CreateIncidentAsync(Guid userId, CreateIncidentDto dto)
+    public async Task<ApiResponse<IncidentDto>> CreateIncidentAsync(int userId, CreateIncidentDto dto)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -538,10 +525,9 @@ public class CareLogService : ICareLogService
 
         var incident = new IncidentReport
         {
-            IncidentId = Guid.NewGuid(),
             ElderlyId = elderly.ElderlyId,
             CenterId = elderly.CenterId,
-            ReportedBy = staff.StaffId,
+            ReportedBy = staff.UserId,
             IncidentType = incidentType,
             Severity = severity,
             Description = dto.Description.Trim(),
@@ -562,7 +548,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<IncidentDto>.Ok(CareLogShared.ToIncidentDto(incident), "Báo sự cố thành công.");
     }
 
-    public async Task<ApiResponse<IncidentDto>> UpdateIncidentAsync(Guid userId, Guid incidentId, UpdateIncidentDto dto)
+    public async Task<ApiResponse<IncidentDto>> UpdateIncidentAsync(int userId, int incidentId, UpdateIncidentDto dto)
     {
         var status = NormalizeStatus(dto.Status, IncidentStatuses.InProgress, IncidentStatuses.Resolved);
         if (status == null)
@@ -582,7 +568,7 @@ public class CareLogService : ICareLogService
         }
 
         var incident = await CareLogShared.IncidentQuery(_context)
-            .FirstOrDefaultAsync(i => i.IncidentId == incidentId && i.CenterId == staff.CenterId);
+            .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
         if (incident == null)
         {
             return ApiResponse<IncidentDto>.Fail("Không tìm thấy sự cố trong trung tâm của bạn.");
@@ -609,17 +595,12 @@ public class CareLogService : ICareLogService
 
     // ===== Chốt ngày =====
 
-    public async Task<ApiResponse<CareLogDayDto>> MarkMedicalDoneAsync(Guid userId, Guid elderlyId, CareLogNoteDto dto)
+    public async Task<ApiResponse<CareLogDayDto>> MarkMedicalDoneAsync(int userId, int elderlyId, CareLogNoteDto dto)
     {
         var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
         if (error != null)
         {
             return ApiResponse<CareLogDayDto>.Fail(error);
-        }
-
-        if (!StaffTitles.IsNurse(staff!.JobTitle))
-        {
-            return ApiResponse<CareLogDayDto>.Fail("Chỉ điều dưỡng được xác nhận xong phần y tế.");
         }
 
         if (await HasTodayAsync(elderlyId, CareLogTypes.MedicalDone))
@@ -627,7 +608,7 @@ public class CareLogService : ICareLogService
             return ApiResponse<CareLogDayDto>.Fail("Phần y tế hôm nay đã được xác nhận.");
         }
 
-        var log = NewLog(staff, elderly!.ElderlyId, CareLogTypes.MedicalDone, "Hoàn tất phần y tế trong ngày", dto.Notes, null, false);
+        var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.MedicalDone, "Hoàn tất phần y tế trong ngày", dto.Notes, null, false);
         await _context.CareLogs.AddAsync(log);
         await _context.SaveChangesAsync();
 
@@ -635,7 +616,7 @@ public class CareLogService : ICareLogService
         return ApiResponse<CareLogDayDto>.Ok(day, "Xác nhận xong phần y tế thành công.");
     }
 
-    public async Task<ApiResponse<CareLogDayDto>> CloseDayAsync(Guid userId, Guid elderlyId, CareLogNoteDto dto)
+    public async Task<ApiResponse<CareLogDayDto>> CloseDayAsync(int userId, int elderlyId, CareLogNoteDto dto)
     {
         var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
         if (error != null)
@@ -643,17 +624,12 @@ public class CareLogService : ICareLogService
             return ApiResponse<CareLogDayDto>.Fail(error);
         }
 
-        if (!StaffTitles.IsCaregiver(staff!.JobTitle))
-        {
-            return ApiResponse<CareLogDayDto>.Fail("Chỉ hộ lý được chốt care log.");
-        }
-
         if (!await HasTodayAsync(elderlyId, CareLogTypes.MedicalDone))
         {
             return ApiResponse<CareLogDayDto>.Fail("Điều dưỡng chưa xác nhận xong phần y tế, chưa thể chốt care log.");
         }
 
-        var log = NewLog(staff, elderly!.ElderlyId, CareLogTypes.Close, "Chốt care log trong ngày", dto.Notes, null, false);
+        var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.Close, "Chốt care log trong ngày", dto.Notes, null, false);
         await _context.CareLogs.AddAsync(log);
 
         await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
@@ -669,19 +645,21 @@ public class CareLogService : ICareLogService
 
     // ===== Helpers =====
 
-    private async Task<Staff?> GetStaffAsync(Guid userId)
+    private async Task<User?> GetStaffAsync(int userId)
     {
         await CareLogSchema.EnsureColumnsAsync(_context);
-        return await _context.Staff.Include(s => s.User).FirstOrDefaultAsync(s => s.UserId == userId);
+        return await _context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.UserId == userId && u.Roles.Any(r => r.RoleName == "Staff" || r.RoleName == "Admin" || r.RoleName == "Center"));
     }
 
-    private Task<ElderlyMember?> GetElderlyInCenterAsync(Staff staff, Guid elderlyId) =>
-        _context.ElderlyMembers.FirstOrDefaultAsync(e => e.ElderlyId == elderlyId && e.CenterId == staff.CenterId && e.IsActive);
+    private Task<ElderlyMember?> GetElderlyInCenterAsync(User staff, int elderlyId) =>
+        _context.ElderlyMembers.FirstOrDefaultAsync(e => e.ElderlyId == elderlyId && e.IsActive);
 
     /// <summary>
-    /// Kiểm tra trước khi ghi: là staff, cụ cùng trung tâm, cụ đã check-in hôm nay, care log hôm nay chưa chốt
+    /// Kiểm tra trước khi ghi: là staff, cụ đã check-in hôm nay, care log hôm nay chưa chốt
     /// </summary>
-    private async Task<(Staff? Staff, ElderlyMember? Elderly, string? Error)> GetWritableAsync(Guid userId, Guid elderlyId)
+    private async Task<(User? Staff, ElderlyMember? Elderly, string? Error)> GetWritableAsync(int userId, int elderlyId)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -692,7 +670,7 @@ public class CareLogService : ICareLogService
         var elderly = await GetElderlyInCenterAsync(staff, elderlyId);
         if (elderly == null)
         {
-            return (staff, null, "Không tìm thấy người cao tuổi trong trung tâm của bạn.");
+            return (staff, null, "Không tìm thấy người cao tuổi.");
         }
 
         var today = VietnamTime.Today;
@@ -711,18 +689,17 @@ public class CareLogService : ICareLogService
         return (staff, elderly, null);
     }
 
-    private Task<bool> HasTodayAsync(Guid elderlyId, string careType)
+    private Task<bool> HasTodayAsync(int elderlyId, string careType)
     {
         var (from, to) = VietnamTime.DayRange(VietnamTime.Today);
         return _context.CareLogs.AnyAsync(c => c.ElderlyId == elderlyId && c.CareType == careType
                                             && c.RecordedAt >= from && c.RecordedAt < to);
     }
 
-    private static CareLog NewLog(Staff staff, Guid elderlyId, string careType, string description, string? notes, string? data, bool isInternal) => new()
+    private static CareLog NewLog(User staff, int elderlyId, string careType, string description, string? notes, string? data, bool isInternal) => new()
     {
-        CareLogId = Guid.NewGuid(),
         ElderlyId = elderlyId,
-        StaffId = staff.StaffId,
+        StaffId = staff.UserId,
         Staff = staff,
         RecordedAt = VietnamTime.Now,
         CareType = careType,

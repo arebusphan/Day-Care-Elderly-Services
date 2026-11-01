@@ -3,7 +3,7 @@ import api from "./api";
 // ── Types ──────────────────────────────────────────────
 
 export interface UserDetail {
-  userId: string;
+  userId: number;
   email: string;
   fullName: string;
   phoneNumber: string | null;
@@ -81,7 +81,7 @@ export const adminUserService = {
   },
 
   /** Get user by ID */
-  async getUserById(id: string): Promise<ApiResponse<UserDetail>> {
+  async getUserById(id: number): Promise<ApiResponse<UserDetail>> {
     const res = await api.get(`${BASE}/${id}`);
     return res.data;
   },
@@ -93,19 +93,19 @@ export const adminUserService = {
   },
 
   /** Update user */
-  async updateUser(id: string, dto: UpdateUserDto): Promise<ApiResponse<UserDetail>> {
+  async updateUser(id: number, dto: UpdateUserDto): Promise<ApiResponse<UserDetail>> {
     const res = await api.put(`${BASE}/${id}`, dto);
     return res.data;
   },
 
   /** Toggle user active status */
-  async toggleStatus(id: string): Promise<ApiResponse<null>> {
+  async toggleStatus(id: number): Promise<ApiResponse<null>> {
     const res = await api.patch(`${BASE}/${id}/toggle-status`);
     return res.data;
   },
 
   /** Delete user */
-  async deleteUser(id: string): Promise<ApiResponse<null>> {
+  async deleteUser(id: number): Promise<ApiResponse<null>> {
     const res = await api.delete(`${BASE}/${id}`);
     return res.data;
   },

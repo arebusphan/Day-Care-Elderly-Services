@@ -18,7 +18,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         _context = context;
     }
 
-    public async Task<ApiResponse<CareLogDayDto>> GetDayAsync(Guid userId, Guid elderlyId, DateOnly? date)
+    public async Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date)
     {
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);
         if (elderly == null)
@@ -30,7 +30,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         return ApiResponse<CareLogDayDto>.Ok(day, "Lấy care log thành công.");
     }
 
-    public async Task<ApiResponse<List<CareLogDaySummaryDto>>> GetHistoryAsync(Guid userId, Guid elderlyId, DateOnly? from, DateOnly? to)
+    public async Task<ApiResponse<List<CareLogDaySummaryDto>>> GetHistoryAsync(int userId, int elderlyId, DateOnly? from, DateOnly? to)
     {
         var toDate = to ?? VietnamTime.Today;
         var fromDate = from ?? toDate.AddDays(-29);
@@ -72,7 +72,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         return ApiResponse<List<CareLogDaySummaryDto>>.Ok(days, "Lấy lịch sử care log thành công.");
     }
 
-    public async Task<ApiResponse<HealthHistoryDto>> GetHealthAsync(Guid userId, Guid elderlyId, int days)
+    public async Task<ApiResponse<HealthHistoryDto>> GetHealthAsync(int userId, int elderlyId, int days)
     {
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);
         if (elderly == null)
@@ -107,7 +107,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         return ApiResponse<HealthHistoryDto>.Ok(result, "Lấy lịch sử sức khỏe thành công.");
     }
 
-    public async Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(Guid userId, int days)
+    public async Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, int days)
     {
         await CareLogSchema.EnsureColumnsAsync(_context);
 
@@ -128,7 +128,7 @@ public class FamilyCareLogService : IFamilyCareLogService
     /// <summary>
     /// Cụ thuộc gia đình của tài khoản và được phép xem care log (CanViewCareLogs)
     /// </summary>
-    private async Task<ElderlyMember?> GetViewableElderlyAsync(Guid userId, Guid elderlyId)
+    private async Task<ElderlyMember?> GetViewableElderlyAsync(int userId, int elderlyId)
     {
         await CareLogSchema.EnsureColumnsAsync(_context);
 

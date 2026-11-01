@@ -11,10 +11,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("7a33dfc3-5ee6-40f2-b316-8aded616742e")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a210ff0ca799fdfdf1f69b0609512afeaa50ef89")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a09860f12a4e39204e4e51f6b7c6f8be1ae3804")]
 [assembly: System.Reflection.AssemblyProductAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

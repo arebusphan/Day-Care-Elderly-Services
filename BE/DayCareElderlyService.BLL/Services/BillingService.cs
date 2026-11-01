@@ -71,7 +71,7 @@ public class BillingService : IBillingService
         return ApiResponse<List<ServicePackageDto>>.Ok(dtos, "Lấy danh sách gói dịch vụ thành công.");
     }
 
-    public async Task<ApiResponse<ServiceRegistrationResultDto>> RegisterServicePackageAsync(Guid userId, CreateServiceRegistrationDto dto)
+    public async Task<ApiResponse<ServiceRegistrationResultDto>> RegisterServicePackageAsync(int userId, CreateServiceRegistrationDto dto)
     {
         // 1. Kiểm tra hoặc tạo hồ sơ FamilyMember cho User nếu chưa có
         var familyMember = await _context.FamilyMembers.FirstOrDefaultAsync(f => f.UserId == userId);
@@ -85,7 +85,6 @@ public class BillingService : IBillingService
 
             familyMember = new FamilyMember
             {
-                FamilyMemberId = Guid.NewGuid(),
                 UserId = user.UserId
             };
             await _context.FamilyMembers.AddAsync(familyMember);
@@ -123,9 +122,7 @@ public class BillingService : IBillingService
                 FamilyMemberId = familyMember.FamilyMemberId,
                 ElderlyId = elderly.ElderlyId,
                 Relationship = "Người thân",
-                IsPrimaryContact = true,
-                CanViewCareLogs = true,
-                CanReceiveNotifications = true
+                IsPrimaryContact = true
             });
         }
 
@@ -134,12 +131,10 @@ public class BillingService : IBillingService
         // 5. Lưu ServiceRegistration
         var registration = new ServiceRegistration
         {
-            RegistrationId = Guid.NewGuid(),
             ElderlyId = elderly.ElderlyId,
             PackageId = package.PackageId,
             StartDate = dto.StartDate,
             EndDate = endDate,
-            PriceAtPurchase = dto.PackagePrice > 0 ? dto.PackagePrice : package.Price,
             Status = "Confirmed",
             CreatedAt = DateTime.UtcNow,
             RegistrationCode = registrationCode,
@@ -154,6 +149,7 @@ public class BillingService : IBillingService
         };
 
         await _context.ServiceRegistrations.AddAsync(registration);
+        await _context.SaveChangesAsync();
 
         var method = string.IsNullOrWhiteSpace(dto.PaymentMethod) ? "Chuyển khoản" : dto.PaymentMethod;
         if (method.Length > 100) method = method[..100];
@@ -161,13 +157,11 @@ public class BillingService : IBillingService
         // 6. Lưu Payment kèm hóa đơn
         var payment = new Payment
         {
-            PaymentId = Guid.NewGuid(),
             RegistrationId = registration.RegistrationId,
             Amount = dto.TotalAmount,
             PaymentMethod = method,
             PaymentStatus = "Paid",
-            TransactionReference = $"TXN-{Guid.NewGuid().ToString()[..8].ToUpper()}",
-            PaidAt = DateTime.UtcNow,
+            TransactionReference = $"TXN-{Random.Shared.Next(10000000, 99999999)}",
             CreatedAt = DateTime.UtcNow,
             InvoiceNo = invoiceNo,
             InvoiceVatNo = invoiceVatNo
@@ -191,7 +185,7 @@ public class BillingService : IBillingService
         return ApiResponse<ServiceRegistrationResultDto>.Ok(result, "Đăng ký gói dịch vụ và tạo hóa đơn thành công.");
     }
 
-    public async Task<ApiResponse<List<InvoiceDto>>> GetMyInvoicesAsync(Guid userId)
+    public async Task<ApiResponse<List<InvoiceDto>>> GetMyInvoicesAsync(int userId)
     {
         var familyMember = await _context.FamilyMembers.FirstOrDefaultAsync(f => f.UserId == userId);
         if (familyMember == null)
@@ -226,7 +220,7 @@ public class BillingService : IBillingService
         return ApiResponse<List<InvoiceDto>>.Ok(invoiceDtos, "Lấy danh sách hóa đơn thành công.");
     }
 
-    public async Task<ApiResponse<InvoiceDto>> GetInvoiceByIdAsync(Guid userId, string invoiceNo)
+    public async Task<ApiResponse<InvoiceDto>> GetInvoiceByIdAsync(int userId, string invoiceNo)
     {
         var familyMember = await _context.FamilyMembers.FirstOrDefaultAsync(f => f.UserId == userId);
         if (familyMember == null)
@@ -260,7 +254,7 @@ public class BillingService : IBillingService
         return ApiResponse<InvoiceDto>.Ok(dto, "Lấy chi tiết hóa đơn thành công.");
     }
 
-    private static InvoiceDto MapToInvoiceDto(Payment payment, Guid familyMemberId)
+    private static InvoiceDto MapToInvoiceDto(Payment payment, int familyMemberId)
     {
         var reg = payment.Registration;
         var elderly = reg.Elderly;

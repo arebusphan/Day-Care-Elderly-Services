@@ -14,19 +14,19 @@ internal static class CareLogShared
 {
     public static IQueryable<CareLog> CareLogQuery(AppDbContext context) =>
         context.CareLogs
-            .Include(c => c.Staff).ThenInclude(s => s.User)
+            .Include(c => c.Staff)
             .Include(c => c.CenterActivity)
             .Include(c => c.CareLogPhotos);
 
     public static IQueryable<IncidentReport> IncidentQuery(AppDbContext context) =>
         context.IncidentReports
             .Include(i => i.Elderly)
-            .Include(i => i.ReportedByNavigation).ThenInclude(s => s.User);
+            .Include(i => i.ReportedByNavigation);
 
     public static IQueryable<MedicationRecord> DoseQuery(AppDbContext context) =>
         context.MedicationRecords
             .Include(r => r.MedicationPlan).ThenInclude(p => p.Elderly)
-            .Include(r => r.Staff).ThenInclude(s => s.User);
+            .Include(r => r.Staff);
 
     /// <summary>
     /// Care log 1 ngày của 1 cụ. includeInternal = false: ẩn mục nội bộ (dành cho gia đình).
@@ -55,7 +55,7 @@ internal static class CareLogShared
             MedicalDoneAt = medicalDone?.RecordedAt,
             IsClosed = closed != null,
             ClosedAt = closed?.RecordedAt,
-            ClosedBy = closed?.Staff?.User?.FullName,
+            ClosedBy = closed?.Staff?.FullName,
             Entries = logs.Select(ToEntryDto).ToList()
         };
     }
@@ -73,8 +73,8 @@ internal static class CareLogShared
         ActivityName = log.CenterActivity?.ActivityName,
         RecordedAt = log.RecordedAt,
         StaffId = log.StaffId,
-        StaffName = log.Staff?.User?.FullName ?? string.Empty,
-        JobTitle = log.Staff?.JobTitle ?? string.Empty,
+        StaffName = log.Staff?.FullName ?? string.Empty,
+        JobTitle = "Nhân viên",
         Photos = log.CareLogPhotos.OrderBy(p => p.UploadedAt).Select(ToPhotoDto).ToList()
     };
 
@@ -96,7 +96,7 @@ internal static class CareLogShared
         Description = incident.Description,
         OccurredAt = incident.OccurredAt,
         ReportedAt = incident.ReportedAt,
-        ReportedByName = incident.ReportedByNavigation?.User?.FullName ?? string.Empty,
+        ReportedByName = incident.ReportedByNavigation?.FullName ?? string.Empty,
         Status = incident.Status,
         ResolutionNotes = incident.ResolutionNotes,
         ResolvedAt = incident.ResolvedAt
@@ -116,14 +116,14 @@ internal static class CareLogShared
         StatusLabel = DoseStatuses.Label(record.Status),
         RecordedAt = record.RecordedAt,
         Notes = record.Notes,
-        StaffName = record.Staff?.User?.FullName ?? string.Empty
+        StaffName = record.Staff?.FullName ?? string.Empty
     };
 
     /// <summary>
     /// Thêm thông báo cho các thành viên gia đình nhận thông báo của cụ (chưa SaveChanges)
     /// </summary>
-    public static async Task NotifyFamilyAsync(AppDbContext context, Guid elderlyId, string title, string message,
-        string notificationType, string? relatedEntityType, Guid? relatedEntityId)
+    public static async Task NotifyFamilyAsync(AppDbContext context, int elderlyId, string title, string message,
+        string notificationType, string? relatedEntityType, int? relatedEntityId)
     {
         var userIds = await context.ElderlyFamilyRelationships
             .Where(r => r.ElderlyId == elderlyId && r.CanReceiveNotifications)
@@ -135,7 +135,6 @@ internal static class CareLogShared
         {
             await context.Notifications.AddAsync(new Notification
             {
-                NotificationId = Guid.NewGuid(),
                 UserId = userId,
                 Title = title,
                 Message = message,

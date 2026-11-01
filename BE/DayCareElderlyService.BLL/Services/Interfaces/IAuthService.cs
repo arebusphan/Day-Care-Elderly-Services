@@ -7,6 +7,6 @@ public interface IAuthService
 {
     Task<ApiResponse<AuthResponseDto>> RegisterAsync(RegisterRequestDto request);
     Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginRequestDto request);
-    Task<ApiResponse<UserDto>> GetCurrentUserAsync(Guid userId);
-    Task<ApiResponse> ChangePasswordAsync(Guid userId, ChangePasswordDto request);
+    Task<ApiResponse<UserDto>> GetCurrentUserAsync(int userId);
+    Task<ApiResponse> ChangePasswordAsync(int userId, ChangePasswordDto request);
 }

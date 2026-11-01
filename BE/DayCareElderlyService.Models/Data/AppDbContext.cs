@@ -26,6 +26,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<CenterActivity> CenterActivities { get; set; }
 
+    public virtual DbSet<DailySchedulePlan> DailySchedulePlans { get; set; }
+
     public virtual DbSet<ElderlyFamilyRelationship> ElderlyFamilyRelationships { get; set; }
 
     public virtual DbSet<ElderlyMember> ElderlyMembers { get; set; }
@@ -52,9 +54,15 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ServiceRegistration> ServiceRegistrations { get; set; }
 
-    public virtual DbSet<StaffLeave> StaffLeaves { get; set; }
+    public virtual DbSet<StaffCareAssignment> StaffCareAssignments { get; set; }
 
-    public virtual DbSet<StaffShift> StaffShifts { get; set; }
+    public virtual DbSet<DailyCareGroup> DailyCareGroups { get; set; }
+
+    public virtual DbSet<CareGroupMember> CareGroupMembers { get; set; }
+
+    public virtual DbSet<DailyAttendanceForecast> DailyAttendanceForecasts { get; set; }
+
+    public virtual DbSet<StaffSchedule> StaffSchedules { get; set; }
 
     public virtual DbSet<SupplyTransaction> SupplyTransactions { get; set; }
 
@@ -70,7 +78,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.CenterActivityId, e.StaffId }, "UQ_ActivityAssignments_ActivityStaff").IsUnique();
 
-            entity.Property(e => e.AssignmentId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.AssignmentId);
             entity.Property(e => e.AssignmentRole).HasMaxLength(100);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
@@ -93,7 +101,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<ActivityTemplate>(entity =>
         {
-            entity.Property(e => e.ActivityTemplateId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.ActivityTemplateId);
             entity.Property(e => e.ActivityName).HasMaxLength(150);
             entity.Property(e => e.DefaultLocation).HasMaxLength(200);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -112,7 +120,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.ElderlyId, e.AttendanceDate }, "UX_AttendanceRecords_Elderly_Date").IsUnique();
 
-            entity.Property(e => e.AttendanceId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.AttendanceId);
             entity.Property(e => e.CheckInAt).HasPrecision(0);
             entity.Property(e => e.CheckOutAt).HasPrecision(0);
             entity.Property(e => e.CreatedAt)
@@ -143,7 +151,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => new { e.ElderlyId, e.RecordedAt }, "IX_CareLogs_ElderlyRecordedAt").IsDescending(false, true);
 
-            entity.Property(e => e.CareLogId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.CareLogId);
             entity.Property(e => e.CareType).HasMaxLength(50);
             entity.Property(e => e.RecordedAt)
                 .HasPrecision(0)
@@ -166,7 +174,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<CareLogPhoto>(entity =>
         {
-            entity.Property(e => e.CareLogPhotoId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.CareLogPhotoId);
             entity.Property(e => e.FileUrl).HasMaxLength(1000);
             entity.Property(e => e.UploadedAt)
                 .HasPrecision(0)
@@ -180,7 +188,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<Center>(entity =>
         {
-            entity.Property(e => e.CenterId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.CenterId);
             entity.Property(e => e.Address).HasMaxLength(500);
             entity.Property(e => e.CenterName).HasMaxLength(200);
             entity.Property(e => e.CreatedAt)
@@ -195,7 +203,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => new { e.CenterId, e.ActivityDate }, "IX_CenterActivities_CenterDate");
 
-            entity.Property(e => e.CenterActivityId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.CenterActivityId);
             entity.Property(e => e.ActivityName).HasMaxLength(150);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
@@ -220,6 +228,101 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.PackageActivity).WithMany(p => p.CenterActivities)
                 .HasForeignKey(d => d.PackageActivityId)
                 .HasConstraintName("FK_CenterActivities_PackageActivities");
+        });
+
+        modelBuilder.Entity<DailySchedulePlan>(entity =>
+        {
+            entity.HasKey(e => e.PlanId);
+
+            entity.HasIndex(e => new { e.CenterId, e.PlanDate }, "UQ_DailySchedulePlans_Center_Date").IsUnique();
+
+            entity.Property(e => e.PlanId);
+            entity.Property(e => e.Status).HasMaxLength(30).HasDefaultValue("Draft");
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.ConfirmedAt).HasPrecision(0);
+            entity.Property(e => e.UpdatedAt).HasPrecision(0);
+
+            entity.HasOne(d => d.Center).WithMany(p => p.DailySchedulePlans)
+                .HasForeignKey(d => d.CenterId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_DailySchedulePlans_Centers");
+
+            entity.HasOne(d => d.ConfirmedByNavigation).WithMany()
+                .HasForeignKey(d => d.ConfirmedBy)
+                .HasConstraintName("FK_DailySchedulePlans_Users");
+        });
+
+        modelBuilder.Entity<DailyAttendanceForecast>(entity =>
+        {
+            entity.ToTable("DailyAttendanceForecasts");
+            entity.HasKey(e => e.ForecastId);
+
+            entity.HasIndex(e => new { e.PlanId, e.ElderlyId }, "UQ_DailyAttendanceForecast_Plan_Elderly").IsUnique();
+            entity.HasIndex(e => e.PlanId, "IX_DailyAttendanceForecast_PlanId");
+
+            entity.Property(e => e.AttendanceStatus).HasMaxLength(20).HasDefaultValue("Attending");
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.UpdatedAt).HasPrecision(0);
+
+            entity.HasOne(d => d.Plan).WithMany(p => p.AttendanceForecasts)
+                .HasForeignKey(d => d.PlanId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_DailyAttendanceForecast_Plans");
+
+            entity.HasOne(d => d.Elderly).WithMany()
+                .HasForeignKey(d => d.ElderlyId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_DailyAttendanceForecast_Elderly");
+        });
+
+        modelBuilder.Entity<DailyCareGroup>(entity =>
+        {
+            entity.HasKey(e => e.GroupId);
+
+            entity.HasIndex(e => e.PlanId, "IX_DailyCareGroups_PlanId");
+            entity.HasIndex(e => e.StaffId, "IX_DailyCareGroups_StaffId");
+
+            entity.Property(e => e.GroupId);
+            entity.Property(e => e.GroupName).HasMaxLength(100);
+            entity.Property(e => e.GroupType).HasMaxLength(20).HasDefaultValue("Normal");
+            entity.Property(e => e.MaxNormalCapacity).HasDefaultValue(10);
+            entity.Property(e => e.MaxSupportCapacity).HasDefaultValue(4);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+
+            entity.HasOne(d => d.Plan).WithMany(p => p.CareGroups)
+                .HasForeignKey(d => d.PlanId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_DailyCareGroups_Plans");
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.DailyCareGroups)
+                .HasForeignKey(d => d.StaffId)
+                .HasConstraintName("FK_DailyCareGroups_Users");
+        });
+
+        modelBuilder.Entity<CareGroupMember>(entity =>
+        {
+            entity.HasKey(e => e.GroupMemberId);
+
+            entity.HasIndex(e => new { e.GroupId, e.ElderlyId }, "UQ_CareGroupMembers_Group_Elderly").IsUnique();
+            entity.HasIndex(e => e.GroupId, "IX_CareGroupMembers_GroupId");
+            entity.HasIndex(e => e.ElderlyId, "IX_CareGroupMembers_ElderlyId");
+
+            entity.Property(e => e.GroupMemberId);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.AssignedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+
+            entity.HasOne(d => d.Group).WithMany(p => p.Members)
+                .HasForeignKey(d => d.GroupId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_CareGroupMembers_Groups");
+
+            entity.HasOne(d => d.Elderly).WithMany(p => p.CareGroupMembers)
+                .HasForeignKey(d => d.ElderlyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CareGroupMembers_Elderly");
         });
 
         modelBuilder.Entity<ElderlyFamilyRelationship>(entity =>
@@ -247,7 +350,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.CenterId, "IX_ElderlyMembers_CenterId");
 
-            entity.Property(e => e.ElderlyId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.ElderlyId);
             entity.Property(e => e.Address).HasMaxLength(500);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
@@ -272,7 +375,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => e.UserId, "UQ_FamilyMembers_UserId").IsUnique();
 
-            entity.Property(e => e.FamilyMemberId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.FamilyMemberId);
             entity.Property(e => e.Address).HasMaxLength(500);
             entity.Property(e => e.EmergencyContact).HasMaxLength(20);
 
@@ -288,7 +391,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.CenterId, e.Status }, "IX_IncidentReports_CenterStatus");
 
-            entity.Property(e => e.IncidentId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.IncidentId);
             entity.Property(e => e.IncidentType).HasMaxLength(100);
             entity.Property(e => e.OccurredAt).HasPrecision(0);
             entity.Property(e => e.ReportedAt)
@@ -320,7 +423,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.SupplyId);
 
-            entity.Property(e => e.SupplyId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.SupplyId);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");
@@ -337,7 +440,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<MedicationPlan>(entity =>
         {
-            entity.Property(e => e.MedicationPlanId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.MedicationPlanId);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");
@@ -356,7 +459,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => new { e.MedicationPlanId, e.ScheduledAt }, "IX_MedicationRecords_PlanScheduledAt");
 
-            entity.Property(e => e.MedicationRecordId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.MedicationRecordId);
             entity.Property(e => e.Notes).HasMaxLength(1000);
             entity.Property(e => e.RecordedAt).HasPrecision(0);
             entity.Property(e => e.ScheduledAt).HasPrecision(0);
@@ -379,7 +482,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => new { e.UserId, e.IsRead, e.CreatedAt }, "IX_Notifications_UserReadCreated").IsDescending(false, false, true);
 
-            entity.Property(e => e.NotificationId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.NotificationId);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");
@@ -395,7 +498,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<PackageActivity>(entity =>
         {
-            entity.Property(e => e.PackageActivityId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.PackageActivityId);
             entity.Property(e => e.EndTime).HasPrecision(0);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.StartTime).HasPrecision(0);
@@ -415,7 +518,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => e.RegistrationId, "IX_Payments_RegistrationId");
 
-            entity.Property(e => e.PaymentId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.PaymentId);
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
@@ -449,7 +552,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.CenterId, "IX_ServicePackages_CenterId");
 
-            entity.Property(e => e.PackageId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.PackageId);
             entity.Property(e => e.BillingPeriod).HasMaxLength(30);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
@@ -479,7 +582,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.PackageId, "IX_ServiceRegistrations_PackageId");
 
-            entity.Property(e => e.RegistrationId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.RegistrationId);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");
@@ -507,60 +610,62 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_ServiceRegistrations_Package");
         });
 
-        modelBuilder.Entity<StaffLeave>(entity =>
+        modelBuilder.Entity<StaffCareAssignment>(entity =>
         {
-            entity.HasKey(e => e.LeaveId);
+            entity.HasKey(e => e.AssignmentId);
 
-            entity.HasIndex(e => new { e.UserId, e.LeaveDate }, "UQ_StaffLeaves_User_Date").IsUnique();
+            entity.HasIndex(e => new { e.PlanId, e.ElderlyId }, "UQ_StaffCareAssignments_Plan_Elderly").IsUnique();
+            entity.HasIndex(e => new { e.PlanId, e.StaffId }, "IX_StaffCareAssignments_Plan_Staff");
 
-            entity.HasIndex(e => e.UserId, "IX_StaffLeaves_UserId");
+            entity.Property(e => e.AssignmentId);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
 
-            entity.HasIndex(e => e.LeaveDate, "IX_StaffLeaves_LeaveDate");
-
-            entity.Property(e => e.LeaveId).HasDefaultValueSql("(newsequentialid())");
-            entity.Property(e => e.Reason).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("(sysdatetime())");
-
-            entity.HasOne(d => d.User).WithMany(p => p.StaffLeaves)
-                .HasForeignKey(d => d.UserId)
+            entity.HasOne(d => d.Plan).WithMany(p => p.Assignments)
+                .HasForeignKey(d => d.PlanId)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_StaffLeaves_Users");
-        });
+                .HasConstraintName("FK_StaffCareAssignments_Plans");
 
-        modelBuilder.Entity<StaffShift>(entity =>
-        {
-            entity.HasIndex(e => new { e.StaffId, e.ShiftDate }, "IX_StaffShifts_StaffDate");
-
-            entity.Property(e => e.StaffShiftId).HasDefaultValueSql("(newsequentialid())");
-            entity.Property(e => e.BreakEndTime).HasPrecision(0);
-            entity.Property(e => e.BreakStartTime).HasPrecision(0);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.EndTime).HasPrecision(0);
-            entity.Property(e => e.StartTime).HasPrecision(0);
-            entity.Property(e => e.Status)
-                .HasMaxLength(30)
-                .HasDefaultValue("Draft");
-
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StaffShifts)
-                .HasForeignKey(d => d.CreatedBy)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StaffShifts_Users");
-
-            entity.HasOne(d => d.Staff).WithMany()
+            entity.HasOne(d => d.Staff).WithMany(p => p.StaffCareAssignments)
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StaffShifts_Users_Staff");
+                .HasConstraintName("FK_StaffCareAssignments_Users");
+
+            entity.HasOne(d => d.Elderly).WithMany(p => p.StaffCareAssignments)
+                .HasForeignKey(d => d.ElderlyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StaffCareAssignments_Elderly");
+        });
+
+        modelBuilder.Entity<StaffSchedule>(entity =>
+        {
+            entity.HasKey(e => e.ScheduleId);
+
+            entity.HasIndex(e => new { e.StaffId, e.WorkDate }, "UQ_StaffSchedules_Staff_Date").IsUnique();
+
+            entity.HasIndex(e => e.StaffId, "IX_StaffSchedules_StaffId");
+
+            entity.HasIndex(e => e.WorkDate, "IX_StaffSchedules_WorkDate");
+
+            entity.Property(e => e.ScheduleId);
+            entity.Property(e => e.IsWorking).HasDefaultValue(true);
+            entity.Property(e => e.Availability).HasMaxLength(20).HasDefaultValue("Working");
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysdatetime())");
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.StaffSchedules)
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_StaffSchedules_Users");
         });
 
         modelBuilder.Entity<SupplyTransaction>(entity =>
         {
             entity.HasIndex(e => new { e.SupplyId, e.OccurredAt }, "IX_SupplyTransactions_SupplyOccurredAt").IsDescending(false, true);
 
-            entity.Property(e => e.SupplyTransactionId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.SupplyTransactionId);
             entity.Property(e => e.Notes).HasMaxLength(1000);
             entity.Property(e => e.OccurredAt)
                 .HasPrecision(0)
@@ -583,7 +688,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => e.Email, "UQ_Users_Email").IsUnique();
 
-            entity.Property(e => e.UserId).HasDefaultValueSql("(newsequentialid())");
+            entity.Property(e => e.UserId);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");

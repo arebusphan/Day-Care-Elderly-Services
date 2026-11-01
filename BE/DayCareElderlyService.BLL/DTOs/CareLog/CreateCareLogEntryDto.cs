@@ -26,5 +26,5 @@ public class CreateCareLogEntryDto
     public bool IsInternal { get; set; }
 
     /// <summary>Hoạt động hôm nay trong lịch (GET /api/staff/activities/today) mà mục này thuộc về, không bắt buộc</summary>
-    public Guid? CenterActivityId { get; set; }
+    public int? CenterActivityId { get; set; }
 }

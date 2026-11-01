@@ -5,9 +5,9 @@ namespace DayCareElderlyService.BLL.DTOs.CareLog;
 /// </summary>
 public class DoseDto
 {
-    public Guid MedicationRecordId { get; set; }
-    public Guid MedicationPlanId { get; set; }
-    public Guid ElderlyId { get; set; }
+    public int MedicationRecordId { get; set; }
+    public int MedicationPlanId { get; set; }
+    public int ElderlyId { get; set; }
     public string ElderlyName { get; set; } = string.Empty;
     public string MedicationName { get; set; } = string.Empty;
     public string Dosage { get; set; } = string.Empty;

@@ -37,7 +37,7 @@ public class UserService : IUserService
         return ApiResponse<PagedResult<UserDetailDto>>.Ok(result);
     }
 
-    public async Task<ApiResponse<UserDetailDto>> GetUserByIdAsync(Guid userId)
+    public async Task<ApiResponse<UserDetailDto>> GetUserByIdAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdWithRolesAsync(userId);
         if (user == null)
@@ -59,7 +59,6 @@ public class UserService : IUserService
 
         var user = new User
         {
-            UserId = Guid.NewGuid(),
             Email = email,
             PasswordHash = _passwordHasher.HashPassword(dto.Password),
             FullName = dto.FullName.Trim(),
@@ -98,7 +97,7 @@ public class UserService : IUserService
         return ApiResponse<UserDetailDto>.Ok(MapToDetailDto(user), "Tạo tài khoản người dùng thành công.");
     }
 
-    public async Task<ApiResponse<UserDetailDto>> UpdateUserAsync(Guid userId, UpdateUserAdminDto dto)
+    public async Task<ApiResponse<UserDetailDto>> UpdateUserAsync(int userId, UpdateUserAdminDto dto)
     {
         var user = await _unitOfWork.Users.GetByIdWithRolesAsync(userId);
         if (user == null)
@@ -135,7 +134,7 @@ public class UserService : IUserService
         return ApiResponse<UserDetailDto>.Ok(MapToDetailDto(user), "Cập nhật người dùng thành công.");
     }
 
-    public async Task<ApiResponse> ToggleUserStatusAsync(Guid userId)
+    public async Task<ApiResponse> ToggleUserStatusAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null)
@@ -153,7 +152,7 @@ public class UserService : IUserService
         return ApiResponse.Ok($"Đã {status} tài khoản thành công.");
     }
 
-    public async Task<ApiResponse> DeleteUserAsync(Guid userId)
+    public async Task<ApiResponse> DeleteUserAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdWithRolesAsync(userId);
         if (user == null)

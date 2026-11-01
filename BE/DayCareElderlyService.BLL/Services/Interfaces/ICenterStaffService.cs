@@ -19,27 +19,27 @@ public interface ICenterStaffService
     Task<ApiResponse<CenterStaffDto>> CreateStaffAsync(CreateCenterStaffDto dto);
 
     /// <summary>
-    /// Kiểm tra lịch tương lai (ngày nghỉ / ca làm việc) trước khi ngừng hoạt động nhân viên
+    /// Kiểm tra lịch tương lai trước khi ngừng hoạt động nhân viên
     /// </summary>
-    Task<ApiResponse<DeactivationWarningDto>> CheckDeactivationWarningAsync(Guid staffUserId);
+    Task<ApiResponse<DeactivationWarningDto>> CheckDeactivationWarningAsync(int staffUserId);
 
     /// <summary>
     /// Bật/tắt trạng thái hoạt động của nhân viên (Không cho tự ngừng hoạt động chính mình)
     /// </summary>
-    Task<ApiResponse<bool>> ToggleStaffStatusAsync(Guid staffUserId, Guid currentManagerUserId);
+    Task<ApiResponse<bool>> ToggleStaffStatusAsync(int staffUserId, int currentManagerUserId);
 
     /// <summary>
-    /// Lấy danh sách ngày nghỉ của nhân viên
+    /// Lấy danh sách lịch làm việc của nhân viên
     /// </summary>
-    Task<ApiResponse<List<StaffLeaveDto>>> GetStaffLeavesAsync(Guid staffUserId);
+    Task<ApiResponse<List<StaffScheduleDto>>> GetStaffSchedulesAsync(int staffUserId);
 
     /// <summary>
-    /// Thêm ngày nghỉ cho nhân viên (không cho đặt CN hoặc ngày đã qua)
+    /// Thêm/cập nhật lịch làm việc cho nhân viên (ngày đó có đi hay không)
     /// </summary>
-    Task<ApiResponse<StaffLeaveDto>> AddStaffLeaveAsync(Guid staffUserId, CreateStaffLeaveDto dto);
+    Task<ApiResponse<StaffScheduleDto>> SetStaffScheduleAsync(int staffUserId, CreateStaffScheduleDto dto);
 
     /// <summary>
-    /// Xóa một ngày nghỉ
+    /// Xóa một ngày trong lịch làm việc
     /// </summary>
-    Task<ApiResponse<bool>> DeleteStaffLeaveAsync(Guid staffUserId, Guid leaveId);
+    Task<ApiResponse<bool>> DeleteStaffScheduleAsync(int staffUserId, int scheduleId);
 }
