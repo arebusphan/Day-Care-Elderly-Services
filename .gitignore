@@ -1,0 +1,18 @@
+## .NET Core / Visual Studio build artifacts
+[Bb]in/
+[Oo]bj/
+**/[Bb]in/
+**/[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userprefs
+*.dbmdl
+
+## Logs and test results
+*.log
+TestResults/
+
+## OS generated files
+.DS_Store
+Thumbs.db

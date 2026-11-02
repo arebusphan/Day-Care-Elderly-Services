@@ -67,6 +67,8 @@ builder.Services.AddSingleton<IImageStorageService, CloudinaryImageStorageServic
 builder.Services.AddScoped<ICenterStaffService, CenterStaffService>();
 builder.Services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
 builder.Services.AddScoped<IDailyPlanningService, DailyPlanningService>();
+builder.Services.AddScoped<IIncidentReportService, IncidentReportService>();
+builder.Services.AddScoped<IMedicalSupplyService, MedicalSupplyService>();
 
 // 4. CORS
 builder.Services.AddCors(options =>

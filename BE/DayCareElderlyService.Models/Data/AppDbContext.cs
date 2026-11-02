@@ -402,6 +402,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Status)
                 .HasMaxLength(30)
                 .HasDefaultValue("Open");
+            entity.Property(e => e.IsSupplyConfirmed).HasDefaultValue(false);
 
             entity.HasOne(d => d.Center).WithMany(p => p.IncidentReports)
                 .HasForeignKey(d => d.CenterId)
@@ -429,6 +430,7 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.MinimumStock).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.QuantityInStock).HasColumnType("decimal(18, 2)").HasDefaultValue(0m);
             entity.Property(e => e.SupplyName).HasMaxLength(200);
             entity.Property(e => e.Unit).HasMaxLength(50);
 

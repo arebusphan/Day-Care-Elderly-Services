@@ -15,6 +15,8 @@ public partial class MedicalSupply
 
     public decimal MinimumStock { get; set; }
 
+    public decimal QuantityInStock { get; set; } = 0;
+
     public bool IsActive { get; set; }
 
     public DateTime CreatedAt { get; set; }

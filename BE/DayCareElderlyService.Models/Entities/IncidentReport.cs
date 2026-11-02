@@ -29,6 +29,8 @@ public partial class IncidentReport
 
     public DateTime? ResolvedAt { get; set; }
 
+    public bool IsSupplyConfirmed { get; set; } = false;
+
     public virtual Center Center { get; set; } = null!;
 
     public virtual ElderlyMember Elderly { get; set; } = null!;

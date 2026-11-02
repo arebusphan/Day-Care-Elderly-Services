@@ -257,7 +257,74 @@ public static class DbInitializer
                 END
             ";
             await context.Database.ExecuteSqlRawAsync(syncCareLogsSql);
-            logger?.LogInformation("Đã đồng bộ bảng CareLogs, CareLogPhotos.");
+                        logger?.LogInformation("Đã đồng bộ bảng CareLogs, CareLogPhotos.");
+
+            // 2.7. Đồng bộ IncidentReports, MedicalSupplies, ElderlyMembers
+            var syncIncidentsAndSuppliesSql = @"
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ElderlyMembers')
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ElderlyMembers' AND COLUMN_NAME = 'EmergencyNotes')
+                        ALTER TABLE ElderlyMembers ADD EmergencyNotes NVARCHAR(1000) NULL;
+                END
+
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'IncidentReports')
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'CenterId')
+                    BEGIN
+                        ALTER TABLE IncidentReports ADD CenterId INT NOT NULL CONSTRAINT DF_IncidentReports_CenterId DEFAULT 1;
+                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_IncidentReports_Centers')
+                            ALTER TABLE IncidentReports ADD CONSTRAINT FK_IncidentReports_Centers FOREIGN KEY (CenterId) REFERENCES Centers(CenterId);
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'IncidentType')
+                        ALTER TABLE IncidentReports ADD IncidentType NVARCHAR(100) NOT NULL CONSTRAINT DF_IncidentReports_IncidentType DEFAULT N'Chung';
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'OccurredAt')
+                        ALTER TABLE IncidentReports ADD OccurredAt DATETIME2(0) NOT NULL CONSTRAINT DF_IncidentReports_OccurredAt DEFAULT SYSDATETIME();
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'ReportedAt')
+                        ALTER TABLE IncidentReports ADD ReportedAt DATETIME2(0) NOT NULL CONSTRAINT DF_IncidentReports_ReportedAt DEFAULT SYSDATETIME();
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'ResolutionNotes')
+                        ALTER TABLE IncidentReports ADD ResolutionNotes NVARCHAR(MAX) NULL;
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'ResolvedAt')
+                        ALTER TABLE IncidentReports ADD ResolvedAt DATETIME2(0) NULL;
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'IsSupplyConfirmed')
+                        ALTER TABLE IncidentReports ADD IsSupplyConfirmed BIT NOT NULL CONSTRAINT DF_IncidentReports_IsSupplyConfirmed DEFAULT 0;
+                END
+
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MedicalSupplies')
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicalSupplies' AND COLUMN_NAME = 'MinimumStock')
+                        ALTER TABLE MedicalSupplies ADD MinimumStock DECIMAL(18,2) NOT NULL CONSTRAINT DF_MedicalSupplies_MinimumStock DEFAULT 0;
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicalSupplies' AND COLUMN_NAME = 'IsActive')
+                        ALTER TABLE MedicalSupplies ADD IsActive BIT NOT NULL CONSTRAINT DF_MedicalSupplies_IsActive DEFAULT 1;
+
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicalSupplies' AND COLUMN_NAME = 'QuantityInStock' AND DATA_TYPE = 'int')
+                    BEGIN
+                        DECLARE @defConstraint NVARCHAR(200);
+                        SELECT @defConstraint = d.name 
+                        FROM sys.default_constraints d 
+                        JOIN sys.columns c ON d.parent_column_id = c.column_id AND d.parent_object_id = c.object_id
+                        WHERE c.object_id = OBJECT_ID('MedicalSupplies') AND c.name = 'QuantityInStock';
+                        
+                        IF @defConstraint IS NOT NULL
+                            EXEC('ALTER TABLE MedicalSupplies DROP CONSTRAINT ' + @defConstraint);
+
+                        ALTER TABLE MedicalSupplies ALTER COLUMN QuantityInStock DECIMAL(18,2) NOT NULL;
+                        ALTER TABLE MedicalSupplies ADD CONSTRAINT DF_MedicalSupplies_QuantityInStock DEFAULT 0 FOR QuantityInStock;
+                    END
+                    ELSE IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicalSupplies' AND COLUMN_NAME = 'QuantityInStock')
+                    BEGIN
+                        ALTER TABLE MedicalSupplies ADD QuantityInStock DECIMAL(18,2) NOT NULL CONSTRAINT DF_MedicalSupplies_QuantityInStock DEFAULT 0;
+                    END
+                END
+            ";
+            await context.Database.ExecuteSqlRawAsync(syncIncidentsAndSuppliesSql);
+            logger?.LogInformation("Đã đồng bộ IncidentReports (IsSupplyConfirmed, CenterId, IncidentType, OccurredAt, ReportedAt, ResolutionNotes, ResolvedAt) và MedicalSupplies (QuantityInStock, MinimumStock, IsActive).");
 
             // 3. Seed Roles
             var defaultRoles = new List<Role>
