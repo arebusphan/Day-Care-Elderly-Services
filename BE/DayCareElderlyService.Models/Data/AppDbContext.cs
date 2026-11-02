@@ -121,12 +121,19 @@ public partial class AppDbContext : DbContext
             entity.HasIndex(e => new { e.ElderlyId, e.AttendanceDate }, "UX_AttendanceRecords_Elderly_Date").IsUnique();
 
             entity.Property(e => e.AttendanceId);
-            entity.Property(e => e.CheckInAt).HasPrecision(0);
-            entity.Property(e => e.CheckOutAt).HasPrecision(0);
+            entity.Property(e => e.Status)
+                .HasMaxLength(30)
+                .HasDefaultValue("Present");
+            entity.Property(e => e.CheckInTime).HasColumnType("time");
+            entity.Property(e => e.CheckOutTime).HasColumnType("time");
+            entity.Property(e => e.CheckInAt).HasColumnType("datetime2");
+            entity.Property(e => e.CheckOutAt).HasColumnType("datetime2");
             entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
+                .HasColumnType("datetime2")
                 .HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.CorrectionReason).HasMaxLength(500);
 
             entity.HasOne(d => d.CheckedInByNavigation).WithMany()
                 .HasForeignKey(d => d.CheckedInBy)
@@ -143,6 +150,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasOne(d => d.Registration).WithMany(p => p.AttendanceRecords)
                 .HasForeignKey(d => d.RegistrationId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_AttendanceRecords_Registration");
         });

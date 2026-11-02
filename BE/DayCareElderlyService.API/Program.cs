@@ -69,6 +69,7 @@ builder.Services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
 builder.Services.AddScoped<IDailyPlanningService, DailyPlanningService>();
 builder.Services.AddScoped<IIncidentReportService, IncidentReportService>();
 builder.Services.AddScoped<IMedicalSupplyService, MedicalSupplyService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 // 4. CORS
 builder.Services.AddCors(options =>

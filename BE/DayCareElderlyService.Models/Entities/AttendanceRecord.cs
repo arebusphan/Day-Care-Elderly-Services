@@ -9,9 +9,15 @@ public partial class AttendanceRecord
 
     public int ElderlyId { get; set; }
 
-    public int RegistrationId { get; set; }
+    public int? RegistrationId { get; set; }
 
     public DateOnly AttendanceDate { get; set; }
+
+    public string Status { get; set; } = "Present";
+
+    public TimeOnly? CheckInTime { get; set; }
+
+    public TimeOnly? CheckOutTime { get; set; }
 
     public DateTime? CheckInAt { get; set; }
 
@@ -25,11 +31,17 @@ public partial class AttendanceRecord
 
     public DateTime CreatedAt { get; set; }
 
+    public DateTime? UpdatedAt { get; set; }
+
+    public int? UpdatedBy { get; set; }
+
+    public string? CorrectionReason { get; set; }
+
     public virtual User? CheckedInByNavigation { get; set; }
 
     public virtual User? CheckedOutByNavigation { get; set; }
 
     public virtual ElderlyMember Elderly { get; set; } = null!;
 
-    public virtual ServiceRegistration Registration { get; set; } = null!;
+    public virtual ServiceRegistration? Registration { get; set; }
 }
