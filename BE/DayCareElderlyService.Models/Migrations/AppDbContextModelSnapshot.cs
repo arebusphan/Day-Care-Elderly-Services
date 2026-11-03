@@ -22,86 +22,6 @@ namespace DayCareElderlyService.Models.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityAssignment", b =>
-                {
-                    b.Property<int>("AssignmentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentId"));
-
-                    b.Property<string>("AssignmentRole")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("CenterActivityId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(0)
-                        .HasColumnType("datetime2(0)")
-                        .HasDefaultValueSql("(sysdatetime())");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("StaffId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("Assigned");
-
-                    b.HasKey("AssignmentId");
-
-                    b.HasIndex(new[] { "StaffId" }, "IX_ActivityAssignments_StaffId");
-
-                    b.HasIndex(new[] { "CenterActivityId", "StaffId" }, "UQ_ActivityAssignments_ActivityStaff")
-                        .IsUnique();
-
-                    b.ToTable("ActivityAssignments");
-                });
-
-            modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityTemplate", b =>
-                {
-                    b.Property<int>("ActivityTemplateId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ActivityTemplateId"));
-
-                    b.Property<string>("ActivityName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int>("CenterId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("DefaultLocation")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.HasKey("ActivityTemplateId");
-
-                    b.HasIndex("CenterId");
-
-                    b.ToTable("ActivityTemplates");
-                });
-
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.AttendanceRecord", b =>
                 {
                     b.Property<int>("AttendanceId")
@@ -890,7 +810,7 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasPrecision(0)
                         .HasColumnType("datetime2(0)");
 
-                    b.Property<int>("StaffId")
+                    b.Property<int?>("StaffId")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
@@ -966,7 +886,7 @@ namespace DayCareElderlyService.Models.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PackageActivityId"));
 
-                    b.Property<int>("ActivityTemplateId")
+                    b.Property<int?>("ActivityTemplateId")
                         .HasColumnType("int");
 
                     b.Property<byte?>("DayOfWeek")
@@ -1017,6 +937,9 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("datetime2(0)")
                         .HasDefaultValueSql("(sysdatetime())");
 
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("InvoiceNo")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -1051,6 +974,8 @@ namespace DayCareElderlyService.Models.Migrations
                     b.HasKey("PaymentId");
 
                     b.HasIndex(new[] { "RegistrationId" }, "IX_Payments_RegistrationId");
+
+                    b.HasIndex("InvoiceId", "IX_Payments_InvoiceId");
 
                     b.ToTable("Payments");
                 });
@@ -1432,36 +1357,6 @@ namespace DayCareElderlyService.Models.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
-            modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityAssignment", b =>
-                {
-                    b.HasOne("DayCareElderlyService.Models.Entities.CenterActivity", "CenterActivity")
-                        .WithMany("ActivityAssignments")
-                        .HasForeignKey("CenterActivityId")
-                        .IsRequired()
-                        .HasConstraintName("FK_ActivityAssignments_Activities");
-
-                    b.HasOne("DayCareElderlyService.Models.Entities.User", "Staff")
-                        .WithMany()
-                        .HasForeignKey("StaffId")
-                        .IsRequired()
-                        .HasConstraintName("FK_ActivityAssignments_Users");
-
-                    b.Navigation("CenterActivity");
-
-                    b.Navigation("Staff");
-                });
-
-            modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityTemplate", b =>
-                {
-                    b.HasOne("DayCareElderlyService.Models.Entities.Center", "Center")
-                        .WithMany("ActivityTemplates")
-                        .HasForeignKey("CenterId")
-                        .IsRequired()
-                        .HasConstraintName("FK_ActivityTemplates_Centers");
-
-                    b.Navigation("Center");
-                });
-
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.AttendanceRecord", b =>
                 {
                     b.HasOne("DayCareElderlyService.Models.Entities.User", "CheckedInByNavigation")
@@ -1736,7 +1631,7 @@ namespace DayCareElderlyService.Models.Migrations
                     b.HasOne("DayCareElderlyService.Models.Entities.User", "Staff")
                         .WithMany()
                         .HasForeignKey("StaffId")
-                        .IsRequired()
+                        .IsRequired(false)
                         .HasConstraintName("FK_MedicationRecords_Users");
 
                     b.Navigation("MedicationPlan");
@@ -1757,19 +1652,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.PackageActivity", b =>
                 {
-                    b.HasOne("DayCareElderlyService.Models.Entities.ActivityTemplate", "ActivityTemplate")
-                        .WithMany("PackageActivities")
-                        .HasForeignKey("ActivityTemplateId")
-                        .IsRequired()
-                        .HasConstraintName("FK_PackageActivities_Templates");
-
                     b.HasOne("DayCareElderlyService.Models.Entities.ServicePackage", "Package")
                         .WithMany("PackageActivities")
                         .HasForeignKey("PackageId")
                         .IsRequired()
                         .HasConstraintName("FK_PackageActivities_Packages");
-
-                    b.Navigation("ActivityTemplate");
 
                     b.Navigation("Package");
                 });
@@ -1889,11 +1776,6 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasConstraintName("FK_UserRoles_Users");
                 });
 
-            modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityTemplate", b =>
-                {
-                    b.Navigation("PackageActivities");
-                });
-
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.CareLog", b =>
                 {
                     b.Navigation("CareLogPhotos");
@@ -1901,8 +1783,6 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.Center", b =>
                 {
-                    b.Navigation("ActivityTemplates");
-
                     b.Navigation("CenterActivities");
 
                     b.Navigation("DailySchedulePlans");
@@ -1918,8 +1798,6 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.CenterActivity", b =>
                 {
-                    b.Navigation("ActivityAssignments");
-
                     b.Navigation("CareLogs");
                 });
 
@@ -2005,6 +1883,223 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Navigation("StaffSchedules");
 
                     b.Navigation("SupplyTransactions");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Conversation", b =>
+                {
+                    b.Property<int>("ConversationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConversationId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<int>("ElderlyId").HasColumnType("int");
+                    b.Property<int>("FamilyUserId").HasColumnType("int");
+                    b.Property<bool>("IsClosed").HasColumnType("bit").HasDefaultValue(false);
+                    b.Property<DateTime?>("LastMessageAt").HasPrecision(0).HasColumnType("datetime2(0)");
+                    b.Property<int>("StaffUserId").HasColumnType("int");
+                    b.Property<DateTime?>("UpdatedAt").HasPrecision(0).HasColumnType("datetime2(0)");
+
+                    b.HasKey("ConversationId");
+                    b.HasIndex("FamilyUserId");
+                    b.HasIndex("LastMessageAt", "IX_Conversations_LastMessageAt");
+                    b.HasIndex("StaffUserId");
+                    b.HasIndex(new[] { "ElderlyId", "FamilyUserId", "StaffUserId" }, "UQ_Conversations_Elderly_Family_Staff").IsUnique();
+                    b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.AuditLog", b =>
+                {
+                    b.Property<long>("AuditLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AuditLogId"));
+
+                    b.Property<string>("Action").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<int?>("ActorUserId").HasColumnType("int");
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+                    b.Property<string>("Details").HasColumnType("nvarchar(max)");
+                    b.Property<string>("EntityId").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("EntityName").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
+
+                    b.HasKey("AuditLogId");
+                    b.HasIndex(new[] { "ActorUserId", "CreatedAt" }, "IX_AuditLogs_Actor_CreatedAt");
+                    b.HasIndex(new[] { "EntityName", "EntityId", "CreatedAt" }, "IX_AuditLogs_Entity_CreatedAt");
+                    b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Invoice", b =>
+                {
+                    b.Property<int>("InvoiceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InvoiceId"));
+
+                    b.Property<DateTime?>("DueAt").HasPrecision(0).HasColumnType("datetime2(0)");
+                    b.Property<string>("InvoiceNo").IsRequired().HasMaxLength(50).HasColumnType("nvarchar(50)");
+                    b.Property<string>("InvoiceVatNo").HasMaxLength(50).HasColumnType("nvarchar(50)");
+                    b.Property<DateTime>("IssuedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+                    b.Property<int>("RegistrationId").HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pending");
+                    b.Property<decimal>("TotalAmount").HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("InvoiceId");
+                    b.HasIndex("InvoiceNo", "IX_Invoices_InvoiceNo");
+                    b.HasIndex("RegistrationId", "UQ_Invoices_RegistrationId").IsUnique();
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Message", b =>
+                {
+                    b.Property<int>("MessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("ConversationId").HasColumnType("int");
+                    b.Property<DateTime?>("ReadAt").HasPrecision(0).HasColumnType("datetime2(0)");
+                    b.Property<DateTime>("SentAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+                    b.Property<int>("SenderUserId").HasColumnType("int");
+
+                    b.HasKey("MessageId");
+                    b.HasIndex("SenderUserId");
+                    b.HasIndex(new[] { "ConversationId", "SentAt" }, "IX_Messages_Conversation_SentAt");
+                    b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Invoice", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.ServiceRegistration", "Registration")
+                        .WithMany("Invoices")
+                        .HasForeignKey("RegistrationId")
+                        .IsRequired()
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Invoices_ServiceRegistrations");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.AuditLog", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_AuditLogs_Users");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Payment", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Payments_Invoices");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Conversation", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.ElderlyMember", "Elderly")
+                        .WithMany()
+                        .HasForeignKey("ElderlyId")
+                        .IsRequired()
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Conversations_ElderlyMembers");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "FamilyUser")
+                        .WithMany()
+                        .HasForeignKey("FamilyUserId")
+                        .IsRequired()
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Conversations_FamilyUsers");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "StaffUser")
+                        .WithMany()
+                        .HasForeignKey("StaffUserId")
+                        .IsRequired()
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Conversations_StaffUsers");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Message", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .IsRequired()
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("FK_Messages_Conversations");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "SenderUser")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .IsRequired()
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Messages_Users");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Conversation", b =>
+                {
+                    b.Navigation("Elderly");
+                    b.Navigation("FamilyUser");
+                    b.Navigation("Messages");
+                    b.Navigation("StaffUser");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Message", b =>
+                {
+                    b.Navigation("Conversation");
+                    b.Navigation("SenderUser");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Invoice", b =>
+                {
+                    b.Navigation("Payments");
+                    b.Navigation("Registration");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.AuditLog", b =>
+                {
+                    b.Navigation("ActorUser");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.Payment", b =>
+                {
+                    b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.ServiceRegistration", b =>
+                {
+                    b.Navigation("Invoices");
                 });
 #pragma warning restore 612, 618
         }

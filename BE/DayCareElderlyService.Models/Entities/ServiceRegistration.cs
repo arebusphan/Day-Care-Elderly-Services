@@ -46,4 +46,6 @@ public partial class ServiceRegistration
     public virtual ServicePackage Package { get; set; } = null!;
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 }

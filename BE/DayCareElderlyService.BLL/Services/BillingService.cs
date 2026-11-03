@@ -154,10 +154,24 @@ public class BillingService : IBillingService
         var method = string.IsNullOrWhiteSpace(dto.PaymentMethod) ? "Chuyển khoản" : dto.PaymentMethod;
         if (method.Length > 100) method = method[..100];
 
-        // 6. Lưu Payment kèm hóa đơn
+        // 6. Lưu hóa đơn độc lập; payment tham chiếu hóa đơn để hỗ trợ nhiều lần thanh toán.
+        var invoice = new Invoice
+        {
+            RegistrationId = registration.RegistrationId,
+            InvoiceNo = invoiceNo,
+            InvoiceVatNo = invoiceVatNo,
+            TotalAmount = dto.TotalAmount,
+            Status = "Paid",
+            IssuedAt = DateTime.UtcNow
+        };
+        await _context.Invoices.AddAsync(invoice);
+        await _context.SaveChangesAsync();
+
+        // 7. Lưu giao dịch thanh toán gắn với hóa đơn.
         var payment = new Payment
         {
             RegistrationId = registration.RegistrationId,
+            InvoiceId = invoice.InvoiceId,
             Amount = dto.TotalAmount,
             PaymentMethod = method,
             PaymentStatus = "Paid",
@@ -170,6 +184,15 @@ public class BillingService : IBillingService
 
         await _context.Payments.AddAsync(payment);
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "REGISTER_AND_PAY_SERVICE", nameof(ServiceRegistration), registration.RegistrationId.ToString(), new
+        {
+            registration.ElderlyId,
+            registration.PackageId,
+            invoice.InvoiceId,
+            invoice.InvoiceNo,
+            payment.Amount,
+            payment.PaymentMethod
+        });
 
         var result = new ServiceRegistrationResultDto
         {
@@ -205,18 +228,19 @@ public class BillingService : IBillingService
             return ApiResponse<List<InvoiceDto>>.Ok(new List<InvoiceDto>(), "Chưa có hóa đơn nào.");
         }
 
-        // Truy vấn tất cả payments gắn với các elderlyIds đó
-        var payments = await _context.Payments
-            .Include(p => p.Registration)
+        // Hóa đơn là bản ghi công nợ; payments là các giao dịch thanh toán của hóa đơn.
+        var invoices = await _context.Invoices
+            .Include(i => i.Registration)
                 .ThenInclude(r => r.Package)
-            .Include(p => p.Registration)
+            .Include(i => i.Registration)
                 .ThenInclude(r => r.Elderly)
                     .ThenInclude(e => e.ElderlyFamilyRelationships)
-            .Where(p => elderlyIds.Contains(p.Registration.ElderlyId))
-            .OrderByDescending(p => p.CreatedAt)
+            .Include(i => i.Payments)
+            .Where(i => elderlyIds.Contains(i.Registration.ElderlyId))
+            .OrderByDescending(i => i.IssuedAt)
             .ToListAsync();
 
-        var invoiceDtos = payments.Select(p => MapToInvoiceDto(p, familyMember.FamilyMemberId)).ToList();
+        var invoiceDtos = invoices.Select(i => MapToInvoiceDto(i, familyMember.FamilyMemberId)).ToList();
 
         return ApiResponse<List<InvoiceDto>>.Ok(invoiceDtos, "Lấy danh sách hóa đơn thành công.");
     }
@@ -229,21 +253,22 @@ public class BillingService : IBillingService
             return ApiResponse<InvoiceDto>.Fail("Không tìm thấy thông tin gia đình.");
         }
 
-        var payment = await _context.Payments
-            .Include(p => p.Registration)
+        var invoice = await _context.Invoices
+            .Include(i => i.Registration)
                 .ThenInclude(r => r.Package)
-            .Include(p => p.Registration)
+            .Include(i => i.Registration)
                 .ThenInclude(r => r.Elderly)
                     .ThenInclude(e => e.ElderlyFamilyRelationships)
-            .FirstOrDefaultAsync(p => p.InvoiceNo == invoiceNo);
+            .Include(i => i.Payments)
+            .FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo);
 
-        if (payment == null)
+        if (invoice == null)
         {
             return ApiResponse<InvoiceDto>.Fail("Không tìm thấy hóa đơn.");
         }
 
         // Kiểm tra quyền xem
-        var hasAccess = payment.Registration.Elderly.ElderlyFamilyRelationships
+        var hasAccess = invoice.Registration.Elderly.ElderlyFamilyRelationships
             .Any(r => r.FamilyMemberId == familyMember.FamilyMemberId);
 
         if (!hasAccess)
@@ -251,14 +276,17 @@ public class BillingService : IBillingService
             return ApiResponse<InvoiceDto>.Fail("Bạn không có quyền xem hóa đơn này.");
         }
 
-        var dto = MapToInvoiceDto(payment, familyMember.FamilyMemberId);
+        var dto = MapToInvoiceDto(invoice, familyMember.FamilyMemberId);
         return ApiResponse<InvoiceDto>.Ok(dto, "Lấy chi tiết hóa đơn thành công.");
     }
 
-    private static InvoiceDto MapToInvoiceDto(Payment payment, int familyMemberId)
+    private static InvoiceDto MapToInvoiceDto(Invoice invoice, int familyMemberId)
     {
-        var reg = payment.Registration;
+        var reg = invoice.Registration;
         var elderly = reg.Elderly;
+        var payment = invoice.Payments
+            .OrderByDescending(p => p.PaidAt ?? p.CreatedAt)
+            .FirstOrDefault();
         var rel = elderly.ElderlyFamilyRelationships
             .FirstOrDefault(r => r.FamilyMemberId == familyMemberId)?.Relationship ?? "Người thân";
 
@@ -287,9 +315,9 @@ public class BillingService : IBillingService
 
         return new InvoiceDto
         {
-            Id = payment.InvoiceNo ?? $"HD-{payment.CreatedAt:yyyyMMdd}-{payment.PaymentId.ToString()[..4].ToUpper()}",
+            Id = invoice.InvoiceNo,
             RegistrationCode = reg.RegistrationCode ?? $"REG-{reg.CreatedAt:yyMMdd}",
-            CreatedAt = payment.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+            CreatedAt = invoice.IssuedAt.ToString("dd/MM/yyyy HH:mm"),
             ElderlyName = elderly.FullName,
             Relationship = rel,
             PackageName = reg.Package?.PackageName ?? "Gói chăm sóc ban ngày",
@@ -300,10 +328,12 @@ public class BillingService : IBillingService
             PackagePrice = reg.PriceAtPurchase,
             SupportSurcharge = reg.SupportSurcharge,
             RoomSurcharge = reg.RoomSurcharge,
-            TotalAmount = payment.Amount > 0 ? payment.Amount : reg.TotalAmount,
-            Status = payment.PaymentStatus.ToLower() == "paid" ? "paid" : "pending",
-            PaymentMethod = payment.PaymentMethod,
-            InvoiceVatNo = payment.InvoiceVatNo
+            TotalAmount = invoice.TotalAmount,
+            Status = invoice.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase)
+                ? "paid"
+                : invoice.Status.Equals("Refunded", StringComparison.OrdinalIgnoreCase) ? "refunded" : "pending",
+            PaymentMethod = payment?.PaymentMethod ?? "Chưa thanh toán",
+            InvoiceVatNo = invoice.InvoiceVatNo
         };
     }
 }

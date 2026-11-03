@@ -5,6 +5,7 @@ import ElderlyProfileView from "./ElderlyProfileView";
 import { ServicePackagesView } from "./ServicePackagesView";
 import { BillingView } from "./BillingView";
 import FamilyAttendanceView from "./FamilyAttendanceView";
+import FamilyHealthTrackingView from "./FamilyHealthTrackingView";
 
 export const FamilyDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -105,6 +106,8 @@ export const FamilyDashboard: React.FC = () => {
             <BillingView onNavigateToServices={() => setActiveTab("services")} />
           ) : activeTab === "attendence" ? (
             <FamilyAttendanceView />
+          ) : activeTab === "health_tracking" ? (
+            <FamilyHealthTrackingView />
           ) : (
             <div className="w-full h-full min-h-[350px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50 flex flex-col items-center justify-center text-center p-6">
               <p className="text-sm font-semibold text-slate-600">Khu vực {activeItem.label}</p>

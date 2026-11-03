@@ -126,6 +126,12 @@ public class CareLogService : ICareLogService
         var log = NewLog(staff!, elderly!.ElderlyId, careType, dto.Description.Trim(), dto.Notes, ToJson(dto.Data), dto.IsInternal);
         await _context.CareLogs.AddAsync(log);
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "CREATE_CARE_LOG", nameof(CareLog), log.CareLogId.ToString(), new
+        {
+            ElderlyId = elderlyId,
+            CareType = careType,
+            dto.IsInternal
+        });
 
         return ApiResponse<CareLogEntryDto>.Ok(CareLogShared.ToEntryDto(log), "Ghi care log thành công.");
     }
@@ -215,6 +221,10 @@ public class CareLogService : ICareLogService
 
         await _context.CareLogPhotos.AddRangeAsync(photos);
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "UPLOAD_CARE_LOG_PHOTOS", nameof(CareLog), log.CareLogId.ToString(), new
+        {
+            PhotoCount = photos.Count
+        });
 
         return ApiResponse<List<CareLogPhotoDto>>.Ok(photos.Select(CareLogShared.ToPhotoDto).ToList(), "Tải ảnh thành công.");
     }
@@ -243,6 +253,10 @@ public class CareLogService : ICareLogService
 
         _context.CareLogPhotos.Remove(photo);
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "DELETE_CARE_LOG_PHOTO", nameof(CareLogPhoto), photoId.ToString(), new
+        {
+            CareLogId = photo.CareLogId
+        });
         await _imageStorage.DeleteAsync(_imageStorage.CareLogPhotoPublicId(photo.CareLogPhotoId));
 
         return ApiResponse<bool>.Ok(true, "Xoá ảnh thành công.");
@@ -301,6 +315,13 @@ public class CareLogService : ICareLogService
         }
 
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "RECORD_VITALS", nameof(CareLog), log.CareLogId.ToString(), new
+        {
+            ElderlyId = elderlyId,
+            HasWarnings = warnings.Count > 0,
+            WarningCount = warnings.Count,
+            IncidentId = incident?.IncidentId
+        });
 
         var result = new VitalsResultDto
         {
@@ -392,6 +413,11 @@ public class CareLogService : ICareLogService
         }
 
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "UPDATE_MEDICATION_DOSE", nameof(MedicationRecord), record.MedicationRecordId.ToString(), new
+        {
+            ElderlyId = elderly.ElderlyId,
+            Status = record.Status
+        });
         return ApiResponse<DoseDto>.Ok(CareLogShared.ToDoseDto(record), "Ghi nhận thuốc thành công.");
     }
 
@@ -485,6 +511,12 @@ public class CareLogService : ICareLogService
             "Incident", nameof(IncidentReport), incident.IncidentId);
 
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "CREATE_INCIDENT", nameof(IncidentReport), incident.IncidentId.ToString(), new
+        {
+            ElderlyId = elderly.ElderlyId,
+            IncidentType = incident.IncidentType,
+            Severity = incident.Severity
+        });
         return ApiResponse<IncidentDto>.Ok(CareLogShared.ToIncidentDto(incident), "Báo sự cố thành công.");
     }
 
@@ -530,57 +562,11 @@ public class CareLogService : ICareLogService
         }
 
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "UPDATE_INCIDENT", nameof(IncidentReport), incident.IncidentId.ToString(), new
+        {
+            Status = incident.Status
+        });
         return ApiResponse<IncidentDto>.Ok(CareLogShared.ToIncidentDto(incident), "Cập nhật sự cố thành công.");
-    }
-
-    // ===== Chốt ngày =====
-
-    public async Task<ApiResponse<CareLogDayDto>> MarkMedicalDoneAsync(int userId, int elderlyId, CareLogNoteDto dto)
-    {
-        var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
-        if (error != null)
-        {
-            return ApiResponse<CareLogDayDto>.Fail(error);
-        }
-
-        if (await HasTodayAsync(elderlyId, CareLogTypes.MedicalDone))
-        {
-            return ApiResponse<CareLogDayDto>.Fail("Phần y tế hôm nay đã được xác nhận.");
-        }
-
-        var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.MedicalDone, "Hoàn tất phần y tế trong ngày", dto.Notes, null, false);
-        await _context.CareLogs.AddAsync(log);
-        await _context.SaveChangesAsync();
-
-        var day = await CareLogShared.BuildDayAsync(_context, elderly, VietnamTime.Today, includeInternal: true);
-        return ApiResponse<CareLogDayDto>.Ok(day, "Xác nhận xong phần y tế thành công.");
-    }
-
-    public async Task<ApiResponse<CareLogDayDto>> CloseDayAsync(int userId, int elderlyId, CareLogNoteDto dto)
-    {
-        var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
-        if (error != null)
-        {
-            return ApiResponse<CareLogDayDto>.Fail(error);
-        }
-
-        if (!await HasTodayAsync(elderlyId, CareLogTypes.MedicalDone))
-        {
-            return ApiResponse<CareLogDayDto>.Fail("Điều dưỡng chưa xác nhận xong phần y tế, chưa thể chốt care log.");
-        }
-
-        var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.Close, "Chốt care log trong ngày", dto.Notes, null, false);
-        await _context.CareLogs.AddAsync(log);
-
-        await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
-            $"Care log hôm nay của {elderly.FullName}",
-            "Care log hôm nay đã được chốt. Mời gia đình xem tổng kết ngày.",
-            "CareLog", nameof(CareLog), log.CareLogId);
-
-        await _context.SaveChangesAsync();
-
-        var day = await CareLogShared.BuildDayAsync(_context, elderly, VietnamTime.Today, includeInternal: true);
-        return ApiResponse<CareLogDayDto>.Ok(day, "Chốt care log thành công.");
     }
 
     // ===== Helpers =====
@@ -597,7 +583,7 @@ public class CareLogService : ICareLogService
         _context.ElderlyMembers.FirstOrDefaultAsync(e => e.ElderlyId == elderlyId && e.IsActive);
 
     /// <summary>
-    /// Kiểm tra trước khi ghi: là staff, cụ đã check-in hôm nay, care log hôm nay chưa chốt
+    /// Kiểm tra trước khi ghi: là staff và cụ đã check-in hôm nay
     /// </summary>
     private async Task<(User? Staff, ElderlyMember? Elderly, string? Error)> GetWritableAsync(int userId, int elderlyId)
     {
@@ -619,11 +605,6 @@ public class CareLogService : ICareLogService
         if (!checkedIn)
         {
             return (staff, elderly, "Người cao tuổi chưa check-in hôm nay.");
-        }
-
-        if (await HasTodayAsync(elderlyId, CareLogTypes.Close))
-        {
-            return (staff, elderly, "Care log hôm nay đã chốt, không thể ghi thêm.");
         }
 
         return (staff, elderly, null);

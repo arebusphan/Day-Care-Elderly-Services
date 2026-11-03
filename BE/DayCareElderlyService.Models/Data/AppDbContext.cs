@@ -12,15 +12,15 @@ public partial class AppDbContext : DbContext
     {
     }
 
-    public virtual DbSet<ActivityAssignment> ActivityAssignments { get; set; }
-
-    public virtual DbSet<ActivityTemplate> ActivityTemplates { get; set; }
-
     public virtual DbSet<AttendanceRecord> AttendanceRecords { get; set; }
+
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
     public virtual DbSet<CareLog> CareLogs { get; set; }
 
     public virtual DbSet<CareLogPhoto> CareLogPhotos { get; set; }
+
+    public virtual DbSet<Conversation> Conversations { get; set; }
 
     public virtual DbSet<DailySchedulePlan> DailySchedulePlans { get; set; }
 
@@ -32,7 +32,11 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<IncidentReport> IncidentReports { get; set; }
 
+    public virtual DbSet<Invoice> Invoices { get; set; }
+
     public virtual DbSet<MedicalSupply> MedicalSupplies { get; set; }
+
+    public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<MedicationPlan> MedicationPlans { get; set; }
 
@@ -66,37 +70,6 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<ActivityAssignment>(entity =>
-        {
-            entity.HasKey(e => e.AssignmentId);
-
-            entity.HasIndex(e => e.StaffId, "IX_ActivityAssignments_StaffId");
-
-            entity.Property(e => e.AssignmentId);
-            entity.Property(e => e.AssignmentRole).HasMaxLength(100);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.Notes).HasMaxLength(1000);
-            entity.Property(e => e.Status)
-                .HasMaxLength(30)
-                .HasDefaultValue("Assigned");
-
-            entity.HasOne(d => d.Staff).WithMany()
-                .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ActivityAssignments_Users");
-        });
-
-        modelBuilder.Entity<ActivityTemplate>(entity =>
-        {
-            entity.Property(e => e.ActivityTemplateId);
-            entity.Property(e => e.ActivityName).HasMaxLength(150);
-            entity.Property(e => e.DefaultLocation).HasMaxLength(200);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-
-        });
-
         modelBuilder.Entity<AttendanceRecord>(entity =>
         {
             entity.HasKey(e => e.AttendanceId);
@@ -140,6 +113,25 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_AttendanceRecords_Registration");
         });
 
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.AuditLogId);
+
+            entity.HasIndex(e => new { e.EntityName, e.EntityId, e.CreatedAt }, "IX_AuditLogs_Entity_CreatedAt");
+            entity.HasIndex(e => new { e.ActorUserId, e.CreatedAt }, "IX_AuditLogs_Actor_CreatedAt");
+
+            entity.Property(e => e.Action).HasMaxLength(100);
+            entity.Property(e => e.EntityName).HasMaxLength(100);
+            entity.Property(e => e.EntityId).HasMaxLength(100);
+            entity.Property(e => e.Details).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+
+            entity.HasOne(e => e.ActorUser).WithMany()
+                .HasForeignKey(e => e.ActorUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_AuditLogs_Users");
+        });
+
         modelBuilder.Entity<CareLog>(entity =>
         {
             entity.HasIndex(e => new { e.ElderlyId, e.RecordedAt }, "IX_CareLogs_ElderlyRecordedAt").IsDescending(false, true);
@@ -173,6 +165,34 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.CareLogId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CareLogPhotos_CareLogs");
+        });
+
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasKey(e => e.ConversationId);
+
+            entity.HasIndex(e => new { e.ElderlyId, e.FamilyUserId, e.StaffUserId }, "UQ_Conversations_Elderly_Family_Staff").IsUnique();
+            entity.HasIndex(e => e.LastMessageAt, "IX_Conversations_LastMessageAt");
+
+            entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.UpdatedAt).HasPrecision(0);
+            entity.Property(e => e.LastMessageAt).HasPrecision(0);
+            entity.Property(e => e.IsClosed).HasDefaultValue(false);
+
+            entity.HasOne(e => e.Elderly).WithMany()
+                .HasForeignKey(e => e.ElderlyId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Conversations_ElderlyMembers");
+
+            entity.HasOne(e => e.FamilyUser).WithMany()
+                .HasForeignKey(e => e.FamilyUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Conversations_FamilyUsers");
+
+            entity.HasOne(e => e.StaffUser).WithMany()
+                .HasForeignKey(e => e.StaffUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Conversations_StaffUsers");
         });
 
         modelBuilder.Entity<DailySchedulePlan>(entity =>
@@ -349,6 +369,26 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_IncidentReports_Users");
         });
 
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.HasKey(e => e.InvoiceId);
+
+            entity.HasIndex(e => e.RegistrationId, "UQ_Invoices_RegistrationId").IsUnique();
+            entity.HasIndex(e => e.InvoiceNo, "IX_Invoices_InvoiceNo");
+
+            entity.Property(e => e.InvoiceNo).HasMaxLength(50);
+            entity.Property(e => e.InvoiceVatNo).HasMaxLength(50);
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Status).HasMaxLength(30).HasDefaultValue("Pending");
+            entity.Property(e => e.IssuedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.DueAt).HasPrecision(0);
+
+            entity.HasOne(e => e.Registration).WithMany(e => e.Invoices)
+                .HasForeignKey(e => e.RegistrationId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Invoices_ServiceRegistrations");
+        });
+
         modelBuilder.Entity<MedicalSupply>(entity =>
         {
             entity.HasKey(e => e.SupplyId);
@@ -401,6 +441,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasOne(d => d.Staff).WithMany()
                 .HasForeignKey(d => d.StaffId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MedicationRecords_Users");
         });
@@ -423,17 +464,34 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_Notifications_Users");
         });
 
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.HasKey(e => e.MessageId);
+
+            entity.HasIndex(e => new { e.ConversationId, e.SentAt }, "IX_Messages_Conversation_SentAt");
+            entity.HasIndex(e => e.SenderUserId, "IX_Messages_SenderUserId");
+
+            entity.Property(e => e.Content).HasMaxLength(4000);
+            entity.Property(e => e.SentAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.ReadAt).HasPrecision(0);
+
+            entity.HasOne(e => e.Conversation).WithMany(e => e.Messages)
+                .HasForeignKey(e => e.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Messages_Conversations");
+
+            entity.HasOne(e => e.SenderUser).WithMany()
+                .HasForeignKey(e => e.SenderUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Messages_Users");
+        });
+
         modelBuilder.Entity<PackageActivity>(entity =>
         {
             entity.Property(e => e.PackageActivityId);
             entity.Property(e => e.EndTime).HasPrecision(0);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.StartTime).HasPrecision(0);
-
-            entity.HasOne(d => d.ActivityTemplate).WithMany(p => p.PackageActivities)
-                .HasForeignKey(d => d.ActivityTemplateId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PackageActivities_Templates");
 
             entity.HasOne(d => d.Package).WithMany(p => p.PackageActivities)
                 .HasForeignKey(d => d.PackageId)
@@ -459,10 +517,17 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.InvoiceNo).HasMaxLength(50);
             entity.Property(e => e.InvoiceVatNo).HasMaxLength(50);
 
+            entity.HasIndex(e => e.InvoiceId, "IX_Payments_InvoiceId");
+
             entity.HasOne(d => d.Registration).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.RegistrationId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Payments_ServiceRegistrations");
+
+            entity.HasOne(d => d.Invoice).WithMany(i => i.Payments)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Payments_Invoices");
         });
 
         modelBuilder.Entity<Role>(entity =>

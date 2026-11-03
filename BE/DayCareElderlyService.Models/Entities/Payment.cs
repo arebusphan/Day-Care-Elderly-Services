@@ -9,6 +9,8 @@ public partial class Payment
 
     public int RegistrationId { get; set; }
 
+    public int? InvoiceId { get; set; }
+
     public decimal Amount { get; set; }
 
     public string PaymentMethod { get; set; } = null!;
@@ -26,4 +28,6 @@ public partial class Payment
     public string? InvoiceVatNo { get; set; }
 
     public virtual ServiceRegistration Registration { get; set; } = null!;
+
+    public virtual Invoice? Invoice { get; set; }
 }

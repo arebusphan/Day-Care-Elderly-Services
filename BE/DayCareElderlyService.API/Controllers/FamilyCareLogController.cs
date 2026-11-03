@@ -41,6 +41,14 @@ public class FamilyCareLogController : ControllerBase
         RunAsync(userId => _familyCareLogService.GetHistoryAsync(userId, elderlyId, from, to), "lấy lịch sử care log");
 
     /// <summary>
+    /// Dòng thời gian chăm sóc của cụ trong tối đa 90 ngày gần nhất
+    /// </summary>
+    [HttpGet("care-logs/{elderlyId:int}/timeline")]
+    [ProducesResponseType(typeof(ApiResponse<List<CareLogDayDto>>), StatusCodes.Status200OK)]
+    public Task<IActionResult> GetTimeline(int elderlyId, [FromQuery] int days = 30) =>
+        RunAsync(userId => _familyCareLogService.GetTimelineAsync(userId, elderlyId, days), "lấy dòng thời gian chăm sóc");
+
+    /// <summary>
     /// Các lần đo chỉ số và lịch sử uống thuốc trong N ngày gần nhất (mặc định 30)
     /// </summary>
     [HttpGet("care-logs/{elderlyId:int}/health")]

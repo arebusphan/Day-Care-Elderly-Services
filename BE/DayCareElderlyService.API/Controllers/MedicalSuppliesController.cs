@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Security.Claims;
 using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.DTOs.MedicalSupply;
 using DayCareElderlyService.BLL.Services.Interfaces;
@@ -20,6 +21,12 @@ public class MedicalSuppliesController : ControllerBase
         _supplyService = supplyService;
     }
 
+    private int? GetCurrentUserId()
+    {
+        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(value, out var userId) ? userId : null;
+    }
+
     /// <summary>
     /// Thêm vật tư y tế mới
     /// </summary>
@@ -36,7 +43,7 @@ public class MedicalSuppliesController : ControllerBase
             return BadRequest(ApiResponse<MedicalSupplyDto>.Fail("Dữ liệu không hợp lệ.", errors));
         }
 
-        var result = await _supplyService.CreateMedicalSupplyAsync(dto);
+        var result = await _supplyService.CreateMedicalSupplyAsync(dto, GetCurrentUserId());
         if (!result.Success)
         {
             return BadRequest(result);
@@ -93,7 +100,7 @@ public class MedicalSuppliesController : ControllerBase
             return BadRequest(ApiResponse<MedicalSupplyDto>.Fail("Dữ liệu không hợp lệ.", errors));
         }
 
-        var result = await _supplyService.UpdateMedicalSupplyAsync(id, dto);
+        var result = await _supplyService.UpdateMedicalSupplyAsync(id, dto, GetCurrentUserId());
         if (!result.Success)
         {
             if (result.Errors?.Contains("SUPPLY_NOT_FOUND") == true)
@@ -123,7 +130,7 @@ public class MedicalSuppliesController : ControllerBase
             return BadRequest(ApiResponse<MedicalSupplyDto>.Fail("Dữ liệu không hợp lệ.", errors));
         }
 
-        var result = await _supplyService.AdjustStockAsync(id, dto);
+        var result = await _supplyService.AdjustStockAsync(id, dto, GetCurrentUserId());
         if (!result.Success)
         {
             if (result.Errors?.Contains("SUPPLY_NOT_FOUND") == true)
@@ -146,7 +153,7 @@ public class MedicalSuppliesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
-        var result = await _supplyService.ToggleStatusAsync(id);
+        var result = await _supplyService.ToggleStatusAsync(id, GetCurrentUserId());
         if (!result.Success)
         {
             if (result.Errors?.Contains("SUPPLY_NOT_FOUND") == true)

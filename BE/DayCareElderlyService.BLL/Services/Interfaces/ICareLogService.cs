@@ -19,6 +19,4 @@ public interface ICareLogService
     Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, string? status, int days);
     Task<ApiResponse<IncidentDto>> CreateIncidentAsync(int userId, CreateIncidentDto dto);
     Task<ApiResponse<IncidentDto>> UpdateIncidentAsync(int userId, int incidentId, UpdateIncidentDto dto);
-    Task<ApiResponse<CareLogDayDto>> MarkMedicalDoneAsync(int userId, int elderlyId, CareLogNoteDto dto);
-    Task<ApiResponse<CareLogDayDto>> CloseDayAsync(int userId, int elderlyId, CareLogNoteDto dto);
 }

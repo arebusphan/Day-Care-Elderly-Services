@@ -9,7 +9,7 @@ public partial class MedicationRecord
 
     public int MedicationPlanId { get; set; }
 
-    public int StaffId { get; set; }
+    public int? StaffId { get; set; }
 
     public DateTime ScheduledAt { get; set; }
 
@@ -21,5 +21,5 @@ public partial class MedicationRecord
 
     public virtual MedicationPlan MedicationPlan { get; set; } = null!;
 
-    public virtual User Staff { get; set; } = null!;
+    public virtual User? Staff { get; set; }
 }

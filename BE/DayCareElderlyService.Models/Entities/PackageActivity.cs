@@ -9,7 +9,7 @@ public partial class PackageActivity
 
     public int PackageId { get; set; }
 
-    public int ActivityTemplateId { get; set; }
+    public int? ActivityTemplateId { get; set; }
 
     public byte? DayOfWeek { get; set; }
 
@@ -20,8 +20,6 @@ public partial class PackageActivity
     public int DisplayOrder { get; set; }
 
     public bool IsActive { get; set; }
-
-    public virtual ActivityTemplate ActivityTemplate { get; set; } = null!;
 
     public virtual ServicePackage Package { get; set; } = null!;
 }

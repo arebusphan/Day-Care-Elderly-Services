@@ -20,3 +20,6 @@ C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\buil
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.DAL.deps.json
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.DAL.dll
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.DAL.pdb
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.DAL.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.DAL.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.DAL.pdb

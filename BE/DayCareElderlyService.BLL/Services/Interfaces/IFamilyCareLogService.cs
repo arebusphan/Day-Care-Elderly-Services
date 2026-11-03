@@ -10,6 +10,7 @@ public interface IFamilyCareLogService
 {
     Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date);
     Task<ApiResponse<List<CareLogDaySummaryDto>>> GetHistoryAsync(int userId, int elderlyId, DateOnly? from, DateOnly? to);
+    Task<ApiResponse<List<CareLogDayDto>>> GetTimelineAsync(int userId, int elderlyId, int days);
     Task<ApiResponse<HealthHistoryDto>> GetHealthAsync(int userId, int elderlyId, int days);
     Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, int days);
 }

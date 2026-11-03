@@ -97,6 +97,13 @@ public class AttendanceService : IAttendanceService
             return ConflictCheckIn();
         }
 
+        await AuditLogWriter.WriteAsync(_context, userId, "CHECK_IN", nameof(AttendanceRecord), record.AttendanceId.ToString(), new
+        {
+            record.ElderlyId,
+            record.RegistrationId,
+            record.AttendanceDate
+        });
+
         return new AttendanceActionResult<CheckInResponseDto>
         {
             StatusCode = 200,
@@ -161,6 +168,11 @@ public class AttendanceService : IAttendanceService
         record.Status = "CheckedOut";
 
         await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "CHECK_OUT", nameof(AttendanceRecord), record.AttendanceId.ToString(), new
+        {
+            record.ElderlyId,
+            record.AttendanceDate
+        });
 
         return new AttendanceActionResult<CheckOutResponseDto>
         {

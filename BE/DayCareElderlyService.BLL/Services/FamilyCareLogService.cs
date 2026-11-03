@@ -72,6 +72,50 @@ public class FamilyCareLogService : IFamilyCareLogService
         return ApiResponse<List<CareLogDaySummaryDto>>.Ok(days, "Lấy lịch sử care log thành công.");
     }
 
+    public async Task<ApiResponse<List<CareLogDayDto>>> GetTimelineAsync(int userId, int elderlyId, int days)
+    {
+        var elderly = await GetViewableElderlyAsync(userId, elderlyId);
+        if (elderly == null)
+        {
+            return ApiResponse<List<CareLogDayDto>>.Fail("Không tìm thấy người cao tuổi hoặc bạn không có quyền xem care log.");
+        }
+
+        var toDate = VietnamTime.Today;
+        var fromDate = toDate.AddDays(-(Math.Clamp(days, 1, 90) - 1));
+        var rangeFrom = VietnamTime.DayRange(fromDate).From;
+        var rangeTo = VietnamTime.DayRange(toDate).To;
+        var logs = await CareLogShared.CareLogQuery(_context)
+            .Where(c => c.ElderlyId == elderlyId && !c.IsInternal
+                     && c.RecordedAt >= rangeFrom && c.RecordedAt < rangeTo)
+            .OrderBy(c => c.RecordedAt)
+            .ToListAsync();
+
+        var timeline = logs
+            .GroupBy(log => DateOnly.FromDateTime(log.RecordedAt))
+            .Select(group =>
+            {
+                var entries = group.OrderBy(log => log.RecordedAt).ToList();
+                var medicalDone = entries.FirstOrDefault(log => log.CareType == CareLogTypes.MedicalDone);
+                var closed = entries.FirstOrDefault(log => log.CareType == CareLogTypes.Close);
+                return new CareLogDayDto
+                {
+                    ElderlyId = elderly.ElderlyId,
+                    ElderlyName = elderly.FullName,
+                    Date = group.Key,
+                    IsMedicalDone = medicalDone != null,
+                    MedicalDoneAt = medicalDone?.RecordedAt,
+                    IsClosed = closed != null,
+                    ClosedAt = closed?.RecordedAt,
+                    ClosedBy = closed?.Staff?.FullName,
+                    Entries = entries.Select(CareLogShared.ToEntryDto).ToList()
+                };
+            })
+            .OrderByDescending(day => day.Date)
+            .ToList();
+
+        return ApiResponse<List<CareLogDayDto>>.Ok(timeline, "Lấy dòng thời gian chăm sóc thành công.");
+    }
+
     public async Task<ApiResponse<HealthHistoryDto>> GetHealthAsync(int userId, int elderlyId, int days)
     {
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);

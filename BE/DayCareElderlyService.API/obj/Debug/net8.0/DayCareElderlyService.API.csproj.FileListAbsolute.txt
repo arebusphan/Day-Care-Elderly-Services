@@ -168,3 +168,16 @@ C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\buil
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.API.runtimeconfig.json
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.API.dll
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.API.pdb
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\appsettings.Development.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\appsettings.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\bin\Debug\net8.0\appsettings.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\bin\Debug\net8.0\DayCareElderlyService.API.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\bin\Debug\net8.0\DayCareElderlyService.API.runtimeconfig.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\bin\Debug\net8.0\DayCareElderlyService.API.staticwebassets.endpoints.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.API.staticwebassets.endpoints.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.API.exe
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.API.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.API.runtimeconfig.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.API.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\Debug\net8.0\DayCareElderlyService.API.pdb

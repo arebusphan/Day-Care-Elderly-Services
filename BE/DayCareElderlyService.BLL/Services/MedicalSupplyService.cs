@@ -23,7 +23,7 @@ public class MedicalSupplyService : IMedicalSupplyService
         _logger = logger;
     }
 
-    public async Task<ApiResponse<MedicalSupplyDto>> CreateMedicalSupplyAsync(CreateMedicalSupplyDto dto)
+    public async Task<ApiResponse<MedicalSupplyDto>> CreateMedicalSupplyAsync(CreateMedicalSupplyDto dto, int? actorUserId = null)
     {
         try
         {
@@ -49,7 +49,12 @@ public class MedicalSupplyService : IMedicalSupplyService
 
             await _context.MedicalSupplies.AddAsync(supply);
             await _context.SaveChangesAsync();
-
+            await AuditLogWriter.WriteAsync(_context, actorUserId, "CREATE_MEDICAL_SUPPLY", nameof(MedicalSupply), supply.SupplyId.ToString(), new
+            {
+                supply.SupplyName,
+                supply.QuantityInStock,
+                supply.MinimumStock
+            });
 
             return ApiResponse<MedicalSupplyDto>.Ok(MapToDto(supply), "Thêm vật tư y tế thành công.");
         }
@@ -125,7 +130,7 @@ public class MedicalSupplyService : IMedicalSupplyService
         }
     }
 
-    public async Task<ApiResponse<MedicalSupplyDto>> UpdateMedicalSupplyAsync(int supplyId, UpdateMedicalSupplyDto dto)
+    public async Task<ApiResponse<MedicalSupplyDto>> UpdateMedicalSupplyAsync(int supplyId, UpdateMedicalSupplyDto dto, int? actorUserId = null)
     {
         try
         {
@@ -148,6 +153,12 @@ public class MedicalSupplyService : IMedicalSupplyService
             supply.MinimumStock = dto.MinimumStock;
 
             await _context.SaveChangesAsync();
+            await AuditLogWriter.WriteAsync(_context, actorUserId, "UPDATE_MEDICAL_SUPPLY", nameof(MedicalSupply), supply.SupplyId.ToString(), new
+            {
+                supply.SupplyName,
+                supply.Unit,
+                supply.MinimumStock
+            });
 
             return ApiResponse<MedicalSupplyDto>.Ok(MapToDto(supply), "Cập nhật thông tin vật tư thành công.");
         }
@@ -158,7 +169,7 @@ public class MedicalSupplyService : IMedicalSupplyService
         }
     }
 
-    public async Task<ApiResponse<MedicalSupplyDto>> AdjustStockAsync(int supplyId, AdjustStockDto dto)
+    public async Task<ApiResponse<MedicalSupplyDto>> AdjustStockAsync(int supplyId, AdjustStockDto dto, int? actorUserId = null)
     {
         try
         {
@@ -170,7 +181,8 @@ public class MedicalSupplyService : IMedicalSupplyService
                 return ApiResponse<MedicalSupplyDto>.Fail("Không tìm thấy vật tư y tế.", new List<string> { "SUPPLY_NOT_FOUND" });
             }
 
-            var newStock = supply.QuantityInStock + dto.AdjustmentQuantity;
+            var previousStock = supply.QuantityInStock;
+            var newStock = previousStock + dto.AdjustmentQuantity;
             if (newStock < 0)
             {
                 return ApiResponse<MedicalSupplyDto>.Fail(
@@ -180,6 +192,12 @@ public class MedicalSupplyService : IMedicalSupplyService
 
             supply.QuantityInStock = newStock;
             await _context.SaveChangesAsync();
+            await AuditLogWriter.WriteAsync(_context, actorUserId, "ADJUST_MEDICAL_SUPPLY_STOCK", nameof(MedicalSupply), supply.SupplyId.ToString(), new
+            {
+                PreviousStock = previousStock,
+                AdjustmentQuantity = dto.AdjustmentQuantity,
+                NewStock = newStock
+            });
 
             string message = newStock <= supply.MinimumStock
                 ? $"Điều chỉnh tồn kho thành công ({newStock} {supply.Unit}). CẢNH BÁO: Vật tư sắp hết (tồn kho hiện tại <= mức tối thiểu {supply.MinimumStock})!"
@@ -194,7 +212,7 @@ public class MedicalSupplyService : IMedicalSupplyService
         }
     }
 
-    public async Task<ApiResponse<MedicalSupplyDto>> ToggleStatusAsync(int supplyId)
+    public async Task<ApiResponse<MedicalSupplyDto>> ToggleStatusAsync(int supplyId, int? actorUserId = null)
     {
         try
         {
@@ -209,6 +227,10 @@ public class MedicalSupplyService : IMedicalSupplyService
             // Chuyển trạng thái theo quy ước bool IsActive hiện có
             supply.IsActive = !supply.IsActive;
             await _context.SaveChangesAsync();
+            await AuditLogWriter.WriteAsync(_context, actorUserId, "TOGGLE_MEDICAL_SUPPLY_STATUS", nameof(MedicalSupply), supply.SupplyId.ToString(), new
+            {
+                supply.IsActive
+            });
 
             var statusText = supply.IsActive ? "kích hoạt hoạt động" : "tắt trạng thái hoạt động";
             return ApiResponse<MedicalSupplyDto>.Ok(MapToDto(supply), $"Đã {statusText} cho vật tư '{supply.SupplyName}'.");
