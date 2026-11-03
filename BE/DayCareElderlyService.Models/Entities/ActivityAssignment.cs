@@ -7,7 +7,6 @@ public partial class ActivityAssignment
 {
     public int AssignmentId { get; set; }
 
-    public int CenterActivityId { get; set; }
 
     public int StaffId { get; set; }
 
@@ -18,8 +17,6 @@ public partial class ActivityAssignment
     public string? Notes { get; set; }
 
     public DateTime CreatedAt { get; set; }
-
-    public virtual CenterActivity CenterActivity { get; set; } = null!;
 
     public virtual User Staff { get; set; } = null!;
 }

@@ -42,13 +42,11 @@ public class IncidentReportService : IIncidentReportService
                 return ApiResponse<IncidentReportDto>.Fail($"Mức độ nghiêm trọng không hợp lệ. Chấp nhận: {string.Join(", ", IncidentSeverities.All)}");
             }
 
-            var centerId = dto.CenterId ?? elderly.CenterId;
             var occurredAt = dto.OccurredAt ?? DateTime.UtcNow;
 
             var incident = new IncidentReport
             {
                 ElderlyId = dto.ElderlyId,
-                CenterId = centerId,
                 ReportedBy = userId,
                 IncidentType = dto.IncidentType.Trim(),
                 Severity = severity,
@@ -64,7 +62,6 @@ public class IncidentReportService : IIncidentReportService
 
             // Load navigations for response
             await _context.Entry(incident).Reference(i => i.Elderly).LoadAsync();
-            await _context.Entry(incident).Reference(i => i.Center).LoadAsync();
             await _context.Entry(incident).Reference(i => i.ReportedByNavigation).LoadAsync();
 
             return ApiResponse<IncidentReportDto>.Ok(MapToDto(incident), "Tạo sự cố thành công.");
@@ -82,18 +79,12 @@ public class IncidentReportService : IIncidentReportService
         {
             var query = _context.IncidentReports
                 .Include(i => i.Elderly)
-                .Include(i => i.Center)
                 .Include(i => i.ReportedByNavigation)
                 .AsNoTracking();
 
             if (filter.ElderlyId.HasValue)
             {
                 query = query.Where(i => i.ElderlyId == filter.ElderlyId.Value);
-            }
-
-            if (filter.CenterId.HasValue)
-            {
-                query = query.Where(i => i.CenterId == filter.CenterId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Status))
@@ -147,7 +138,6 @@ public class IncidentReportService : IIncidentReportService
         {
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
-                .Include(i => i.Center)
                 .Include(i => i.ReportedByNavigation)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
@@ -172,7 +162,6 @@ public class IncidentReportService : IIncidentReportService
         {
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
-                .Include(i => i.Center)
                 .Include(i => i.ReportedByNavigation)
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
@@ -218,7 +207,6 @@ public class IncidentReportService : IIncidentReportService
         {
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
-                .Include(i => i.Center)
                 .Include(i => i.ReportedByNavigation)
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
@@ -267,7 +255,6 @@ public class IncidentReportService : IIncidentReportService
         {
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
-                .Include(i => i.Center)
                 .Include(i => i.ReportedByNavigation)
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
@@ -332,8 +319,8 @@ public class IncidentReportService : IIncidentReportService
             IncidentId = i.IncidentId,
             ElderlyId = i.ElderlyId,
             ElderlyName = i.Elderly?.FullName ?? string.Empty,
-            CenterId = i.CenterId,
-            CenterName = i.Center?.CenterName ?? string.Empty,
+            CenterId = 0,
+            CenterName = string.Empty,
             ReportedBy = i.ReportedBy,
             ReportedByName = i.ReportedByNavigation?.FullName ?? string.Empty,
             IncidentType = i.IncidentType,

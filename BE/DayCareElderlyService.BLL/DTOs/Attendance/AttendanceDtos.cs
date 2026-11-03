@@ -9,8 +9,6 @@ public class CheckInRequestDto
     [Range(1, int.MaxValue, ErrorMessage = "Mã người cao tuổi không hợp lệ.")]
     public int ElderlyId { get; set; }
 
-    [StringLength(500, ErrorMessage = "Ghi chú tối đa 500 ký tự.")]
-    public string? Notes { get; set; }
 }
 
 public class CheckInResponseDto
@@ -28,8 +26,6 @@ public class CheckOutRequestDto
     [Range(1, int.MaxValue, ErrorMessage = "Mã người cao tuổi không hợp lệ.")]
     public int ElderlyId { get; set; }
 
-    [StringLength(500, ErrorMessage = "Ghi chú tối đa 500 ký tự.")]
-    public string? Notes { get; set; }
 }
 
 public class CheckOutResponseDto
@@ -54,7 +50,6 @@ public class AttendanceListItemDto
     public int? CheckedInBy { get; set; }
     public int? CheckedOutBy { get; set; }
     public int? RegistrationId { get; set; }
-    public string? Notes { get; set; }
 }
 
 public class AttendanceDetailDto
@@ -71,37 +66,9 @@ public class AttendanceDetailDto
     public TimeOnly? CheckOutTime { get; set; }
     public int? CheckedInBy { get; set; }
     public int? CheckedOutBy { get; set; }
-    public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public int? UpdatedBy { get; set; }
-    public string? CorrectionReason { get; set; }
-}
-
-public class UpdateAttendanceRequestDto
-{
-    [Required(ErrorMessage = "Vui lòng nhập thời gian check-in.")]
-    public DateTime CheckInAt { get; set; }
-
-    public DateTime? CheckOutAt { get; set; }
-
-    [Required(ErrorMessage = "Vui lòng nhập lý do chỉnh sửa.")]
-    [MinLength(1, ErrorMessage = "Lý do chỉnh sửa không được để trống.")]
-    [StringLength(500, ErrorMessage = "Lý do chỉnh sửa tối đa 500 ký tự.")]
-    public string CorrectionReason { get; set; } = string.Empty;
-}
-
-public class UpdateAttendanceResponseDto
-{
-    public int AttendanceId { get; set; }
-    public int ElderlyId { get; set; }
-    public DateOnly AttendanceDate { get; set; }
-    public DateTime CheckInAt { get; set; }
-    public DateTime? CheckOutAt { get; set; }
-    public string Status { get; set; } = string.Empty;
-    public DateTime? UpdatedAt { get; set; }
-    public int? UpdatedBy { get; set; }
-    public string? CorrectionReason { get; set; }
 }
 
 public class AttendanceActionResult<T>

@@ -25,6 +25,4 @@ public class CreateCareLogEntryDto
     /// <summary>true = mục nội bộ, gia đình không xem được</summary>
     public bool IsInternal { get; set; }
 
-    /// <summary>Hoạt động hôm nay trong lịch (GET /api/staff/activities/today) mà mục này thuộc về, không bắt buộc</summary>
-    public int? CenterActivityId { get; set; }
 }

@@ -162,6 +162,7 @@ public class BillingService : IBillingService
             PaymentMethod = method,
             PaymentStatus = "Paid",
             TransactionReference = $"TXN-{Random.Shared.Next(10000000, 99999999)}",
+            PaidAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             InvoiceNo = invoiceNo,
             InvoiceVatNo = invoiceVatNo

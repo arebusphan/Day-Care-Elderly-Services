@@ -125,7 +125,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // Run DB Initializer to seed default Roles and Admin user
-await DbInitializer.SeedDefaultDataAsync(app.Services);
+//await DbInitializer.SeedDefaultDataAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

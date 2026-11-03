@@ -24,17 +24,18 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityAssignment", b =>
                 {
-                    b.Property<Guid>("AssignmentId")
+                    b.Property<int>("AssignmentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentId"));
 
                     b.Property<string>("AssignmentRole")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("CenterActivityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CenterActivityId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -46,8 +47,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<Guid>("StaffId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -68,18 +69,19 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ActivityTemplate", b =>
                 {
-                    b.Property<Guid>("ActivityTemplateId")
+                    b.Property<int>("ActivityTemplateId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ActivityTemplateId"));
 
                     b.Property<string>("ActivityName")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<Guid>("CenterId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<string>("DefaultLocation")
                         .HasMaxLength(200)
@@ -102,43 +104,64 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.AttendanceRecord", b =>
                 {
-                    b.Property<Guid>("AttendanceId")
+                    b.Property<int>("AttendanceId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceId"));
 
                     b.Property<DateOnly>("AttendanceDate")
                         .HasColumnType("date");
 
                     b.Property<DateTime?>("CheckInAt")
-                        .HasPrecision(0)
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeOnly?>("CheckInTime")
+                        .HasColumnType("time");
 
                     b.Property<DateTime?>("CheckOutAt")
-                        .HasPrecision(0)
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("CheckedInBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<TimeOnly?>("CheckOutTime")
+                        .HasColumnType("time");
 
-                    b.Property<Guid?>("CheckedOutBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("CheckedInBy")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CheckedOutBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CorrectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasPrecision(0)
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("(sysdatetime())");
 
-                    b.Property<Guid>("ElderlyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<Guid>("RegistrationId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("RegistrationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Present");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedBy")
+                        .HasColumnType("int");
 
                     b.HasKey("AttendanceId");
 
@@ -156,20 +179,57 @@ namespace DayCareElderlyService.Models.Migrations
                     b.ToTable("AttendanceRecords");
                 });
 
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.CareGroupMember", b =>
+                {
+                    b.Property<int>("GroupMemberId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupMemberId"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("GroupMemberId");
+
+                    b.HasIndex(new[] { "ElderlyId" }, "IX_CareGroupMembers_ElderlyId");
+
+                    b.HasIndex(new[] { "GroupId" }, "IX_CareGroupMembers_GroupId");
+
+                    b.HasIndex(new[] { "GroupId", "ElderlyId" }, "UQ_CareGroupMembers_Group_Elderly")
+                        .IsUnique();
+
+                    b.ToTable("CareGroupMembers");
+                });
+
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.CareLog", b =>
                 {
-                    b.Property<Guid>("CareLogId")
+                    b.Property<int>("CareLogId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CareLogId"));
 
                     b.Property<string>("CareType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<Guid?>("CenterActivityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("CenterActivityId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Data")
                         .HasColumnType("nvarchar(max)");
@@ -178,8 +238,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("ElderlyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsInternal")
                         .HasColumnType("bit");
@@ -193,8 +253,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("datetime2(0)")
                         .HasDefaultValueSql("(sysdatetime())");
 
-                    b.Property<Guid>("StaffId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
 
                     b.HasKey("CareLogId");
 
@@ -210,13 +270,14 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.CareLogPhoto", b =>
                 {
-                    b.Property<Guid>("CareLogPhotoId")
+                    b.Property<int>("CareLogPhotoId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("CareLogId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CareLogPhotoId"));
+
+                    b.Property<int>("CareLogId")
+                        .HasColumnType("int");
 
                     b.Property<string>("FileUrl")
                         .IsRequired()
@@ -238,10 +299,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.Center", b =>
                 {
-                    b.Property<Guid>("CenterId")
+                    b.Property<int>("CenterId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CenterId"));
 
                     b.Property<string>("Address")
                         .IsRequired()
@@ -279,10 +341,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.CenterActivity", b =>
                 {
-                    b.Property<Guid>("CenterActivityId")
+                    b.Property<int>("CenterActivityId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CenterActivityId"));
 
                     b.Property<DateOnly>("ActivityDate")
                         .HasColumnType("date");
@@ -292,8 +355,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<Guid>("CenterId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -301,8 +364,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("datetime2(0)")
                         .HasDefaultValueSql("(sysdatetime())");
 
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
 
                     b.Property<TimeOnly>("EndTime")
                         .HasPrecision(0)
@@ -312,8 +375,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid?>("PackageActivityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("PackageActivityId")
+                        .HasColumnType("int");
 
                     b.Property<TimeOnly>("StartTime")
                         .HasPrecision(0)
@@ -337,13 +400,173 @@ namespace DayCareElderlyService.Models.Migrations
                     b.ToTable("CenterActivities");
                 });
 
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailyAttendanceForecast", b =>
+                {
+                    b.Property<int>("ForecastId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ForecastId"));
+
+                    b.Property<string>("AttendanceStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Attending");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)");
+
+                    b.HasKey("ForecastId");
+
+                    b.HasIndex("ElderlyId");
+
+                    b.HasIndex(new[] { "PlanId" }, "IX_DailyAttendanceForecast_PlanId");
+
+                    b.HasIndex(new[] { "PlanId", "ElderlyId" }, "UQ_DailyAttendanceForecast_Plan_Elderly")
+                        .IsUnique();
+
+                    b.ToTable("DailyAttendanceForecasts", (string)null);
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailyCareGroup", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<string>("GroupName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GroupType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Normal");
+
+                    b.Property<int>("MaxNormalCapacity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(10);
+
+                    b.Property<int>("MaxSupportCapacity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(4);
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("StaffId")
+                        .HasColumnType("int");
+
+                    b.HasKey("GroupId");
+
+                    b.HasIndex(new[] { "PlanId" }, "IX_DailyCareGroups_PlanId");
+
+                    b.HasIndex(new[] { "StaffId" }, "IX_DailyCareGroups_StaffId");
+
+                    b.ToTable("DailyCareGroups");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailySchedulePlan", b =>
+                {
+                    b.Property<int>("PlanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanId"));
+
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<int?>("ConfirmedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateOnly>("PlanDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Draft");
+
+                    b.Property<int>("TotalElderly")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalStaff")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)");
+
+                    b.HasKey("PlanId");
+
+                    b.HasIndex("ConfirmedBy");
+
+                    b.HasIndex(new[] { "CenterId", "PlanDate" }, "UQ_DailySchedulePlans_Center_Date")
+                        .IsUnique();
+
+                    b.ToTable("DailySchedulePlans");
+                });
+
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ElderlyFamilyRelationship", b =>
                 {
-                    b.Property<Guid>("ElderlyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("FamilyMemberId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("FamilyMemberId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("CanReceiveNotifications")
                         .ValueGeneratedOnAdd()
@@ -372,10 +595,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ElderlyMember", b =>
                 {
-                    b.Property<Guid>("ElderlyId")
+                    b.Property<int>("ElderlyId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ElderlyId"));
 
                     b.Property<string>("Address")
                         .HasMaxLength(500)
@@ -389,8 +613,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<Guid>("CenterId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -439,6 +663,9 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Bình thường");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("ElderlyId");
 
                     b.HasIndex(new[] { "CenterId" }, "IX_ElderlyMembers_CenterId");
@@ -448,10 +675,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.FamilyMember", b =>
                 {
-                    b.Property<Guid>("FamilyMemberId")
+                    b.Property<int>("FamilyMemberId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FamilyMemberId"));
 
                     b.Property<string>("Address")
                         .HasMaxLength(500)
@@ -461,8 +689,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("FamilyMemberId");
 
@@ -474,25 +702,31 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.IncidentReport", b =>
                 {
-                    b.Property<Guid>("IncidentId")
+                    b.Property<int>("IncidentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("CenterId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
+
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("ElderlyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("IncidentType")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsSupplyConfirmed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<DateTime>("OccurredAt")
                         .HasPrecision(0)
@@ -504,8 +738,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("datetime2(0)")
                         .HasDefaultValueSql("(sysdatetime())");
 
-                    b.Property<Guid>("ReportedBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ReportedBy")
+                        .HasColumnType("int");
 
                     b.Property<string>("ResolutionNotes")
                         .HasColumnType("nvarchar(max)");
@@ -539,13 +773,14 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.MedicalSupply", b =>
                 {
-                    b.Property<Guid>("SupplyId")
+                    b.Property<int>("SupplyId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("CenterId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SupplyId"));
+
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -560,6 +795,11 @@ namespace DayCareElderlyService.Models.Migrations
 
                     b.Property<decimal>("MinimumStock")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("QuantityInStock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("SupplyName")
                         .IsRequired()
@@ -580,10 +820,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.MedicationPlan", b =>
                 {
-                    b.Property<Guid>("MedicationPlanId")
+                    b.Property<int>("MedicationPlanId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MedicationPlanId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -596,8 +837,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("ElderlyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
 
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
@@ -628,13 +869,14 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.MedicationRecord", b =>
                 {
-                    b.Property<Guid>("MedicationRecordId")
+                    b.Property<int>("MedicationRecordId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("MedicationPlanId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MedicationRecordId"));
+
+                    b.Property<int>("MedicationPlanId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -648,8 +890,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasPrecision(0)
                         .HasColumnType("datetime2(0)");
 
-                    b.Property<Guid>("StaffId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -669,10 +911,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.Notification", b =>
                 {
-                    b.Property<Guid>("NotificationId")
+                    b.Property<int>("NotificationId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -692,8 +935,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<Guid?>("RelatedEntityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("RelatedEntityId")
+                        .HasColumnType("int");
 
                     b.Property<string>("RelatedEntityType")
                         .HasMaxLength(100)
@@ -704,8 +947,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("NotificationId");
 
@@ -717,13 +960,14 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.PackageActivity", b =>
                 {
-                    b.Property<Guid>("PackageActivityId")
+                    b.Property<int>("PackageActivityId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("ActivityTemplateId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PackageActivityId"));
+
+                    b.Property<int>("ActivityTemplateId")
+                        .HasColumnType("int");
 
                     b.Property<byte?>("DayOfWeek")
                         .HasColumnType("tinyint");
@@ -740,8 +984,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<Guid>("PackageId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("PackageId")
+                        .HasColumnType("int");
 
                     b.Property<TimeOnly>("StartTime")
                         .HasPrecision(0)
@@ -758,10 +1002,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.Payment", b =>
                 {
-                    b.Property<Guid>("PaymentId")
+                    b.Property<int>("PaymentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaymentId"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18, 2)");
@@ -796,8 +1041,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Pending");
 
-                    b.Property<Guid>("RegistrationId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("RegistrationId")
+                        .HasColumnType("int");
 
                     b.Property<string>("TransactionReference")
                         .HasMaxLength(200)
@@ -837,18 +1082,19 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ServicePackage", b =>
                 {
-                    b.Property<Guid>("PackageId")
+                    b.Property<int>("PackageId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PackageId"));
 
                     b.Property<string>("BillingPeriod")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<Guid>("CenterId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -912,10 +1158,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ServiceRegistration", b =>
                 {
-                    b.Property<Guid>("RegistrationId")
+                    b.Property<int>("RegistrationId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RegistrationId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -923,8 +1170,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasColumnType("datetime2(0)")
                         .HasDefaultValueSql("(sysdatetime())");
 
-                    b.Property<Guid>("ElderlyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
 
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
@@ -933,8 +1180,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<Guid>("PackageId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("PackageId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("PriceAtPurchase")
                         .HasColumnType("decimal(18, 2)");
@@ -989,12 +1236,61 @@ namespace DayCareElderlyService.Models.Migrations
                     b.ToTable("ServiceRegistrations");
                 });
 
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.StaffCareAssignment", b =>
+                {
+                    b.Property<int>("AssignmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(0)
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<int>("ElderlyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AssignmentId");
+
+                    b.HasIndex("ElderlyId");
+
+                    b.HasIndex("StaffId");
+
+                    b.HasIndex(new[] { "PlanId", "StaffId" }, "IX_StaffCareAssignments_Plan_Staff");
+
+                    b.HasIndex(new[] { "PlanId", "ElderlyId" }, "UQ_StaffCareAssignments_Plan_Elderly")
+                        .IsUnique();
+
+                    b.ToTable("StaffCareAssignments");
+                });
+
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.StaffSchedule", b =>
                 {
-                    b.Property<Guid>("ScheduleId")
+                    b.Property<int>("ScheduleId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ScheduleId"));
+
+                    b.Property<string>("Availability")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Working");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -1011,8 +1307,8 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<Guid>("StaffId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
 
                     b.Property<DateOnly>("WorkDate")
                         .HasColumnType("date");
@@ -1031,10 +1327,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.SupplyTransaction", b =>
                 {
-                    b.Property<Guid>("SupplyTransactionId")
+                    b.Property<int>("SupplyTransactionId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SupplyTransactionId"));
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -1049,11 +1346,11 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<Guid>("RecordedBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("RecordedBy")
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("SupplyId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("SupplyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
@@ -1072,10 +1369,11 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.User", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<int>("UserId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newsequentialid())");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -1121,8 +1419,8 @@ namespace DayCareElderlyService.Models.Migrations
 
             modelBuilder.Entity("UserRole", b =>
                 {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
@@ -1185,7 +1483,6 @@ namespace DayCareElderlyService.Models.Migrations
                     b.HasOne("DayCareElderlyService.Models.Entities.ServiceRegistration", "Registration")
                         .WithMany("AttendanceRecords")
                         .HasForeignKey("RegistrationId")
-                        .IsRequired()
                         .HasConstraintName("FK_AttendanceRecords_Registration");
 
                     b.Navigation("CheckedInByNavigation");
@@ -1195,6 +1492,26 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Navigation("Elderly");
 
                     b.Navigation("Registration");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.CareGroupMember", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.ElderlyMember", "Elderly")
+                        .WithMany("CareGroupMembers")
+                        .HasForeignKey("ElderlyId")
+                        .IsRequired()
+                        .HasConstraintName("FK_CareGroupMembers_Elderly");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.DailyCareGroup", "Group")
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_CareGroupMembers_Groups");
+
+                    b.Navigation("Elderly");
+
+                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.CareLog", b =>
@@ -1258,6 +1575,64 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Navigation("CreatedByNavigation");
 
                     b.Navigation("PackageActivity");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailyAttendanceForecast", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.ElderlyMember", "Elderly")
+                        .WithMany()
+                        .HasForeignKey("ElderlyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_DailyAttendanceForecast_Elderly");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.DailySchedulePlan", "Plan")
+                        .WithMany("AttendanceForecasts")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_DailyAttendanceForecast_Plans");
+
+                    b.Navigation("Elderly");
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailyCareGroup", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.DailySchedulePlan", "Plan")
+                        .WithMany("CareGroups")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_DailyCareGroups_Plans");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "Staff")
+                        .WithMany("DailyCareGroups")
+                        .HasForeignKey("StaffId")
+                        .HasConstraintName("FK_DailyCareGroups_Users");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("Staff");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailySchedulePlan", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.Center", "Center")
+                        .WithMany("DailySchedulePlans")
+                        .HasForeignKey("CenterId")
+                        .IsRequired()
+                        .HasConstraintName("FK_DailySchedulePlans_Centers");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "ConfirmedByNavigation")
+                        .WithMany()
+                        .HasForeignKey("ConfirmedBy")
+                        .HasConstraintName("FK_DailySchedulePlans_Users");
+
+                    b.Navigation("Center");
+
+                    b.Navigation("ConfirmedByNavigation");
                 });
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ElderlyFamilyRelationship", b =>
@@ -1440,6 +1815,34 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.StaffCareAssignment", b =>
+                {
+                    b.HasOne("DayCareElderlyService.Models.Entities.ElderlyMember", "Elderly")
+                        .WithMany("StaffCareAssignments")
+                        .HasForeignKey("ElderlyId")
+                        .IsRequired()
+                        .HasConstraintName("FK_StaffCareAssignments_Elderly");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.DailySchedulePlan", "Plan")
+                        .WithMany("Assignments")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_StaffCareAssignments_Plans");
+
+                    b.HasOne("DayCareElderlyService.Models.Entities.User", "Staff")
+                        .WithMany("StaffCareAssignments")
+                        .HasForeignKey("StaffId")
+                        .IsRequired()
+                        .HasConstraintName("FK_StaffCareAssignments_Users");
+
+                    b.Navigation("Elderly");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("Staff");
+                });
+
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.StaffSchedule", b =>
                 {
                     b.HasOne("DayCareElderlyService.Models.Entities.User", "Staff")
@@ -1502,6 +1905,8 @@ namespace DayCareElderlyService.Models.Migrations
 
                     b.Navigation("CenterActivities");
 
+                    b.Navigation("DailySchedulePlans");
+
                     b.Navigation("ElderlyMembers");
 
                     b.Navigation("IncidentReports");
@@ -1518,9 +1923,25 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Navigation("CareLogs");
                 });
 
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailyCareGroup", b =>
+                {
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("DayCareElderlyService.Models.Entities.DailySchedulePlan", b =>
+                {
+                    b.Navigation("Assignments");
+
+                    b.Navigation("AttendanceForecasts");
+
+                    b.Navigation("CareGroups");
+                });
+
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.ElderlyMember", b =>
                 {
                     b.Navigation("AttendanceRecords");
+
+                    b.Navigation("CareGroupMembers");
 
                     b.Navigation("CareLogs");
 
@@ -1531,6 +1952,8 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Navigation("MedicationPlans");
 
                     b.Navigation("ServiceRegistrations");
+
+                    b.Navigation("StaffCareAssignments");
                 });
 
             modelBuilder.Entity("DayCareElderlyService.Models.Entities.FamilyMember", b =>
@@ -1571,9 +1994,13 @@ namespace DayCareElderlyService.Models.Migrations
                 {
                     b.Navigation("CenterActivities");
 
+                    b.Navigation("DailyCareGroups");
+
                     b.Navigation("FamilyMember");
 
                     b.Navigation("Notifications");
+
+                    b.Navigation("StaffCareAssignments");
 
                     b.Navigation("StaffSchedules");
 

@@ -27,19 +27,6 @@ public class MedicalSupplyService : IMedicalSupplyService
     {
         try
         {
-            var centerId = dto.CenterId ?? 1;
-            var center = await _context.Centers.AsNoTracking().FirstOrDefaultAsync(c => c.CenterId == centerId);
-            if (center == null)
-            {
-                // Fallback to first existing center
-                var firstCenter = await _context.Centers.AsNoTracking().FirstOrDefaultAsync();
-                if (firstCenter == null)
-                {
-                    return ApiResponse<MedicalSupplyDto>.Fail("Không tìm thấy trung tâm hoạt động.");
-                }
-                centerId = firstCenter.CenterId;
-            }
-
             if (dto.MinimumStock < 0)
             {
                 return ApiResponse<MedicalSupplyDto>.Fail("Mức tồn kho tối thiểu không được âm.");
@@ -52,7 +39,6 @@ public class MedicalSupplyService : IMedicalSupplyService
 
             var supply = new MedicalSupply
             {
-                CenterId = centerId,
                 SupplyName = dto.SupplyName.Trim(),
                 Unit = dto.Unit.Trim(),
                 MinimumStock = dto.MinimumStock,
@@ -64,7 +50,6 @@ public class MedicalSupplyService : IMedicalSupplyService
             await _context.MedicalSupplies.AddAsync(supply);
             await _context.SaveChangesAsync();
 
-            await _context.Entry(supply).Reference(s => s.Center).LoadAsync();
 
             return ApiResponse<MedicalSupplyDto>.Ok(MapToDto(supply), "Thêm vật tư y tế thành công.");
         }
@@ -79,14 +64,7 @@ public class MedicalSupplyService : IMedicalSupplyService
     {
         try
         {
-            var query = _context.MedicalSupplies
-                .Include(s => s.Center)
-                .AsNoTracking();
-
-            if (filter.CenterId.HasValue)
-            {
-                query = query.Where(s => s.CenterId == filter.CenterId.Value);
-            }
+            var query = _context.MedicalSupplies.AsNoTracking();
 
             if (filter.IsActive.HasValue)
             {
@@ -130,7 +108,6 @@ public class MedicalSupplyService : IMedicalSupplyService
         try
         {
             var supply = await _context.MedicalSupplies
-                .Include(s => s.Center)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SupplyId == supplyId);
 
@@ -153,7 +130,6 @@ public class MedicalSupplyService : IMedicalSupplyService
         try
         {
             var supply = await _context.MedicalSupplies
-                .Include(s => s.Center)
                 .FirstOrDefaultAsync(s => s.SupplyId == supplyId);
 
             if (supply == null)
@@ -187,7 +163,6 @@ public class MedicalSupplyService : IMedicalSupplyService
         try
         {
             var supply = await _context.MedicalSupplies
-                .Include(s => s.Center)
                 .FirstOrDefaultAsync(s => s.SupplyId == supplyId);
 
             if (supply == null)
@@ -224,7 +199,6 @@ public class MedicalSupplyService : IMedicalSupplyService
         try
         {
             var supply = await _context.MedicalSupplies
-                .Include(s => s.Center)
                 .FirstOrDefaultAsync(s => s.SupplyId == supplyId);
 
             if (supply == null)
@@ -251,8 +225,6 @@ public class MedicalSupplyService : IMedicalSupplyService
         return new MedicalSupplyDto
         {
             SupplyId = s.SupplyId,
-            CenterId = s.CenterId,
-            CenterName = s.Center?.CenterName ?? string.Empty,
             SupplyName = s.SupplyName,
             Unit = s.Unit,
             MinimumStock = s.MinimumStock,

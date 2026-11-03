@@ -17,11 +17,16 @@ public class StaffCareLogController : ControllerBase
 {
     private readonly ICareLogService _careLogService;
     private readonly ILogger<StaffCareLogController> _logger;
+    private readonly IHostEnvironment _environment;
 
-    public StaffCareLogController(ICareLogService careLogService, ILogger<StaffCareLogController> logger)
+    public StaffCareLogController(
+        ICareLogService careLogService,
+        ILogger<StaffCareLogController> logger,
+        IHostEnvironment environment)
     {
         _careLogService = careLogService;
         _logger = logger;
+        _environment = environment;
     }
 
     /// <summary>
@@ -35,11 +40,6 @@ public class StaffCareLogController : ControllerBase
     /// <summary>
     /// Lịch hoạt động hôm nay của trung tâm, đánh dấu hoạt động nhân viên được phân công
     /// </summary>
-    [HttpGet("activities/today")]
-    [ProducesResponseType(typeof(ApiResponse<List<ActivityTodayDto>>), StatusCodes.Status200OK)]
-    public Task<IActionResult> GetTodayActivities() =>
-        RunAsync(userId => _careLogService.GetTodayActivitiesAsync(userId), "lấy lịch hoạt động hôm nay");
-
     /// <summary>
     /// Care log 1 ngày của 1 cụ (mặc định hôm nay), gồm cả mục nội bộ
     /// </summary>
@@ -202,7 +202,10 @@ public class StaffCareLogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi {Action}: {Message}", actionName, ex.Message);
-            return StatusCode(500, ApiResponse<T>.Fail($"Lỗi máy chủ khi {actionName}."));
+            var message = _environment.IsDevelopment()
+                ? $"Lỗi máy chủ khi {actionName}: {ex.GetBaseException().Message}"
+                : $"Lỗi máy chủ khi {actionName}.";
+            return StatusCode(500, ApiResponse<T>.Fail(message));
         }
     }
 }

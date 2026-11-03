@@ -123,27 +123,9 @@ public class ElderlyService : IElderlyService
             await _context.SaveChangesAsync();
         }
 
-        // 3. Tìm hoặc tạo Center mặc định
-        var center = await _context.Centers.FirstOrDefaultAsync();
-        if (center == null)
-        {
-            center = new Center
-            {
-                CenterName = "Trung Tâm Chăm Sóc Người Cao Tuổi DayCare",
-                Address = "123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
-                PhoneNumber = "02838123456",
-                Email = "contact@daycare.com",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _context.Centers.AddAsync(center);
-            await _context.SaveChangesAsync();
-        }
-
-        // 4. Lưu trực tiếp các trường chuẩn vào Entity (không lưu JSON vào MedicalNotes)
+        // 3. Lưu trực tiếp các trường chuẩn vào Entity (không lưu JSON vào MedicalNotes)
         var elderly = new ElderlyMember
         {
-            CenterId = center.CenterId,
             FullName = dto.FullName.Trim(),
             DateOfBirth = dto.DateOfBirth,
             Gender = MapGenderForDb(dto.Gender),
@@ -177,7 +159,7 @@ public class ElderlyService : IElderlyService
         await _context.ElderlyFamilyRelationships.AddAsync(relationship);
         await _context.SaveChangesAsync();
 
-        var resultDto = MapToDto(elderly, relationship.Relationship, center.CenterName);
+        var resultDto = MapToDto(elderly, relationship.Relationship);
         return ApiResponse<ElderlyProfileDto>.Ok(resultDto, "Tạo hồ sơ người cao tuổi thành công.");
     }
 
@@ -193,7 +175,6 @@ public class ElderlyService : IElderlyService
 
         var relationships = await _context.ElderlyFamilyRelationships
             .Include(r => r.Elderly)
-                .ThenInclude(e => e.Center)
             .Where(r => r.FamilyMemberId == familyMember.FamilyMemberId && r.Elderly.IsActive)
             .OrderByDescending(r => r.Elderly.CreatedAt)
             .ToListAsync();
@@ -202,7 +183,7 @@ public class ElderlyService : IElderlyService
         foreach (var rel in relationships)
         {
             var e = rel.Elderly;
-            list.Add(MapToDto(e, rel.Relationship, e.Center?.CenterName ?? "DayCare Center"));
+            list.Add(MapToDto(e, rel.Relationship));
         }
 
         return ApiResponse<List<ElderlyProfileDto>>.Ok(list);
@@ -220,7 +201,6 @@ public class ElderlyService : IElderlyService
 
         var rel = await _context.ElderlyFamilyRelationships
             .Include(r => r.Elderly)
-                .ThenInclude(e => e.Center)
             .FirstOrDefaultAsync(r => r.FamilyMemberId == familyMember.FamilyMemberId && r.ElderlyId == elderlyId);
 
         if (rel == null || !rel.Elderly.IsActive)
@@ -229,7 +209,7 @@ public class ElderlyService : IElderlyService
         }
 
         var e = rel.Elderly;
-        var dto = MapToDto(e, rel.Relationship, e.Center?.CenterName ?? "DayCare Center");
+        var dto = MapToDto(e, rel.Relationship);
         return ApiResponse<ElderlyProfileDto>.Ok(dto);
     }
 
@@ -245,7 +225,6 @@ public class ElderlyService : IElderlyService
 
         var rel = await _context.ElderlyFamilyRelationships
             .Include(r => r.Elderly)
-                .ThenInclude(e => e.Center)
             .FirstOrDefaultAsync(r => r.FamilyMemberId == familyMember.FamilyMemberId && r.ElderlyId == elderlyId);
 
         if (rel == null || !rel.Elderly.IsActive)
@@ -273,7 +252,7 @@ public class ElderlyService : IElderlyService
 
         await _context.SaveChangesAsync();
 
-        var resultDto = MapToDto(e, rel.Relationship, e.Center?.CenterName ?? "DayCare Center");
+        var resultDto = MapToDto(e, rel.Relationship);
         return ApiResponse<ElderlyProfileDto>.Ok(resultDto, "Cập nhật hồ sơ người cao tuổi thành công.");
     }
 
@@ -329,8 +308,7 @@ public class ElderlyService : IElderlyService
 
     private static ElderlyProfileDto MapToDto(
         ElderlyMember e,
-        string relationship,
-        string centerName)
+        string relationship)
     {
         int? age = null;
         if (e.DateOfBirth.HasValue)
@@ -377,8 +355,8 @@ public class ElderlyService : IElderlyService
         return new ElderlyProfileDto
         {
             ElderlyId = e.ElderlyId,
-            CenterId = e.CenterId,
-            CenterName = centerName,
+            CenterId = 0,
+            CenterName = string.Empty,
             FullName = e.FullName,
             DateOfBirth = e.DateOfBirth,
             Age = age,

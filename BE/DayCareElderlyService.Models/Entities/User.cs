@@ -21,8 +21,6 @@ public partial class User
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ICollection<CenterActivity> CenterActivities { get; set; } = new List<CenterActivity>();
-
     public virtual FamilyMember? FamilyMember { get; set; }
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();

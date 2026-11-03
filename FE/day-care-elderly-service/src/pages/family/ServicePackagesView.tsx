@@ -1425,8 +1425,8 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
         try {
           const startIso =
             regType === "monthly"
-              ? monthlyStartDate || fmt(getTomorrow())
-              : selectedDates[0] || fmt(getTomorrow());
+              ? monthlyStartDate || fmt(new Date())
+              : selectedDates[0] || fmt(new Date());
           const endIso =
             regType === "monthly" && monthlyStartDate
               ? fmt(getMonthEndDate(parseDateStr(monthlyStartDate)))
@@ -1829,8 +1829,9 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
   // STEP 2 — HÌNH THỨC ĐĂNG KÝ
   // ===================================================================
   const renderStep2 = () => {
-    const tomorrow = getTomorrow();
-    const tomorrowStr = dateStr(tomorrow);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = dateStr(today);
 
     return (
       <div className="max-w-3xl mx-auto">
@@ -1937,7 +1938,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
               <input
                 type="date"
                 value={monthlyStartDate}
-                min={tomorrowStr}
+                min={todayStr}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val) {
@@ -2044,7 +2045,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
                   const d = new Date(year, month, day);
                   const ds = dateStr(d);
                   const isSun = isSunday(d);
-                  const isPast = d <= today;
+                  const isPast = d < today;
                   const isSelected = dailySelectedDates.includes(ds);
                   const disabled = isSun || isPast;
 

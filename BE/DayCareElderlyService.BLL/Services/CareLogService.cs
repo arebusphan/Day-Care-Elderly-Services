@@ -88,50 +88,6 @@ public class CareLogService : ICareLogService
         return ApiResponse<List<StaffElderlyTodayDto>>.Ok(result, "Lấy danh sách người cao tuổi hôm nay thành công.");
     }
 
-    public async Task<ApiResponse<List<ActivityTodayDto>>> GetTodayActivitiesAsync(int userId)
-    {
-        var staff = await GetStaffAsync(userId);
-        if (staff == null)
-        {
-            return ApiResponse<List<ActivityTodayDto>>.Fail("Tài khoản chưa có hồ sơ nhân viên.");
-        }
-
-        var today = VietnamTime.Today;
-        var activities = await _context.CenterActivities
-            .Include(a => a.ActivityAssignments).ThenInclude(x => x.Staff)
-            .Where(a => a.ActivityDate == today)
-            .OrderBy(a => a.StartTime)
-            .ToListAsync();
-
-        var activityIds = activities.Select(a => a.CenterActivityId).ToList();
-        var entryCounts = await _context.CareLogs
-            .Where(c => c.CenterActivityId != null && activityIds.Contains(c.CenterActivityId.Value))
-            .GroupBy(c => c.CenterActivityId!.Value)
-            .Select(g => new { ActivityId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ActivityId, x => x.Count);
-
-        var result = activities.Select(a =>
-        {
-            var mine = a.ActivityAssignments.FirstOrDefault(x => x.StaffId == staff.UserId);
-            return new ActivityTodayDto
-            {
-                CenterActivityId = a.CenterActivityId,
-                ActivityName = a.ActivityName,
-                ActivityDate = a.ActivityDate,
-                StartTime = a.StartTime,
-                EndTime = a.EndTime,
-                Location = a.Location,
-                Status = a.Status,
-                IsAssignedToMe = mine != null,
-                MyAssignmentRole = mine?.AssignmentRole,
-                AssignedStaff = a.ActivityAssignments.Select(x => x.Staff.FullName).ToList(),
-                EntryCount = entryCounts.GetValueOrDefault(a.CenterActivityId)
-            };
-        }).ToList();
-
-        return ApiResponse<List<ActivityTodayDto>>.Ok(result, "Lấy lịch hoạt động hôm nay thành công.");
-    }
-
     public async Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date)
     {
         var staff = await GetStaffAsync(userId);
@@ -167,21 +123,7 @@ public class CareLogService : ICareLogService
             return ApiResponse<CareLogEntryDto>.Fail(error);
         }
 
-        CenterActivity? activity = null;
-        if (dto.CenterActivityId != null)
-        {
-            var today = VietnamTime.Today;
-            activity = await _context.CenterActivities.FirstOrDefaultAsync(a =>
-                a.CenterActivityId == dto.CenterActivityId && a.ActivityDate == today);
-            if (activity == null)
-            {
-                return ApiResponse<CareLogEntryDto>.Fail("Không tìm thấy hoạt động hôm nay của trung tâm.");
-            }
-        }
-
         var log = NewLog(staff!, elderly!.ElderlyId, careType, dto.Description.Trim(), dto.Notes, ToJson(dto.Data), dto.IsInternal);
-        log.CenterActivityId = activity?.CenterActivityId;
-        log.CenterActivity = activity;
         await _context.CareLogs.AddAsync(log);
         await _context.SaveChangesAsync();
 
@@ -342,7 +284,6 @@ public class CareLogService : ICareLogService
             incident = new IncidentReport
             {
                 ElderlyId = elderly.ElderlyId,
-                CenterId = elderly.CenterId,
                 ReportedBy = staff!.UserId,
                 IncidentType = IncidentTypes.VitalsAlert,
                 Severity = severity,
@@ -526,7 +467,6 @@ public class CareLogService : ICareLogService
         var incident = new IncidentReport
         {
             ElderlyId = elderly.ElderlyId,
-            CenterId = elderly.CenterId,
             ReportedBy = staff.UserId,
             IncidentType = incidentType,
             Severity = severity,
@@ -650,7 +590,7 @@ public class CareLogService : ICareLogService
         await CareLogSchema.EnsureColumnsAsync(_context);
         return await _context.Users
             .Include(u => u.Roles)
-            .FirstOrDefaultAsync(u => u.UserId == userId && u.Roles.Any(r => r.RoleName == "Staff" || r.RoleName == "Admin" || r.RoleName == "Center"));
+            .FirstOrDefaultAsync(u => u.UserId == userId && u.Roles.Any(r => r.RoleName == "Staff" || r.RoleName == "Admin"));
     }
 
     private Task<ElderlyMember?> GetElderlyInCenterAsync(User staff, int elderlyId) =>

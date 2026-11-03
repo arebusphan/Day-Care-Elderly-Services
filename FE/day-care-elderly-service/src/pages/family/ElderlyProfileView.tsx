@@ -321,7 +321,7 @@ export const ElderlyProfileView: React.FC<ElderlyProfileViewProps> = ({ onNaviga
                   Phiếu Tiếp Nhận & Quản Lý Hồ Sơ
                 </span>
                 <span className="text-xs text-slate-400">
-                  Mã: <b className="text-slate-700">{current.elderlyId.slice(0, 8).toUpperCase()}</b>
+                                          Mã: <b className="text-slate-700">{String(current.elderlyId).slice(0, 8).toUpperCase()}</b>
                 </span>
               </div>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-1.5">

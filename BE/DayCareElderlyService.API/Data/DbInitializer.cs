@@ -162,7 +162,6 @@ public static class DbInitializer
                 BEGIN
                     CREATE TABLE DailySchedulePlans (
                         PlanId INT IDENTITY(1,1) NOT NULL,
-                        CenterId INT NOT NULL,
                         PlanDate DATE NOT NULL,
                         Status NVARCHAR(30) NOT NULL CONSTRAINT DF_DailySchedulePlans_Status DEFAULT ('Draft'),
                         ConfirmedAt DATETIME2(0) NULL,
@@ -173,9 +172,8 @@ public static class DbInitializer
                         CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_DailySchedulePlans_CreatedAt DEFAULT (SYSDATETIME()),
                         UpdatedAt DATETIME2(0) NULL,
                         CONSTRAINT PK_DailySchedulePlans PRIMARY KEY (PlanId),
-                        CONSTRAINT FK_DailySchedulePlans_Centers FOREIGN KEY (CenterId) REFERENCES Centers(CenterId),
                         CONSTRAINT FK_DailySchedulePlans_Users FOREIGN KEY (ConfirmedBy) REFERENCES Users(UserId),
-                        CONSTRAINT UQ_DailySchedulePlans_Center_Date UNIQUE (CenterId, PlanDate)
+                        CONSTRAINT UQ_DailySchedulePlans_Date UNIQUE (PlanDate)
                     );
                     CREATE INDEX IX_DailySchedulePlans_PlanDate ON DailySchedulePlans(PlanDate);
                 END
@@ -269,13 +267,6 @@ public static class DbInitializer
 
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'IncidentReports')
                 BEGIN
-                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'CenterId')
-                    BEGIN
-                        ALTER TABLE IncidentReports ADD CenterId INT NOT NULL CONSTRAINT DF_IncidentReports_CenterId DEFAULT 1;
-                        IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_IncidentReports_Centers')
-                            ALTER TABLE IncidentReports ADD CONSTRAINT FK_IncidentReports_Centers FOREIGN KEY (CenterId) REFERENCES Centers(CenterId);
-                    END
-
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'IncidentReports' AND COLUMN_NAME = 'IncidentType')
                         ALTER TABLE IncidentReports ADD IncidentType NVARCHAR(100) NOT NULL CONSTRAINT DF_IncidentReports_IncidentType DEFAULT N'Chung';
 
@@ -324,13 +315,12 @@ public static class DbInitializer
                 END
             ";
             await context.Database.ExecuteSqlRawAsync(syncIncidentsAndSuppliesSql);
-            logger?.LogInformation("Đã đồng bộ IncidentReports (IsSupplyConfirmed, CenterId, IncidentType, OccurredAt, ReportedAt, ResolutionNotes, ResolvedAt) và MedicalSupplies (QuantityInStock, MinimumStock, IsActive).");
+            logger?.LogInformation("Đã đồng bộ IncidentReports (IsSupplyConfirmed, IncidentType, OccurredAt, ReportedAt, ResolutionNotes, ResolvedAt) và MedicalSupplies (QuantityInStock, MinimumStock, IsActive).");
 
             // 3. Seed Roles
             var defaultRoles = new List<Role>
             {
                 new() { RoleName = "Admin",        Description = "Quản trị viên toàn quyền hệ thống" },
-                new() { RoleName = "Center",       Description = "Quản lý trung tâm chăm sóc" },
                 new() { RoleName = "Staff",        Description = "Nhân viên chăm sóc và điều dưỡng" },
                 new() { RoleName = "FamilyMember", Description = "Thành viên gia đình của người cao tuổi" }
             };
@@ -341,24 +331,6 @@ public static class DbInitializer
                     await context.Roles.AddAsync(role);
             }
             await context.SaveChangesAsync();
-
-            // 4. Seed Default Center (INT identity — let DB assign ID)
-            var center = await context.Centers.FirstOrDefaultAsync();
-            if (center == null)
-            {
-                center = new Center
-                {
-                    CenterName  = "Trung Tâm Chăm Sóc Người Cao Tuổi Day Care",
-                    Address     = "Số 123 Đường Hạnh Phúc, Quận Cầu Giấy, Hà Nội",
-                    PhoneNumber = "1900 6868",
-                    Email       = "contact@daycare-elderly.vn",
-                    IsActive    = true,
-                    CreatedAt   = DateTime.UtcNow
-                };
-                await context.Centers.AddAsync(center);
-                await context.SaveChangesAsync();
-                logger?.LogInformation("Đã tạo trung tâm mặc định (CenterId = {Id}).", center.CenterId);
-            }
 
             // 5. Seed Default Admin User
             var adminEmail = "admin@daycare.com";
@@ -387,7 +359,6 @@ public static class DbInitializer
             {
                 new()
                 {
-                    CenterId           = center.CenterId,
                     PackageName        = "Cơ bản",
                     Description        = "Dành cho người cao tuổi khỏe mạnh hoặc giảm nhẹ vận động, cần giao lưu và sinh hoạt ban ngày.",
                     Price              = 6000000,
@@ -406,7 +377,6 @@ public static class DbInitializer
                 },
                 new()
                 {
-                    CenterId           = center.CenterId,
                     PackageName        = "Phục hồi chức năng",
                     Description        = "Dành cho người cao tuổi yếu vận động, sau phẫu thuật xương khớp, cần phục hồi tầm vận động và thể lực.",
                     Price              = 9000000,
@@ -425,7 +395,6 @@ public static class DbInitializer
                 },
                 new()
                 {
-                    CenterId           = center.CenterId,
                     PackageName        = "Sa sút trí tuệ",
                     Description        = "Dành cho người cao tuổi hay quên, lú lẫn, Alzheimer, cần môi trường an toàn và giám sát chuyên biệt.",
                     Price              = 10000000,
@@ -444,7 +413,6 @@ public static class DbInitializer
                 },
                 new()
                 {
-                    CenterId           = center.CenterId,
                     PackageName        = "Sau tai biến",
                     Description        = "Dành cho người cao tuổi có di chứng tai biến mạch máu não, liệt nửa người, rối loạn nuốt hoặc phát âm.",
                     Price              = 11000000,
@@ -463,7 +431,6 @@ public static class DbInitializer
                 },
                 new()
                 {
-                    CenterId           = center.CenterId,
                     PackageName        = "Giai đoạn cuối",
                     Description        = "Dành cho người cao tuổi cần chăm sóc giảm nhẹ, tạo sự thoải mái tối đa và đồng hành tinh thần những năm tháng cuối đời.",
                     Price              = 14000000,
@@ -485,7 +452,7 @@ public static class DbInitializer
             foreach (var pkg in packagesToSeed)
             {
                 var existing = await context.ServicePackages
-                    .FirstOrDefaultAsync(p => p.PackageName == pkg.PackageName && p.CenterId == center.CenterId);
+                    .FirstOrDefaultAsync(p => p.PackageName == pkg.PackageName);
                 if (existing == null)
                 {
                     await context.ServicePackages.AddAsync(pkg);

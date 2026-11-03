@@ -10,7 +10,6 @@ public partial class DailySchedulePlan
 {
     public int PlanId { get; set; }
 
-    public int CenterId { get; set; }
 
     public DateOnly PlanDate { get; set; }
 
@@ -32,8 +31,6 @@ public partial class DailySchedulePlan
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
-
-    public virtual Center Center { get; set; } = null!;
 
     public virtual User? ConfirmedByNavigation { get; set; }
 

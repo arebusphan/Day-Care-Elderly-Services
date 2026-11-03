@@ -15,7 +15,6 @@ internal static class CareLogShared
     public static IQueryable<CareLog> CareLogQuery(AppDbContext context) =>
         context.CareLogs
             .Include(c => c.Staff)
-            .Include(c => c.CenterActivity)
             .Include(c => c.CareLogPhotos);
 
     public static IQueryable<IncidentReport> IncidentQuery(AppDbContext context) =>
@@ -69,8 +68,6 @@ internal static class CareLogShared
         Notes = log.Notes,
         Data = ParseJson(log.Data),
         IsInternal = log.IsInternal,
-        CenterActivityId = log.CenterActivityId,
-        ActivityName = log.CenterActivity?.ActivityName,
         RecordedAt = log.RecordedAt,
         StaffId = log.StaffId,
         StaffName = log.Staff?.FullName ?? string.Empty,

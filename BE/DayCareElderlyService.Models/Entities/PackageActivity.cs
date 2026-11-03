@@ -23,7 +23,5 @@ public partial class PackageActivity
 
     public virtual ActivityTemplate ActivityTemplate { get; set; } = null!;
 
-    public virtual ICollection<CenterActivity> CenterActivities { get; set; } = new List<CenterActivity>();
-
     public virtual ServicePackage Package { get; set; } = null!;
 }

@@ -37,10 +37,7 @@ public class AttendanceService : IAttendanceService
             return FailCheckIn(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailCheckIn(403, "Bạn không có quyền điểm danh người cao tuổi.");
-        }
+        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
 
         var elderly = await _context.ElderlyMembers
             .FirstOrDefaultAsync(e => e.ElderlyId == request.ElderlyId);
@@ -49,6 +46,9 @@ public class AttendanceService : IAttendanceService
         {
             return FailCheckIn(400, "Không tìm thấy người cao tuổi.");
         }
+
+        if (!isStaff && !await IsFamilyLinkedAsync(userId, request.ElderlyId))
+            return FailCheckIn(403, "Bạn chỉ có thể điểm danh người cao tuổi thuộc hồ sơ gia đình của mình.");
 
         if (!elderly.IsActive)
         {
@@ -82,8 +82,7 @@ public class AttendanceService : IAttendanceService
             CheckInAt = now,
             CheckInTime = TimeOnly.FromDateTime(now),
             CheckedInBy = userId,
-            CreatedAt = now,
-            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+            CreatedAt = now
         };
 
         await _context.AttendanceRecords.AddAsync(record);
@@ -121,10 +120,10 @@ public class AttendanceService : IAttendanceService
             return FailCheckOut(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailCheckOut(403, "Bạn không có quyền điểm danh người cao tuổi.");
-        }
+        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
+
+        if (!isStaff && !await IsFamilyLinkedAsync(userId, request.ElderlyId))
+            return FailCheckOut(403, "Bạn chỉ có thể điểm danh người cao tuổi thuộc hồ sơ gia đình của mình.");
 
         var elderlyExists = await _context.ElderlyMembers
             .AsNoTracking()
@@ -160,7 +159,6 @@ public class AttendanceService : IAttendanceService
         record.CheckOutTime = TimeOnly.FromDateTime(now);
         record.CheckedOutBy = userId;
         record.Status = "CheckedOut";
-        MergeNotes(record, request.Notes);
 
         await _context.SaveChangesAsync();
 
@@ -188,16 +186,15 @@ public class AttendanceService : IAttendanceService
             return FailList(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailList(403, "Bạn không có quyền xem danh sách điểm danh.");
-        }
+        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
+        var familyElderlyIds = isStaff ? null : await GetFamilyElderlyIdsAsync(userId);
+        if (!isStaff && familyElderlyIds == null) return FailList(403, "Tài khoản không có quyền xem điểm danh.");
 
         var targetDate = date ?? VietnamTime.Today;
 
         var items = await _context.AttendanceRecords
             .AsNoTracking()
-            .Where(a => a.AttendanceDate == targetDate)
+            .Where(a => a.AttendanceDate == targetDate && (isStaff || familyElderlyIds!.Contains(a.ElderlyId)))
             .OrderBy(a => a.CheckInAt)
             .Select(a => new AttendanceListItemDto
             {
@@ -210,8 +207,7 @@ public class AttendanceService : IAttendanceService
                 Status = a.Status,
                 CheckedInBy = a.CheckedInBy,
                 CheckedOutBy = a.CheckedOutBy,
-                RegistrationId = a.RegistrationId,
-                Notes = a.Notes
+                RegistrationId = a.RegistrationId
             })
             .ToListAsync();
 
@@ -244,10 +240,9 @@ public class AttendanceService : IAttendanceService
             return FailDetail(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailDetail(403, "Bạn không có quyền xem chi tiết điểm danh.");
-        }
+        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
+        if (!isStaff && !await IsFamilyLinkedAsync(userId, await _context.AttendanceRecords.Where(a => a.AttendanceId == attendanceId).Select(a => a.ElderlyId).FirstOrDefaultAsync()))
+            return FailDetail(403, "Bạn không có quyền xem bản ghi điểm danh này.");
 
         var detail = await _context.AttendanceRecords
             .AsNoTracking()
@@ -266,11 +261,9 @@ public class AttendanceService : IAttendanceService
                 CheckOutTime = a.CheckOutTime,
                 CheckedInBy = a.CheckedInBy,
                 CheckedOutBy = a.CheckedOutBy,
-                Notes = a.Notes,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
-                UpdatedBy = a.UpdatedBy,
-                CorrectionReason = a.CorrectionReason
+                UpdatedBy = a.UpdatedBy
             })
             .FirstOrDefaultAsync();
 
@@ -308,10 +301,9 @@ public class AttendanceService : IAttendanceService
             return FailList(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailList(403, "Bạn không có quyền xem lịch sử điểm danh.");
-        }
+        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
+        if (!isStaff && !await IsFamilyLinkedAsync(userId, elderlyId))
+            return FailList(403, "Bạn không có quyền xem lịch sử người cao tuổi này.");
 
         var elderlyExists = await _context.ElderlyMembers
             .AsNoTracking()
@@ -338,8 +330,7 @@ public class AttendanceService : IAttendanceService
                 Status = a.Status,
                 CheckedInBy = a.CheckedInBy,
                 CheckedOutBy = a.CheckedOutBy,
-                RegistrationId = a.RegistrationId,
-                Notes = a.Notes
+                RegistrationId = a.RegistrationId
             })
             .ToListAsync();
 
@@ -367,10 +358,9 @@ public class AttendanceService : IAttendanceService
             return FailList(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailList(403, "Bạn không có quyền xem danh sách người cao tuổi đang có mặt.");
-        }
+        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
+        var familyElderlyIds = isStaff ? null : await GetFamilyElderlyIdsAsync(userId);
+        if (!isStaff && familyElderlyIds == null) return FailList(403, "Tài khoản không có quyền xem điểm danh.");
 
         var today = VietnamTime.Today;
 
@@ -378,7 +368,8 @@ public class AttendanceService : IAttendanceService
             .AsNoTracking()
             .Where(a => a.AttendanceDate == today
                      && a.CheckInAt != null
-                     && a.CheckOutAt == null)
+                     && a.CheckOutAt == null
+                     && (isStaff || familyElderlyIds!.Contains(a.ElderlyId)))
             .OrderBy(a => a.CheckInAt)
             .Select(a => new AttendanceListItemDto
             {
@@ -391,8 +382,7 @@ public class AttendanceService : IAttendanceService
                 Status = a.Status,
                 CheckedInBy = a.CheckedInBy,
                 CheckedOutBy = a.CheckedOutBy,
-                RegistrationId = a.RegistrationId,
-                Notes = a.Notes
+                RegistrationId = a.RegistrationId
             })
             .ToListAsync();
 
@@ -403,153 +393,6 @@ public class AttendanceService : IAttendanceService
         };
     }
 
-    public async Task<AttendanceActionResult<UpdateAttendanceResponseDto>> UpdateAsync(
-        int userId,
-        int attendanceId,
-        UpdateAttendanceRequestDto request)
-    {
-        if (attendanceId <= 0)
-        {
-            return FailUpdate(400, "Mã điểm danh không hợp lệ.");
-        }
-
-        var user = await _context.Users
-            .Include(u => u.Roles)
-            .FirstOrDefaultAsync(u => u.UserId == userId);
-
-        if (user == null)
-        {
-            return FailUpdate(401, "Không xác thực được người dùng. Vui lòng đăng nhập lại.");
-        }
-
-        if (!user.IsActive)
-        {
-            return FailUpdate(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
-        }
-
-        if (user.Roles == null || !user.Roles.Any(r => r.RoleName == "Staff"))
-        {
-            return FailUpdate(403, "Bạn không có quyền chỉnh sửa điểm danh.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.CorrectionReason))
-        {
-            return FailUpdate(400, "Lý do chỉnh sửa không được để trống.");
-        }
-
-        var record = await _context.AttendanceRecords
-            .FirstOrDefaultAsync(a => a.AttendanceId == attendanceId);
-
-        if (record == null)
-        {
-            return FailUpdate(404, "Không tìm thấy bản ghi điểm danh.");
-        }
-
-        // Giữ nguyên giá trị wall-clock, không chuyển UTC (theo VietnamTime / Unspecified).
-        var checkInAt = DateTime.SpecifyKind(request.CheckInAt, DateTimeKind.Unspecified);
-        DateTime? checkOutAt = request.CheckOutAt.HasValue
-            ? DateTime.SpecifyKind(request.CheckOutAt.Value, DateTimeKind.Unspecified)
-            : null;
-
-        if (DateOnly.FromDateTime(checkInAt) != record.AttendanceDate)
-        {
-            return FailUpdate(400, "Thời gian check-in phải thuộc đúng ngày điểm danh của bản ghi.");
-        }
-
-        if (checkOutAt.HasValue)
-        {
-            if (DateOnly.FromDateTime(checkOutAt.Value) != record.AttendanceDate)
-            {
-                return FailUpdate(400, "Thời gian check-out phải thuộc đúng ngày điểm danh của bản ghi.");
-            }
-
-            if (checkOutAt.Value < checkInAt)
-            {
-                return FailUpdate(400, "Thời gian check-out phải sau hoặc bằng thời gian check-in.");
-            }
-        }
-
-        var originalUpdatedAt = record.UpdatedAt;
-
-        record.CheckInAt = checkInAt;
-        record.CheckInTime = TimeOnly.FromDateTime(checkInAt);
-
-        if (checkOutAt.HasValue)
-        {
-            record.CheckOutAt = checkOutAt.Value;
-            record.CheckOutTime = TimeOnly.FromDateTime(checkOutAt.Value);
-            record.Status = "CheckedOut";
-            // Không tự gán CheckedOutBy khi chỉnh sửa; giữ nguyên giá trị hiện có.
-        }
-        else
-        {
-            record.CheckOutAt = null;
-            record.CheckOutTime = null;
-            record.CheckedOutBy = null;
-            record.Status = "Present";
-        }
-
-        record.UpdatedAt = VietnamTime.Now;
-        record.UpdatedBy = userId;
-        record.CorrectionReason = request.CorrectionReason.Trim();
-
-        try
-        {
-            // Soft concurrency: từ chối nếu UpdatedAt đã đổi sau khi load (best-effort, không có rowversion).
-            var latestStamp = await _context.AttendanceRecords
-                .AsNoTracking()
-                .Where(a => a.AttendanceId == attendanceId)
-                .Select(a => a.UpdatedAt)
-                .FirstAsync();
-
-            if (latestStamp != originalUpdatedAt)
-            {
-                _context.ChangeTracker.Clear();
-                return FailUpdate(409, "Bản ghi điểm danh đã được chỉnh sửa bởi người khác. Vui lòng tải lại và thử lại.");
-            }
-
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            _context.ChangeTracker.Clear();
-            return FailUpdate(409, "Bản ghi điểm danh đã được chỉnh sửa bởi người khác. Vui lòng tải lại và thử lại.");
-        }
-
-        return new AttendanceActionResult<UpdateAttendanceResponseDto>
-        {
-            StatusCode = 200,
-            Body = ApiResponse<UpdateAttendanceResponseDto>.Ok(MapUpdate(record), "Chỉnh sửa điểm danh thành công.")
-        };
-    }
-
-    /// <summary>
-    /// Giữ Notes check-in; nếu có notes check-out thì nối thêm, không ghi đè/xóa ghi chú cũ.
-    /// </summary>
-    private static void MergeNotes(AttendanceRecord record, string? checkOutNotes)
-    {
-        if (string.IsNullOrWhiteSpace(checkOutNotes))
-        {
-            return;
-        }
-
-        var addition = checkOutNotes.Trim();
-        if (string.IsNullOrWhiteSpace(record.Notes))
-        {
-            record.Notes = TruncateNotes(addition);
-            return;
-        }
-
-        record.Notes = TruncateNotes($"{record.Notes.Trim()} | Check-out: {addition}");
-    }
-
-    private static string TruncateNotes(string notes) =>
-        notes.Length <= 500 ? notes : notes[..500];
-
-    /// <summary>
-    /// Đăng ký Confirmed còn hiệu lực và ngày check-in thuộc lịch sử dụng đã đăng ký.
-    /// Quy tắc lịch lấy từ FE/Billing (all|mwf|tts, SelectedDatesJson) và DailyPlanningService.ShouldAttend.
-    /// </summary>
     private async Task<ServiceRegistration?> FindValidRegistrationForDateAsync(int elderlyId, DateOnly date)
     {
         var candidates = await _context.ServiceRegistrations
@@ -565,21 +408,11 @@ public class AttendanceService : IAttendanceService
         return candidates.FirstOrDefault(r => IsServiceDay(r, date));
     }
 
-    /// <summary>
-    /// daily: ngày phải có trong SelectedDatesJson (yyyy-MM-dd) — như DailyPlanningService.
-    /// monthly: MonthlyPattern all/mwf/tts (FE/Billing) hoặc mon_wed_fri/tue_thu_sat (DailyPlanning/StaffAssignment).
-    /// </summary>
     private static bool IsServiceDay(ServiceRegistration registration, DateOnly date)
     {
-        var dayOfWeek = date.DayOfWeek;
-
         if (registration.RegistrationType.Equals("daily", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(registration.SelectedDatesJson))
-            {
-                return false;
-            }
-
+            if (string.IsNullOrWhiteSpace(registration.SelectedDatesJson)) return false;
             try
             {
                 var dates = JsonSerializer.Deserialize<List<string>>(registration.SelectedDatesJson);
@@ -591,17 +424,32 @@ public class AttendanceService : IAttendanceService
             }
         }
 
-        // monthly (và mọi loại không phải daily — cùng nhánh else của StaffAssignmentService)
-        var pattern = registration.MonthlyPattern?.ToLowerInvariant();
-        return pattern switch
+        var dayOfWeek = date.DayOfWeek;
+        return registration.MonthlyPattern?.ToLowerInvariant() switch
         {
-            "mwf" or "mon_wed_fri" =>
-                dayOfWeek is DayOfWeek.Monday or DayOfWeek.Wednesday or DayOfWeek.Friday,
-            "tts" or "tue_thu_sat" =>
-                dayOfWeek is DayOfWeek.Tuesday or DayOfWeek.Thursday or DayOfWeek.Saturday,
-            // "all" (FE/Billing) và nhánh mặc định của DailyPlanning: T2–T7, nghỉ Chủ nhật
-            "all" or _ => dayOfWeek != DayOfWeek.Sunday
+            "mwf" or "mon_wed_fri" => dayOfWeek is DayOfWeek.Monday or DayOfWeek.Wednesday or DayOfWeek.Friday,
+            "tts" or "tue_thu_sat" => dayOfWeek is DayOfWeek.Tuesday or DayOfWeek.Thursday or DayOfWeek.Saturday,
+            _ => dayOfWeek != DayOfWeek.Sunday
         };
+    }
+
+    private Task<bool> IsFamilyLinkedAsync(int userId, int elderlyId) =>
+        _context.ElderlyFamilyRelationships.AnyAsync(r =>
+            r.FamilyMember.UserId == userId && r.ElderlyId == elderlyId);
+
+    private async Task<List<int>?> GetFamilyElderlyIdsAsync(int userId)
+    {
+        var familyMemberId = await _context.FamilyMembers
+            .Where(f => f.UserId == userId)
+            .Select(f => (int?)f.FamilyMemberId)
+            .FirstOrDefaultAsync();
+
+        if (!familyMemberId.HasValue) return null;
+
+        return await _context.ElderlyFamilyRelationships
+            .Where(r => r.FamilyMemberId == familyMemberId.Value)
+            .Select(r => r.ElderlyId)
+            .ToListAsync();
     }
 
     private static AttendanceActionResult<CheckInResponseDto> FailCheckIn(int statusCode, string message) => new()
@@ -632,25 +480,6 @@ public class AttendanceService : IAttendanceService
     {
         StatusCode = statusCode,
         Body = ApiResponse<AttendanceDetailDto>.Fail(message)
-    };
-
-    private static AttendanceActionResult<UpdateAttendanceResponseDto> FailUpdate(int statusCode, string message) => new()
-    {
-        StatusCode = statusCode,
-        Body = ApiResponse<UpdateAttendanceResponseDto>.Fail(message)
-    };
-
-    private static UpdateAttendanceResponseDto MapUpdate(AttendanceRecord record) => new()
-    {
-        AttendanceId = record.AttendanceId,
-        ElderlyId = record.ElderlyId,
-        AttendanceDate = record.AttendanceDate,
-        CheckInAt = record.CheckInAt ?? default,
-        CheckOutAt = record.CheckOutAt,
-        Status = record.Status,
-        UpdatedAt = record.UpdatedAt,
-        UpdatedBy = record.UpdatedBy,
-        CorrectionReason = record.CorrectionReason
     };
 
     private static CheckInResponseDto MapCheckIn(AttendanceRecord record) => new()

@@ -47,14 +47,14 @@ public class StaffAssignmentService : IStaffAssignmentService
     /// <summary>
     /// Lấy danh sách người cao tuổi dự kiến có mặt tại trung tâm vào ngày chỉ định
     /// </summary>
-    private async Task<List<ElderlyMember>> GetAttendingElderlyForDateAsync(int centerId, DateOnly targetDate)
+    private async Task<List<ElderlyMember>> GetAttendingElderlyForDateAsync(DateOnly targetDate)
     {
         var dayOfWeek = targetDate.DayOfWeek;
 
         // 1. Lấy tất cả người cao tuổi đang hoạt động thuộc trung tâm
         var allActiveElderly = await _context.ElderlyMembers
             .Include(e => e.ServiceRegistrations)
-            .Where(e => e.CenterId == centerId && e.IsActive)
+            .Where(e => e.IsActive)
             .ToListAsync();
 
         if (allActiveElderly.Count == 0)
@@ -185,13 +185,6 @@ public class StaffAssignmentService : IStaffAssignmentService
             return ApiResponse<DailySchedulePlanDto>.Fail("Chủ nhật trung tâm đóng cửa, không thể chia lịch chăm sóc.");
         }
 
-        // 2. Lấy thông tin Center
-        var center = await _context.Centers.FirstOrDefaultAsync(c => c.IsActive);
-        if (center == null)
-        {
-            return ApiResponse<DailySchedulePlanDto>.Fail("Không tìm thấy thông tin trung tâm.");
-        }
-
         // 3. Lấy danh sách Staff đi làm ngày hôm đó
         var workingStaff = await GetWorkingStaffForDateAsync(targetDate);
         if (workingStaff.Count == 0)
@@ -200,7 +193,7 @@ public class StaffAssignmentService : IStaffAssignmentService
         }
 
         // 4. Lấy danh sách người cao tuổi dự kiến có mặt
-        var attendingElderly = await GetAttendingElderlyForDateAsync(center.CenterId, targetDate);
+        var attendingElderly = await GetAttendingElderlyForDateAsync(targetDate);
         if (attendingElderly.Count == 0)
         {
             return ApiResponse<DailySchedulePlanDto>.Fail($"Không có người cao tuổi nào có lịch đến trung tâm vào ngày {targetDate:dd/MM/yyyy}.");
@@ -281,7 +274,7 @@ public class StaffAssignmentService : IStaffAssignmentService
             .Include(p => p.Assignments)
             .Include(p => p.CareGroups)
                 .ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(p => p.CenterId == center.CenterId && p.PlanDate == targetDate);
+            .FirstOrDefaultAsync(p => p.PlanDate == targetDate);
 
         DailySchedulePlan plan;
         if (existingPlan != null)
@@ -304,7 +297,6 @@ public class StaffAssignmentService : IStaffAssignmentService
         {
             plan = new DailySchedulePlan
             {
-                CenterId = center.CenterId,
                 PlanDate = targetDate,
                 Status = "Draft",
                 TotalStaff = groupPlans.Count(g => g.Staff != null),
@@ -492,15 +484,13 @@ public class StaffAssignmentService : IStaffAssignmentService
         }
 
         // Kiểm tra xem có người cao tuổi nào tham gia ngày này mà chưa được gán không
-        var center = await _context.Centers.FirstOrDefaultAsync(c => c.IsActive);
         var unassignedDtos = new List<ElderlyInGroupDto>();
 
-        if (center != null)
         {
             var assignedElderlyIds = plan.CareGroups.Count > 0
                 ? plan.CareGroups.SelectMany(g => g.Members.Select(m => m.ElderlyId)).ToHashSet()
                 : plan.Assignments.Select(a => a.ElderlyId).ToHashSet();
-            var attending = await GetAttendingElderlyForDateAsync(center.CenterId, date);
+            var attending = await GetAttendingElderlyForDateAsync(date);
             var unassigned = attending.Where(e => !assignedElderlyIds.Contains(e.ElderlyId)).ToList();
 
             unassignedDtos = unassigned.Select(e => new ElderlyInGroupDto
@@ -522,7 +512,6 @@ public class StaffAssignmentService : IStaffAssignmentService
         var resultDto = new DailySchedulePlanDto
         {
             PlanId = plan.PlanId,
-            CenterId = plan.CenterId,
             PlanDate = plan.PlanDate,
             Status = plan.Status,
             ConfirmedAt = plan.ConfirmedAt,

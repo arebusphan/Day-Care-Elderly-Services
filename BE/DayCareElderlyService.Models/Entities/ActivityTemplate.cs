@@ -7,7 +7,6 @@ public partial class ActivityTemplate
 {
     public int ActivityTemplateId { get; set; }
 
-    public int CenterId { get; set; }
 
     public string ActivityName { get; set; } = null!;
 
@@ -16,8 +15,6 @@ public partial class ActivityTemplate
     public string? DefaultLocation { get; set; }
 
     public bool IsActive { get; set; }
-
-    public virtual Center Center { get; set; } = null!;
 
     public virtual ICollection<PackageActivity> PackageActivities { get; set; } = new List<PackageActivity>();
 }

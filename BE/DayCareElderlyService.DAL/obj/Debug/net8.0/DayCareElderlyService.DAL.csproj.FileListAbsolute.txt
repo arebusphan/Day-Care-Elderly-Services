@@ -14,3 +14,9 @@ C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayC
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayCareElderlyService.DAL\obj\Debug\net8.0\refint\DayCareElderlyService.DAL.dll
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayCareElderlyService.DAL\obj\Debug\net8.0\DayCareElderlyService.DAL.pdb
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayCareElderlyService.DAL\obj\Debug\net8.0\ref\DayCareElderlyService.DAL.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.DAL.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.DAL.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.DAL.pdb
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.DAL.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.DAL.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.DAL.pdb

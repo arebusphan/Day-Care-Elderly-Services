@@ -53,13 +53,12 @@ public class DailyPlanningService : IDailyPlanningService
             .Include(p => p.AttendanceForecasts)
             .Include(p => p.CareGroups).ThenInclude(g => g.Members)
             .Include(p => p.Assignments)
-            .FirstOrDefaultAsync(p => p.CenterId == centerId && p.PlanDate == date);
+            .FirstOrDefaultAsync(p => p.PlanDate == date);
 
         if (plan == null)
         {
             plan = new DailySchedulePlan
             {
-                CenterId = centerId,
                 PlanDate = date,
                 Status = "Draft",
                 CreatedAt = DateTime.UtcNow
@@ -81,7 +80,7 @@ public class DailyPlanningService : IDailyPlanningService
     {
         var allElderly = await _context.ElderlyMembers
             .Include(e => e.ServiceRegistrations)
-            .Where(e => e.CenterId == centerId && e.IsActive)
+            .Where(e => e.IsActive)
             .ToListAsync();
 
         var dayOfWeek = date.DayOfWeek;
@@ -490,7 +489,7 @@ public class DailyPlanningService : IDailyPlanningService
 
         var plan = await _context.DailySchedulePlans
             .Include(p => p.AttendanceForecasts).ThenInclude(f => f.Elderly)
-            .FirstOrDefaultAsync(p => p.PlanDate == date && p.CenterId == centerId);
+            .FirstOrDefaultAsync(p => p.PlanDate == date);
 
         var attending = plan?.AttendanceForecasts
             .Where(f => NormalizeStatus(f.AttendanceStatus) == "Expected" && f.Elderly != null)
@@ -862,7 +861,6 @@ public class DailyPlanningService : IDailyPlanningService
         var plans = await _context.DailySchedulePlans
             .Include(p => p.ConfirmedByNavigation)
             .Include(p => p.CareGroups)
-            .Where(p => p.CenterId == centerId)
             .OrderByDescending(p => p.PlanDate)
             .ThenByDescending(p => p.PlanId)
             .Take(60)
@@ -1057,7 +1055,6 @@ public class DailyPlanningService : IDailyPlanningService
         return new DailySchedulePlanDto
         {
             PlanId = plan.PlanId,
-            CenterId = plan.CenterId,
             PlanDate = plan.PlanDate,
             Status = plan.Status,
             TotalStaff = plan.TotalStaff,

@@ -7,7 +7,6 @@ public partial class MedicalSupply
 {
     public int SupplyId { get; set; }
 
-    public int CenterId { get; set; }
 
     public string SupplyName { get; set; } = null!;
 
@@ -20,8 +19,6 @@ public partial class MedicalSupply
     public bool IsActive { get; set; }
 
     public DateTime CreatedAt { get; set; }
-
-    public virtual Center Center { get; set; } = null!;
 
     public virtual ICollection<SupplyTransaction> SupplyTransactions { get; set; } = new List<SupplyTransaction>();
 }

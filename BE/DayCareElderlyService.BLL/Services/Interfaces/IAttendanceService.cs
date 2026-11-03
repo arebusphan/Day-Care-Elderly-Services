@@ -16,5 +16,4 @@ public interface IAttendanceService
 
     Task<AttendanceActionResult<List<AttendanceListItemDto>>> GetPresentTodayAsync(int userId);
 
-    Task<AttendanceActionResult<UpdateAttendanceResponseDto>> UpdateAsync(int userId, int attendanceId, UpdateAttendanceRequestDto request);
 }

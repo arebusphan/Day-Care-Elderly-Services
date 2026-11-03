@@ -13,3 +13,11 @@ C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayC
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayCareElderlyService.Models\bin\Debug\net8.0\DayCareElderlyService.Models.runtimeconfig.json
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayCareElderlyService.Models\obj\Debug\net8.0\DayCareElderlyService.Models.csproj.AssemblyReference.cache
 C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\DayCareElderlyService.Models\obj\Debug\net8.0\DayCareElderlyService.Models.genruntimeconfig.cache
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.Models.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.Models.runtimeconfig.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.Models.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\DayCareElderlyService.Models.pdb
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.Models.deps.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.Models.runtimeconfig.json
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.Models.dll
+C:\Users\ACER\Desktop\Day Care Elderly Service\Day-Care-Elderly-Services\BE\build-check\bin\Debug\net8.0\DayCareElderlyService.Models.pdb

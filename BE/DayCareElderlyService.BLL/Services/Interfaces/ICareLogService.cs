@@ -9,7 +9,6 @@ namespace DayCareElderlyService.BLL.Services.Interfaces;
 public interface ICareLogService
 {
     Task<ApiResponse<List<StaffElderlyTodayDto>>> GetTodayElderlyAsync(int userId);
-    Task<ApiResponse<List<ActivityTodayDto>>> GetTodayActivitiesAsync(int userId);
     Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date);
     Task<ApiResponse<CareLogEntryDto>> AddEntryAsync(int userId, int elderlyId, CreateCareLogEntryDto dto);
     Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files);

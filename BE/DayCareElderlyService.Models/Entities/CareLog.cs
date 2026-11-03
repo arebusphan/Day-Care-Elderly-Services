@@ -11,7 +11,6 @@ public partial class CareLog
 
     public int StaffId { get; set; }
 
-    public int? CenterActivityId { get; set; }
 
     public DateTime RecordedAt { get; set; }
 
@@ -26,8 +25,6 @@ public partial class CareLog
     public bool IsInternal { get; set; }
 
     public virtual ICollection<CareLogPhoto> CareLogPhotos { get; set; } = new List<CareLogPhoto>();
-
-    public virtual CenterActivity? CenterActivity { get; set; }
 
     public virtual ElderlyMember Elderly { get; set; } = null!;
 

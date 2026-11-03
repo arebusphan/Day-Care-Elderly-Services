@@ -7,7 +7,6 @@ public partial class ElderlyMember
 {
     public int ElderlyId { get; set; }
 
-    public int CenterId { get; set; }
 
     public string FullName { get; set; } = null!;
 
@@ -45,8 +44,6 @@ public partial class ElderlyMember
     public virtual ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
 
     public virtual ICollection<CareLog> CareLogs { get; set; } = new List<CareLog>();
-
-    public virtual Center Center { get; set; } = null!;
 
     public virtual ICollection<ElderlyFamilyRelationship> ElderlyFamilyRelationships { get; set; } = new List<ElderlyFamilyRelationship>();
 

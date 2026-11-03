@@ -7,7 +7,6 @@ public partial class ServicePackage
 {
     public int PackageId { get; set; }
 
-    public int CenterId { get; set; }
 
     public string PackageName { get; set; } = null!;
 
@@ -38,8 +37,6 @@ public partial class ServicePackage
     public int TotalSlots { get; set; } = 20;
 
     public bool EndOfLifeRoomIncluded { get; set; }
-
-    public virtual Center Center { get; set; } = null!;
 
     public virtual ICollection<PackageActivity> PackageActivities { get; set; } = new List<PackageActivity>();
 

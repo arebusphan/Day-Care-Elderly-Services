@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import AssignedElderlyView from "./AssignedElderlyView";
+import CareLogView from "./CareLogView";
+import AttendanceView from "./AttendanceView";
 
 export const StaffDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -9,12 +12,8 @@ export const StaffDashboard: React.FC = () => {
   const menuItems = [
     { id: "overview", label: "Tổng Quan Ca Trực" },
     { id: "assigned_elderly", label: "Danh Sách Người Cao Tuổi" },
-    { id: "care_schedule", label: "Lịch Trực & Chăm Sóc" },
-    { id: "health_monitoring", label: "Chỉ Số Sức Khỏe & Sinh Tồn" },
-    { id: "medication", label: "Thuốc Men & Dinh Dưỡng" },
-    { id: "shift_notes", label: "Nhật Ký & Bàn Giao Ca" },
-    { id: "emergency", label: "Báo Cáo Sự Cố Khẩn" },
-    { id: "settings", label: "Cài Đặt Cá Nhân" },
+    { id: "attendance", label: "Điểm Danh" },
+    { id: "carelog", label: "Carelog" },
   ];
 
   const [activeTab, setActiveTab] = useState<string>("overview");
@@ -80,7 +79,7 @@ export const StaffDashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* BÊN PHẢI: ĐỂ TRỐNG ĐỂ THIẾT KẾ NỘI DUNG SAU */}
+      {/* Nội dung dashboard */}
       <main className="flex-1 flex flex-col overflow-y-auto bg-slate-50">
         {/* Topbar hiển thị tên mục hiện tại */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 justify-between flex-shrink-0">
@@ -88,9 +87,17 @@ export const StaffDashboard: React.FC = () => {
         </header>
 
         {/* Vùng nội dung để trống */}
-        <div className="flex-1 p-6">
-          <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50" />
-        </div>
+              <div className="flex-1 p-6">
+                  {activeTab === "assigned_elderly" ? (
+                      <AssignedElderlyView />
+                  ) : activeTab === "carelog" ? (
+                      <CareLogView />
+                  ) : activeTab === "attendance" ? (
+                      <AttendanceView />
+                  ) : (
+                      <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50" />
+                  )}
+              </div>
       </main>
     </div>
   );

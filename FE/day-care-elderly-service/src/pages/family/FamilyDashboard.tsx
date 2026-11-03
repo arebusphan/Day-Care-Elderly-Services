@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import ElderlyProfileView from "./ElderlyProfileView";
 import { ServicePackagesView } from "./ServicePackagesView";
 import { BillingView } from "./BillingView";
+import FamilyAttendanceView from "./FamilyAttendanceView";
 
 export const FamilyDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -12,13 +13,12 @@ export const FamilyDashboard: React.FC = () => {
   const menuItems = [
     { id: "my_elderly", label: "Hồ Sơ Người Thân" },
     { id: "overview", label: "Tổng Quan Hoạt Động" },
-    { id: "daily_schedule", label: "Lịch Trình Hằng Ngày" },
+    { id: "attendence", label: "Điểm danh" },
     { id: "health_tracking", label: "Theo Dõi Sức Khỏe" },
-    { id: "diet_meals", label: "Dinh Dưỡng & Khẩu Phần" },
+
     { id: "services", label: "Gói Dịch Vụ Đã Đăng Ký" },
     { id: "billing", label: "Hóa Đơn & Chi Phí" },
-    { id: "feedback", label: "Ý Kiến & Hỗ Trợ" },
-    { id: "settings", label: "Cài Đặt Tài Khoản" },
+
   ];
 
   // Mặc định chọn mục "Hồ Sơ Người Thân" để bạn test ngay
@@ -103,6 +103,8 @@ export const FamilyDashboard: React.FC = () => {
             />
           ) : activeTab === "billing" ? (
             <BillingView onNavigateToServices={() => setActiveTab("services")} />
+          ) : activeTab === "attendence" ? (
+            <FamilyAttendanceView />
           ) : (
             <div className="w-full h-full min-h-[350px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50 flex flex-col items-center justify-center text-center p-6">
               <p className="text-sm font-semibold text-slate-600">Khu vực {activeItem.label}</p>

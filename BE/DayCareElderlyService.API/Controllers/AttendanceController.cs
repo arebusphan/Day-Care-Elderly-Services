@@ -9,7 +9,7 @@ namespace DayCareElderlyService.API.Controllers;
 
 [ApiController]
 [Route("api/attendance")]
-[Authorize(Roles = "Staff")]
+[Authorize]
 public class AttendanceController : ControllerBase
 {
     private readonly IAttendanceService _attendanceService;
@@ -208,45 +208,6 @@ public class AttendanceController : ControllerBase
         {
             _logger.LogError(ex, "Lỗi khi check-out người cao tuổi {ElderlyId}", request.ElderlyId);
             return StatusCode(500, ApiResponse<CheckOutResponseDto>.Fail("Lỗi máy chủ khi check-out."));
-        }
-    }
-
-    /// <summary>
-    /// Chỉnh sửa thời gian điểm danh khi có sai sót. UpdatedBy lấy từ JWT.
-    /// </summary>
-    [HttpPut("{attendanceId:int}")]
-    [ProducesResponseType(typeof(ApiResponse<UpdateAttendanceResponseDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<UpdateAttendanceResponseDto>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse<UpdateAttendanceResponseDto>), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse<UpdateAttendanceResponseDto>), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ApiResponse<UpdateAttendanceResponseDto>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse<UpdateAttendanceResponseDto>), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Update(int attendanceId, [FromBody] UpdateAttendanceRequestDto request)
-    {
-        if (!ModelState.IsValid)
-        {
-            var errors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => e.ErrorMessage)
-                .ToList();
-            return BadRequest(ApiResponse<UpdateAttendanceResponseDto>.Fail("Dữ liệu không hợp lệ.", errors));
-        }
-
-        var userId = GetCurrentUserId();
-        if (userId == null)
-        {
-            return Unauthorized(ApiResponse<UpdateAttendanceResponseDto>.Fail("Không xác thực được người dùng. Vui lòng đăng nhập lại."));
-        }
-
-        try
-        {
-            var result = await _attendanceService.UpdateAsync(userId.Value, attendanceId, request);
-            return StatusCode(result.StatusCode, result.Body);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Lỗi khi chỉnh sửa điểm danh {AttendanceId}", attendanceId);
-            return StatusCode(500, ApiResponse<UpdateAttendanceResponseDto>.Fail("Lỗi máy chủ khi chỉnh sửa điểm danh."));
         }
     }
 

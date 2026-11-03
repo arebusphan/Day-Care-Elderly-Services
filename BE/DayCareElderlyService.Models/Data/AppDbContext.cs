@@ -22,10 +22,6 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<CareLogPhoto> CareLogPhotos { get; set; }
 
-    public virtual DbSet<Center> Centers { get; set; }
-
-    public virtual DbSet<CenterActivity> CenterActivities { get; set; }
-
     public virtual DbSet<DailySchedulePlan> DailySchedulePlans { get; set; }
 
     public virtual DbSet<ElderlyFamilyRelationship> ElderlyFamilyRelationships { get; set; }
@@ -76,8 +72,6 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.StaffId, "IX_ActivityAssignments_StaffId");
 
-            entity.HasIndex(e => new { e.CenterActivityId, e.StaffId }, "UQ_ActivityAssignments_ActivityStaff").IsUnique();
-
             entity.Property(e => e.AssignmentId);
             entity.Property(e => e.AssignmentRole).HasMaxLength(100);
             entity.Property(e => e.CreatedAt)
@@ -87,11 +81,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Status)
                 .HasMaxLength(30)
                 .HasDefaultValue("Assigned");
-
-            entity.HasOne(d => d.CenterActivity).WithMany(p => p.ActivityAssignments)
-                .HasForeignKey(d => d.CenterActivityId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ActivityAssignments_Activities");
 
             entity.HasOne(d => d.Staff).WithMany()
                 .HasForeignKey(d => d.StaffId)
@@ -106,10 +95,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.DefaultLocation).HasMaxLength(200);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            entity.HasOne(d => d.Center).WithMany(p => p.ActivityTemplates)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ActivityTemplates_Centers");
         });
 
         modelBuilder.Entity<AttendanceRecord>(entity =>
@@ -165,10 +150,6 @@ public partial class AppDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");
 
-            entity.HasOne(d => d.CenterActivity).WithMany(p => p.CareLogs)
-                .HasForeignKey(d => d.CenterActivityId)
-                .HasConstraintName("FK_CareLogs_CenterActivities");
-
             entity.HasOne(d => d.Elderly).WithMany(p => p.CareLogs)
                 .HasForeignKey(d => d.ElderlyId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -194,55 +175,11 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_CareLogPhotos_CareLogs");
         });
 
-        modelBuilder.Entity<Center>(entity =>
-        {
-            entity.Property(e => e.CenterId);
-            entity.Property(e => e.Address).HasMaxLength(500);
-            entity.Property(e => e.CenterName).HasMaxLength(200);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.Email).HasMaxLength(256);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-        });
-
-        modelBuilder.Entity<CenterActivity>(entity =>
-        {
-            entity.HasIndex(e => new { e.CenterId, e.ActivityDate }, "IX_CenterActivities_CenterDate");
-
-            entity.Property(e => e.CenterActivityId);
-            entity.Property(e => e.ActivityName).HasMaxLength(150);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.EndTime).HasPrecision(0);
-            entity.Property(e => e.Location).HasMaxLength(200);
-            entity.Property(e => e.StartTime).HasPrecision(0);
-            entity.Property(e => e.Status)
-                .HasMaxLength(30)
-                .HasDefaultValue("Scheduled");
-
-            entity.HasOne(d => d.Center).WithMany(p => p.CenterActivities)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CenterActivities_Centers");
-
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.CenterActivities)
-                .HasForeignKey(d => d.CreatedBy)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CenterActivities_Users");
-
-            entity.HasOne(d => d.PackageActivity).WithMany(p => p.CenterActivities)
-                .HasForeignKey(d => d.PackageActivityId)
-                .HasConstraintName("FK_CenterActivities_PackageActivities");
-        });
-
         modelBuilder.Entity<DailySchedulePlan>(entity =>
         {
             entity.HasKey(e => e.PlanId);
 
-            entity.HasIndex(e => new { e.CenterId, e.PlanDate }, "UQ_DailySchedulePlans_Center_Date").IsUnique();
+            entity.HasIndex(e => e.PlanDate, "UQ_DailySchedulePlans_Date").IsUnique();
 
             entity.Property(e => e.PlanId);
             entity.Property(e => e.Status).HasMaxLength(30).HasDefaultValue("Draft");
@@ -250,11 +187,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasPrecision(0).HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.ConfirmedAt).HasPrecision(0);
             entity.Property(e => e.UpdatedAt).HasPrecision(0);
-
-            entity.HasOne(d => d.Center).WithMany(p => p.DailySchedulePlans)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_DailySchedulePlans_Centers");
 
             entity.HasOne(d => d.ConfirmedByNavigation).WithMany()
                 .HasForeignKey(d => d.ConfirmedBy)
@@ -356,8 +288,6 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.ElderlyId);
 
-            entity.HasIndex(e => e.CenterId, "IX_ElderlyMembers_CenterId");
-
             entity.Property(e => e.ElderlyId);
             entity.Property(e => e.Address).HasMaxLength(500);
             entity.Property(e => e.CreatedAt)
@@ -373,10 +303,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.CareNotes).HasMaxLength(1000);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            entity.HasOne(d => d.Center).WithMany(p => p.ElderlyMembers)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ElderlyMembers_Centers");
         });
 
         modelBuilder.Entity<FamilyMember>(entity =>
@@ -397,7 +323,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.IncidentId);
 
-            entity.HasIndex(e => new { e.CenterId, e.Status }, "IX_IncidentReports_CenterStatus");
+            entity.HasIndex(e => e.Status, "IX_IncidentReports_Status");
 
             entity.Property(e => e.IncidentId);
             entity.Property(e => e.IncidentType).HasMaxLength(100);
@@ -411,11 +337,6 @@ public partial class AppDbContext : DbContext
                 .HasMaxLength(30)
                 .HasDefaultValue("Open");
             entity.Property(e => e.IsSupplyConfirmed).HasDefaultValue(false);
-
-            entity.HasOne(d => d.Center).WithMany(p => p.IncidentReports)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_IncidentReports_Centers");
 
             entity.HasOne(d => d.Elderly).WithMany(p => p.IncidentReports)
                 .HasForeignKey(d => d.ElderlyId)
@@ -442,10 +363,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.SupplyName).HasMaxLength(200);
             entity.Property(e => e.Unit).HasMaxLength(50);
 
-            entity.HasOne(d => d.Center).WithMany(p => p.MedicalSupplies)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MedicalSupplies_Centers");
         });
 
         modelBuilder.Entity<MedicationPlan>(entity =>
@@ -560,8 +477,6 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.PackageId);
 
-            entity.HasIndex(e => e.CenterId, "IX_ServicePackages_CenterId");
-
             entity.Property(e => e.PackageId);
             entity.Property(e => e.BillingPeriod).HasMaxLength(30);
             entity.Property(e => e.CreatedAt)
@@ -578,10 +493,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.TargetAudience).HasMaxLength(500);
             entity.Property(e => e.PricingNote).HasMaxLength(500);
 
-            entity.HasOne(d => d.Center).WithMany(p => p.ServicePackages)
-                .HasForeignKey(d => d.CenterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ServicePackages_Centers");
         });
 
         modelBuilder.Entity<ServiceRegistration>(entity =>
