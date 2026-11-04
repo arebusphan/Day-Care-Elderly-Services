@@ -138,6 +138,8 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.CareLogId);
             entity.Property(e => e.CareType).HasMaxLength(50);
+            entity.Property(e => e.BloodPressure).HasMaxLength(20);
+            entity.Property(e => e.BloodGlucose).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.RecordedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("(sysdatetime())");

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DayCareElderlyService.BLL")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3a50485cf901951f53a4319f8dce6a2977bf6784")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d8ae7be8e2edbc9ae4149b099b842b7c64b693d8")]
 [assembly: System.Reflection.AssemblyProductAttribute("DayCareElderlyService.BLL")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DayCareElderlyService.BLL")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

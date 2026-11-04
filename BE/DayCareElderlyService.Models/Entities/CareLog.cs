@@ -22,6 +22,10 @@ public partial class CareLog
 
     public string? Data { get; set; }
 
+    public string? BloodPressure { get; set; }
+
+    public decimal? BloodGlucose { get; set; }
+
     public bool IsInternal { get; set; }
 
     public virtual ICollection<CareLogPhoto> CareLogPhotos { get; set; } = new List<CareLogPhoto>();

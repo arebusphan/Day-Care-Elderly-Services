@@ -290,6 +290,14 @@ public class CareLogService : ICareLogService
         }, JsonOptions);
 
         var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.Vitals, DescribeVitals(dto), dto.Notes, data, false);
+        if (dto.SystolicBp.HasValue || dto.DiastolicBp.HasValue)
+        {
+            log.BloodPressure = $"{dto.SystolicBp?.ToString() ?? "?"}/{dto.DiastolicBp?.ToString() ?? "?"}";
+        }
+        if (dto.BloodGlucose.HasValue)
+        {
+            log.BloodGlucose = dto.BloodGlucose.Value;
+        }
         await _context.CareLogs.AddAsync(log);
 
         IncidentReport? incident = null;

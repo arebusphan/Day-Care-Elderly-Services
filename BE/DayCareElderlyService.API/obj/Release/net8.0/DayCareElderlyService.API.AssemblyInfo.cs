@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a09860f12a4e39204e4e51f6b7c6f8be1ae3804")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d8ae7be8e2edbc9ae4149b099b842b7c64b693d8")]
 [assembly: System.Reflection.AssemblyProductAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DayCareElderlyService.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

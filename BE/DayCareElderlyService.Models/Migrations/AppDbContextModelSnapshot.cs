@@ -154,6 +154,13 @@ namespace DayCareElderlyService.Models.Migrations
                     b.Property<string>("Data")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("BloodPressure")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("BloodGlucose")
+                        .HasColumnType("decimal(5, 2)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -2101,6 +2108,7 @@ namespace DayCareElderlyService.Models.Migrations
                 {
                     b.Navigation("Invoices");
                 });
+
 #pragma warning restore 612, 618
         }
     }
