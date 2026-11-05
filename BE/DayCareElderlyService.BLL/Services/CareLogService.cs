@@ -344,7 +344,7 @@ public class CareLogService : ICareLogService
 
     // ===== Thuốc =====
 
-    public async Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(int userId, string? status = null)
+    public async Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(int userId)
     {
         var staff = await GetStaffAsync(userId);
         if (staff == null)
@@ -353,20 +353,8 @@ public class CareLogService : ICareLogService
         }
 
         var (from, to) = VietnamTime.DayRange(VietnamTime.Today);
-        var query = CareLogShared.DoseQuery(_context)
-            .Where(r => r.ScheduledAt >= from && r.ScheduledAt < to);
-
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            var normalized = NormalizeStatus(status, DoseStatuses.Pending, DoseStatuses.Given, DoseStatuses.Refused, DoseStatuses.Missed);
-            if (normalized == null)
-            {
-                return ApiResponse<List<DoseDto>>.Fail("Trạng thái không hợp lệ. Chọn Pending, Given, Refused hoặc Missed.");
-            }
-            query = query.Where(r => r.Status == normalized);
-        }
-
-        var records = await query
+        var records = await CareLogShared.DoseQuery(_context)
+            .Where(r => r.ScheduledAt >= from && r.ScheduledAt < to)
             .OrderBy(r => r.ScheduledAt)
             .ToListAsync();
 

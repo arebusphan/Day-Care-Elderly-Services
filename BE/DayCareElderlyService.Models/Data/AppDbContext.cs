@@ -415,7 +415,6 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.Dosage).HasMaxLength(100);
             entity.Property(e => e.Instructions).HasMaxLength(1000);
-            entity.Property(e => e.ScheduleTimes).HasMaxLength(200);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.MedicationName).HasMaxLength(200);
 

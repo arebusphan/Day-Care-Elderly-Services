@@ -67,14 +67,6 @@ public static class CareLogSchema
 
                 -- Older databases store medication date/time separately. The current EF model
                 -- reads ScheduledAt and RecordedAt, so add and backfill those columns safely.
-                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MedicationPlans')
-                BEGIN
-                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationPlans' AND COLUMN_NAME = 'ScheduleTimes')
-                        ALTER TABLE MedicationPlans ADD ScheduleTimes NVARCHAR(200) NULL;
-                    EXEC('UPDATE MedicationPlans SET ScheduleTimes = N''08:00'' WHERE ScheduleTimes IS NULL OR LTRIM(RTRIM(ScheduleTimes)) = N''''');
-                    EXEC('ALTER TABLE MedicationPlans ALTER COLUMN ScheduleTimes NVARCHAR(200) NOT NULL');
-                END
-
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MedicationRecords')
                 BEGIN
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'ScheduledAt')

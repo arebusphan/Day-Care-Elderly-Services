@@ -784,11 +784,6 @@ namespace DayCareElderlyService.Models.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("ScheduleTimes")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 

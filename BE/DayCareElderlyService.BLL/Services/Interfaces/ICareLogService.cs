@@ -14,7 +14,7 @@ public interface ICareLogService
     Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files);
     Task<ApiResponse<bool>> DeletePhotoAsync(int userId, int photoId);
     Task<ApiResponse<VitalsResultDto>> RecordVitalsAsync(int userId, int elderlyId, RecordVitalsDto dto);
-    Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(int userId, string? status = null);
+    Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(int userId);
     Task<ApiResponse<DoseDto>> UpdateDoseAsync(int userId, int medicationRecordId, UpdateDoseDto dto);
     Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, string? status, int days);
     Task<ApiResponse<IncidentDto>> CreateIncidentAsync(int userId, CreateIncidentDto dto);
