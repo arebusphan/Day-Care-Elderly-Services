@@ -15,6 +15,11 @@ public partial class MedicationPlan
 
     public string? Instructions { get; set; }
 
+    /// <summary>
+    /// Giờ uống trong ngày, lưu dạng "08:00,20:00" (HH:mm, phân tách bằng dấu phẩy).
+    /// </summary>
+    public string ScheduleTimes { get; set; } = null!;
+
     public DateOnly StartDate { get; set; }
 
     public DateOnly? EndDate { get; set; }
