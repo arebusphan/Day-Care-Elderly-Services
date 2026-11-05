@@ -1,4 +1,5 @@
 using System.Text;
+using DayCareElderlyService.API.Background;
 using DayCareElderlyService.API.Data;
 using DayCareElderlyService.BLL.Security;
 using DayCareElderlyService.BLL.Services;
@@ -63,6 +64,9 @@ builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ICareLogService, CareLogService>();
 builder.Services.AddScoped<IFamilyCareLogService, FamilyCareLogService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IMedicationService, MedicationService>();
+builder.Services.AddScoped<IMedicationReminderService, MedicationReminderService>();
+builder.Services.AddHostedService<MedicationReminderHostedService>();
 builder.Services.AddSingleton<IImageStorageService, CloudinaryImageStorageService>();
 builder.Services.AddScoped<ICenterStaffService, CenterStaffService>();
 builder.Services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();

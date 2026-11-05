@@ -25,9 +25,10 @@ public class FamilyCareLogController : ControllerBase
     }
 
     /// <summary>
-    /// Care log 1 ngày của cụ (mặc định hôm nay)
+    /// Care log 1 ngày của cụ (mặc định hôm nay), gồm mục thuốc đã ghi
     /// </summary>
     [HttpGet("care-logs/{elderlyId:int}")]
+    [HttpGet("elderly/{elderlyId:int}/care-logs")]
     [ProducesResponseType(typeof(ApiResponse<CareLogDayDto>), StatusCodes.Status200OK)]
     public Task<IActionResult> GetDay(int elderlyId, [FromQuery] DateOnly? date) =>
         RunAsync(userId => _familyCareLogService.GetDayAsync(userId, elderlyId, date), "lấy care log");

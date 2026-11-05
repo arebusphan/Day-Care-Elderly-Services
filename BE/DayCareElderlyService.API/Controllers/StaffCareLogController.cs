@@ -107,12 +107,12 @@ public class StaffCareLogController : ControllerBase
         RunAsync(userId => _careLogService.RecordVitalsAsync(userId, elderlyId, dto), "ghi chỉ số");
 
     /// <summary>
-    /// Thuốc đến hạn hôm nay của các cụ trong trung tâm
+    /// Thuốc đến hạn hôm nay. Lọc status: Pending, Given, Refused, Missed.
     /// </summary>
     [HttpGet("doses/today")]
     [ProducesResponseType(typeof(ApiResponse<List<DoseDto>>), StatusCodes.Status200OK)]
-    public Task<IActionResult> GetTodayDoses() =>
-        RunAsync(userId => _careLogService.GetTodayDosesAsync(userId), "lấy danh sách thuốc hôm nay");
+    public Task<IActionResult> GetTodayDoses([FromQuery] string? status) =>
+        RunAsync(userId => _careLogService.GetTodayDosesAsync(userId, status), "lấy danh sách thuốc hôm nay");
 
     /// <summary>
     /// Ghi nhận cho uống thuốc (điều dưỡng): Given / Refused / Missed
