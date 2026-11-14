@@ -5,6 +5,7 @@ import NotificationBell from "../../components/NotificationBell";
 import AssignedElderlyView from "./AssignedElderlyView";
 import CareLogView from "./CareLogView";
 import AttendanceView from "./AttendanceView";
+import MedicationPlanView from "./MedicationPlanView";
 
 export const StaffDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -15,6 +16,7 @@ export const StaffDashboard: React.FC = () => {
     { id: "assigned_elderly", label: "Danh Sách Người Cao Tuổi" },
     { id: "attendance", label: "Điểm Danh" },
     { id: "carelog", label: "Carelog" },
+    { id: "medication", label: "Kế Hoạch Thuốc" },
   ];
 
   const [activeTab, setActiveTab] = useState<string>("overview");
@@ -94,6 +96,8 @@ export const StaffDashboard: React.FC = () => {
                       <AssignedElderlyView />
                   ) : activeTab === "carelog" ? (
                       <CareLogView />
+                  ) : activeTab === "medication" ? (
+                      <MedicationPlanView />
                   ) : activeTab === "attendance" ? (
                       <AttendanceView />
                   ) : (
