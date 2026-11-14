@@ -54,6 +54,13 @@ public class CareLogService : ICareLogService
                      && a.Elderly.IsActive)
             .ToListAsync();
 
+        // BR-33 / SR-39: staff chỉ thấy cụ được phân cho mình trong kế hoạch hôm nay
+        var assigned = await GetAssignedElderlyIdsAsync(staff);
+        if (assigned != null)
+        {
+            attendances = attendances.Where(a => assigned.Contains(a.ElderlyId)).ToList();
+        }
+
         var elderlyIds = attendances.Select(a => a.ElderlyId).Distinct().ToList();
         var logs = await _context.CareLogs
             .Where(c => elderlyIds.Contains(c.ElderlyId) && c.RecordedAt >= from && c.RecordedAt < to)
@@ -100,6 +107,12 @@ public class CareLogService : ICareLogService
         if (elderly == null)
         {
             return ApiResponse<CareLogDayDto>.Fail("Không tìm thấy người cao tuổi trong trung tâm của bạn.");
+        }
+
+        var assignedForView = await GetAssignedElderlyIdsAsync(staff);
+        if (assignedForView != null && !assignedForView.Contains(elderlyId))
+        {
+            return ApiResponse<CareLogDayDto>.Fail(NotAssignedMessage);
         }
 
         var day = await CareLogShared.BuildDayAsync(_context, elderly, date ?? VietnamTime.Today, includeInternal: true);
@@ -355,6 +368,13 @@ public class CareLogService : ICareLogService
         var (from, to) = VietnamTime.DayRange(VietnamTime.Today);
         var query = CareLogShared.DoseQuery(_context)
             .Where(r => r.ScheduledAt >= from && r.ScheduledAt < to);
+
+        // BR-33: chỉ liều thuốc của các cụ được phân cho staff hôm nay
+        var assignedDoses = await GetAssignedElderlyIdsAsync(staff);
+        if (assignedDoses != null)
+        {
+            query = query.Where(r => assignedDoses.Contains(r.MedicationPlan.ElderlyId));
+        }
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -627,7 +647,47 @@ public class CareLogService : ICareLogService
             return (staff, elderly, "Người cao tuổi chưa check-in hôm nay.");
         }
 
+        // BR-33 / SR-39 (SDD 3.4): chỉ staff được phân công cụ này hôm nay mới được ghi
+        var assigned = await GetAssignedElderlyIdsAsync(staff);
+        if (assigned != null && !assigned.Contains(elderlyId))
+        {
+            return (staff, elderly, NotAssignedMessage);
+        }
+
         return (staff, elderly, null);
+    }
+
+    private const string NotAssignedMessage = "Người cao tuổi này không thuộc nhóm bạn phụ trách hôm nay.";
+
+    /// <summary>
+    /// BR-33: id các cụ được phân cho staff trong kế hoạch HÔM NAY đã công bố/xác nhận
+    /// (qua nhóm chăm sóc hoặc phân công trực tiếp). Trả về null = không giới hạn (tài khoản Admin).
+    /// Nếu hôm nay chưa có kế hoạch được công bố, staff không có cụ nào được phân.
+    /// </summary>
+    private async Task<HashSet<int>?> GetAssignedElderlyIdsAsync(User staff)
+    {
+        if (staff.Roles.Any(r => r.RoleName == "Admin"))
+        {
+            return null;
+        }
+
+        var today = VietnamTime.Today;
+        var planIds = await _context.DailySchedulePlans
+            .Where(p => p.PlanDate == today && (p.Status == "Published" || p.Status == "Confirmed"))
+            .Select(p => p.PlanId)
+            .ToListAsync();
+
+        var viaGroups = await _context.CareGroupMembers
+            .Where(m => planIds.Contains(m.Group.PlanId) && m.Group.StaffId == staff.UserId)
+            .Select(m => m.ElderlyId)
+            .ToListAsync();
+
+        var viaAssignments = await _context.StaffCareAssignments
+            .Where(a => planIds.Contains(a.PlanId) && a.StaffId == staff.UserId)
+            .Select(a => a.ElderlyId)
+            .ToListAsync();
+
+        return viaGroups.Concat(viaAssignments).ToHashSet();
     }
 
     private Task<bool> HasTodayAsync(int elderlyId, string careType)
