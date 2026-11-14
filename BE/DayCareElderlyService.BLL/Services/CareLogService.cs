@@ -654,7 +654,85 @@ public class CareLogService : ICareLogService
             return (staff, elderly, NotAssignedMessage);
         }
 
+        // CL-06 / SR-26: sau khi chốt (CLOSE) staff không được ghi thêm vào care log hôm nay
+        if (await HasTodayAsync(elderlyId, CareLogTypes.Close))
+        {
+            return (staff, elderly, "Care log hôm nay đã chốt, không thể ghi thêm.");
+        }
+
         return (staff, elderly, null);
+    }
+
+    // ===== Xác nhận y tế & chốt ngày (CL-06) =====
+
+    public async Task<ApiResponse<CareLogEntryDto>> MarkMedicalDoneAsync(int userId, int elderlyId, CareLogDayActionDto dto)
+    {
+        var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
+        if (error != null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail(error);
+        }
+
+        if (await HasTodayAsync(elderlyId, CareLogTypes.MedicalDone))
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Đã xác nhận phần y tế hôm nay.");
+        }
+
+        var missing = new List<string>();
+        if (!await HasTodayAsync(elderlyId, CareLogTypes.Vitals))
+        {
+            missing.Add("chưa đo chỉ số sức khỏe");
+        }
+
+        var now = VietnamTime.Now;
+        var (from, _) = VietnamTime.DayRange(VietnamTime.Today);
+        var pendingDue = await _context.MedicationRecords
+            .CountAsync(r => r.MedicationPlan.ElderlyId == elderlyId
+                          && r.Status == DoseStatuses.Pending
+                          && r.ScheduledAt >= from && r.ScheduledAt <= now);
+        if (pendingDue > 0)
+        {
+            missing.Add($"còn {pendingDue} liều thuốc tới giờ chưa ghi nhận");
+        }
+
+        if (missing.Count > 0)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail($"Chưa thể xác nhận y tế: {string.Join("; ", missing)}.", missing);
+        }
+
+        return await AddDayMarkerAsync(staff!, elderly!.ElderlyId, CareLogTypes.MedicalDone,
+            "Đã hoàn tất đo chỉ số và cho uống thuốc trong ngày", dto.Notes, "MEDICAL_DONE_CARE_LOG");
+    }
+
+    public async Task<ApiResponse<CareLogEntryDto>> CloseDayAsync(int userId, int elderlyId, CareLogDayActionDto dto)
+    {
+        var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
+        if (error != null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail(error);
+        }
+
+        // CL-06: chốt sau khi phần y tế đã xác nhận (MEDICAL_DONE)
+        if (!await HasTodayAsync(elderlyId, CareLogTypes.MedicalDone))
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Cần xác nhận phần y tế (chỉ số, thuốc) trước khi chốt care log.");
+        }
+
+        return await AddDayMarkerAsync(staff!, elderly!.ElderlyId, CareLogTypes.Close,
+            "Đã chốt care log trong ngày", dto.Notes, "CLOSE_CARE_LOG");
+    }
+
+    private async Task<ApiResponse<CareLogEntryDto>> AddDayMarkerAsync(User staff, int elderlyId, string careType,
+        string description, string? notes, string auditAction)
+    {
+        var log = NewLog(staff, elderlyId, careType, description, string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(), null, false);
+        await _context.CareLogs.AddAsync(log);
+        await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, staff.UserId, auditAction, nameof(CareLog), log.CareLogId.ToString(),
+            new { ElderlyId = elderlyId, CareType = careType });
+
+        return ApiResponse<CareLogEntryDto>.Ok(CareLogShared.ToEntryDto(log),
+            careType == CareLogTypes.Close ? "Đã chốt care log hôm nay." : "Đã xác nhận phần y tế hôm nay.");
     }
 
     private const string NotAssignedMessage = "Người cao tuổi này không thuộc nhóm bạn phụ trách hôm nay.";

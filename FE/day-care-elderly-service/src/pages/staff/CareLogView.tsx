@@ -97,6 +97,24 @@ const CareLogView: React.FC = () => {
 
   const selected = useMemo(() => elderly.find((person) => person.elderlyId === selectedId) ?? null, [elderly, selectedId]);
 
+  // CL-06: xác nhận y tế (MEDICAL_DONE) rồi chốt care log (CLOSE); sau khi chốt BE khóa ghi
+  const runDayAction = async (action: "medical" | "close") => {
+    if (!selected) return;
+    if (action === "close" && !window.confirm(`Chốt care log hôm nay của ${selected.fullName}? Sau khi chốt sẽ không ghi thêm được.`)) return;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      if (action === "medical") await careLogService.markMedicalDone(selected.elderlyId);
+      else await careLogService.closeDay(selected.elderlyId);
+      setElderly(await careLogService.getTodayElderly());
+      await refreshDay(selected.elderlyId);
+      setNotice(action === "medical" ? "Đã xác nhận phần y tế hôm nay." : "Đã chốt care log hôm nay.");
+    } catch (err: any) {
+      const data = err?.response?.data;
+      setError(data?.message || (action === "medical" ? "Không xác nhận được phần y tế." : "Không chốt được care log."));
+    } finally { setSaving(false); }
+  };
+  const isToday = date === localDate();
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedId || !description.trim()) return;
@@ -177,7 +195,7 @@ const CareLogView: React.FC = () => {
         </section>
 
         <div className="space-y-5">
-          {selected && <section className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-base font-bold text-slate-900">{selected.fullName}</h3><p className="mt-1 text-sm text-slate-500">{selected.mobilityStatus ? `Vận động: ${selected.mobilityStatus}` : ""}{selected.checkInAt ? ` · Check-in ${timeLabel(selected.checkInAt)}` : ""}</p></div><span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{day?.entries.length ?? 0} ghi nhận hôm nay</span></div></section>}
+          {selected && <section className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-base font-bold text-slate-900">{selected.fullName}</h3><p className="mt-1 text-sm text-slate-500">{selected.mobilityStatus ? `Vận động: ${selected.mobilityStatus}` : ""}{selected.checkInAt ? ` · Check-in ${timeLabel(selected.checkInAt)}` : ""}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{day?.entries.length ?? 0} ghi nhận hôm nay</span>{selected.isMedicalDone && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Y tế: đã xác nhận</span>}{selected.isClosed && <span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs font-semibold text-white">Đã chốt</span>}{isToday && !selected.isClosed && (!selected.isMedicalDone ? <button type="button" disabled={saving} onClick={() => void runDayAction("medical")} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 disabled:opacity-40">Xác nhận y tế xong</button> : <button type="button" disabled={saving} onClick={() => void runDayAction("close")} className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Chốt care log</button>)}</div></div>{selected.isClosed && isToday && <p className="mt-2 text-xs text-slate-500">Care log hôm nay đã chốt — không ghi thêm được.</p>}</section>}
 
           <nav aria-label="Mục care log" className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-2 sm:grid-cols-4">
             {([["journal", "Nhật ký", day?.entries.length ?? 0], ["health", "Chỉ số", day?.entries.filter((entry) => entry.careType === "VITALS").length ?? 0], ["medication", "Thuốc", doses.filter((dose) => selectedId === null || dose.elderlyId === selectedId).length], ["incidents", "Sự cố", incidents.filter((incident) => selectedId === null || incident.elderlyId === selectedId).length]] as const).map(([key, label, count]) => <button key={key} type="button" onClick={() => setActiveSection(key)} aria-current={activeSection === key ? "page" : undefined} className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${activeSection === key ? "bg-teal-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}><span>{label}</span><span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${activeSection === key ? "bg-white/20" : "bg-slate-100"}`}>{count}</span></button>)}

@@ -107,6 +107,24 @@ public class StaffCareLogController : ControllerBase
         RunAsync(userId => _careLogService.RecordVitalsAsync(userId, elderlyId, dto), "ghi chỉ số");
 
     /// <summary>
+    /// CL-06: xác nhận phần y tế xong (đã đo chỉ số, đã ghi nhận hết liều thuốc tới giờ).
+    /// </summary>
+    [HttpPost("care-logs/{elderlyId:int}/medical-done")]
+    [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status400BadRequest)]
+    public Task<IActionResult> MarkMedicalDone(int elderlyId, [FromBody] CareLogDayActionDto? dto) =>
+        RunAsync(userId => _careLogService.MarkMedicalDoneAsync(userId, elderlyId, dto ?? new CareLogDayActionDto()), "xác nhận y tế");
+
+    /// <summary>
+    /// CL-06: chốt care log trong ngày. Sau khi chốt, staff không ghi thêm được.
+    /// </summary>
+    [HttpPost("care-logs/{elderlyId:int}/close")]
+    [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status400BadRequest)]
+    public Task<IActionResult> CloseDay(int elderlyId, [FromBody] CareLogDayActionDto? dto) =>
+        RunAsync(userId => _careLogService.CloseDayAsync(userId, elderlyId, dto ?? new CareLogDayActionDto()), "chốt care log");
+
+    /// <summary>
     /// Thuốc đến hạn hôm nay. Lọc status: Pending, Given, Refused, Missed.
     /// </summary>
     [HttpGet("doses/today")]

@@ -14,6 +14,10 @@ public interface ICareLogService
     Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files);
     Task<ApiResponse<bool>> DeletePhotoAsync(int userId, int photoId);
     Task<ApiResponse<VitalsResultDto>> RecordVitalsAsync(int userId, int elderlyId, RecordVitalsDto dto);
+    /// <summary>CL-06: xác nhận đã đo chỉ số và xử lý hết liều thuốc tới giờ (MEDICAL_DONE).</summary>
+    Task<ApiResponse<CareLogEntryDto>> MarkMedicalDoneAsync(int userId, int elderlyId, CareLogDayActionDto dto);
+    /// <summary>CL-06: chốt care log trong ngày (CLOSE); sau khi chốt staff không ghi thêm.</summary>
+    Task<ApiResponse<CareLogEntryDto>> CloseDayAsync(int userId, int elderlyId, CareLogDayActionDto dto);
     Task<ApiResponse<List<DoseDto>>> GetTodayDosesAsync(int userId, string? status = null);
     Task<ApiResponse<DoseDto>> UpdateDoseAsync(int userId, int medicationRecordId, UpdateDoseDto dto);
     Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(int userId, string? status, int days);

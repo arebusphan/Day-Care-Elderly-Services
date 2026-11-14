@@ -139,6 +139,16 @@ const careLogService = {
     const response = await api.post<ApiResponse<VitalsResult>>(`/api/staff/care-logs/${elderlyId}/vitals`, input);
     return response.data.data;
   },
+  /** CL-06: xác nhận đã đo chỉ số và ghi nhận hết liều thuốc tới giờ */
+  async markMedicalDone(elderlyId: number, notes?: string): Promise<CareLogEntry> {
+    const response = await api.post<ApiResponse<CareLogEntry>>(`/api/staff/care-logs/${elderlyId}/medical-done`, { notes });
+    return response.data.data;
+  },
+  /** CL-06: chốt care log hôm nay; sau đó không ghi thêm được */
+  async closeDay(elderlyId: number, notes?: string): Promise<CareLogEntry> {
+    const response = await api.post<ApiResponse<CareLogEntry>>(`/api/staff/care-logs/${elderlyId}/close`, { notes });
+    return response.data.data;
+  },
   async getTodayDoses(): Promise<DoseRecord[]> {
     const response = await api.get<ApiResponse<DoseRecord[]>>("/api/staff/doses/today");
     return response.data.data ?? [];
