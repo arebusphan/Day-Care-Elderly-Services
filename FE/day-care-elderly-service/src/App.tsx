@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 import FamilyDashboard from "./pages/family/FamilyDashboard";
 import CenterDashboard from "./pages/center/CenterDashboard";
+import { Toaster } from "@/components/ui/sonner";
 import "./App.css";
 
 function App() {
@@ -85,6 +86,7 @@ function App() {
 
         {/* Global Auth Dialog (Modal) */}
         <AuthDialog />
+        <Toaster richColors position="top-right" />
       </AuthProvider>
     </BrowserRouter>
   );
