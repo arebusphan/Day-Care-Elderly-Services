@@ -98,14 +98,21 @@ public class DailyPlanningService : IDailyPlanningService
         var dayOfWeek = date.DayOfWeek;
         var forecasts = new List<DailyAttendanceForecast>();
 
+        // SR-32: gia đình đã báo vắng ngày này → dự báo Absent kèm lý do
+        var absences = await _context.AbsenceReports
+            .Where(a => a.AbsenceDate == date)
+            .ToDictionaryAsync(a => a.ElderlyId, a => a.Reason);
+
         foreach (var e in allElderly)
         {
-            var status = ShouldAttend(e, date, dayOfWeek) ? "Expected" : "Absent";
+            var reportedAbsent = absences.TryGetValue(e.ElderlyId, out var absenceReason);
+            var status = !reportedAbsent && ShouldAttend(e, date, dayOfWeek) ? "Expected" : "Absent";
             forecasts.Add(new DailyAttendanceForecast
             {
                 PlanId = planId,
                 ElderlyId = e.ElderlyId,
                 AttendanceStatus = status,
+                Reason = reportedAbsent ? $"Gia đình báo vắng{(string.IsNullOrWhiteSpace(absenceReason) ? "" : ": " + absenceReason)}" : null,
                 CreatedAt = DateTime.UtcNow
             });
         }

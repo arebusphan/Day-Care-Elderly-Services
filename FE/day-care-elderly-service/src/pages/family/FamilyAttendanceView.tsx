@@ -3,6 +3,7 @@ import elderlyService from "../../services/elderlyService";
 import type { ElderlyProfileDto } from "../../types/elderly";
 import attendanceService from "../../services/attendanceService";
 import type { AttendanceItem } from "../../services/attendanceService";
+import PickupAbsencePanel from "./PickupAbsencePanel";
 
 const localDate = () => {
   const now = new Date();
@@ -72,6 +73,9 @@ const FamilyAttendanceView: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* BR-30 người được đón + SR-32 báo vắng */}
+      {!loading && <PickupAbsencePanel elderly={profiles.map((p) => ({ elderlyId: p.elderlyId, fullName: p.fullName }))} />}
     </div>
   );
 };

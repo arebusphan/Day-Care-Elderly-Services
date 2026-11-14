@@ -10,7 +10,7 @@ namespace DayCareElderlyService.BLL.Services;
 /// <summary>
 /// Truy vấn và map dùng chung giữa CareLogService (staff) và FamilyCareLogService (gia đình)
 /// </summary>
-internal static class CareLogShared
+public static class CareLogShared
 {
     public static IQueryable<CareLog> CareLogQuery(AppDbContext context) =>
         context.CareLogs

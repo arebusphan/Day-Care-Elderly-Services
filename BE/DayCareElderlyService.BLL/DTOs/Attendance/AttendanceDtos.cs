@@ -26,6 +26,17 @@ public class CheckOutRequestDto
     [Range(1, int.MaxValue, ErrorMessage = "Mã người cao tuổi không hợp lệ.")]
     public int ElderlyId { get; set; }
 
+    /// <summary>BR-30: người đón trong danh sách được ủy quyền</summary>
+    public int? PickupPersonId { get; set; }
+
+    /// <summary>4 số cuối CCCD người đón đưa ra để đối chiếu</summary>
+    [RegularExpression(@"^\d{4}$", ErrorMessage = "Nhập đúng 4 số cuối CCCD.")]
+    public string? IdCardLast4 { get; set; }
+
+    /// <summary>Ngoại lệ: giao cho người không trong danh sách (bắt buộc ghi lý do, cảnh báo gia đình + quản lý)</summary>
+    [StringLength(300)]
+    public string? OverrideReason { get; set; }
+
 }
 
 public class CheckOutResponseDto

@@ -169,6 +169,38 @@ public class AttendanceService : IAttendanceService
             return FailCheckOut(400, "Thời gian check-out không hợp lệ (phải sau hoặc bằng thời gian check-in).");
         }
 
+        // BR-30 / R2 (Design Brief): chỉ giao cụ cho người trong danh sách được đón, đối chiếu 4 số cuối CCCD.
+        // Không khớp → chặn, trừ khi nhân viên ghi lý do ngoại lệ (gia đình + quản lý được cảnh báo ngay).
+        var pickupPersons = await _context.AuthorizedPickupPersons
+            .Where(p => p.ElderlyId == request.ElderlyId && p.IsActive)
+            .ToListAsync();
+        string? pickupLabel = null;
+        var unverifiedOverride = false;
+        if (pickupPersons.Count > 0)
+        {
+            var chosen = pickupPersons.FirstOrDefault(p => p.PickupPersonId == request.PickupPersonId);
+            if (chosen != null && string.Equals(chosen.IdCardLast4, request.IdCardLast4?.Trim(), StringComparison.Ordinal))
+            {
+                record.PickupPersonId = chosen.PickupPersonId;
+                pickupLabel = $"{chosen.FullName}{(chosen.Relationship == null ? "" : $" ({chosen.Relationship})")}";
+            }
+            else if (!string.IsNullOrWhiteSpace(request.OverrideReason))
+            {
+                unverifiedOverride = true;
+                record.Notes = $"Đón không xác minh: {request.OverrideReason.Trim()}";
+            }
+            else
+            {
+                return FailCheckOut(400, chosen == null
+                    ? "Vui lòng chọn người đón trong danh sách được ủy quyền."
+                    : "4 số cuối CCCD không khớp với người được ủy quyền. Hãy gọi người liên hệ chính của gia đình.");
+            }
+        }
+        else
+        {
+            record.Notes = "Gia đình chưa đăng ký người được đón.";
+        }
+
         record.CheckOutAt = now;
         record.CheckOutTime = TimeOnly.FromDateTime(now);
         record.CheckedOutBy = userId;
@@ -178,18 +210,47 @@ public class AttendanceService : IAttendanceService
         await AuditLogWriter.WriteAsync(_context, userId, "CHECK_OUT", nameof(AttendanceRecord), record.AttendanceId.ToString(), new
         {
             record.ElderlyId,
-            record.AttendanceDate
+            record.AttendanceDate,
+            record.PickupPersonId,
+            UnverifiedOverride = unverifiedOverride
         });
 
-        // WF-02: báo gia đình khi cụ rời trung tâm
+        // WF-02: báo gia đình khi cụ rời trung tâm (kèm người đón)
         var elderlyName = await _context.ElderlyMembers
             .Where(e => e.ElderlyId == record.ElderlyId)
             .Select(e => e.FullName)
             .FirstOrDefaultAsync() ?? "Người cao tuổi";
         await CareLogShared.NotifyFamilyAsync(_context, record.ElderlyId,
             $"{elderlyName} đã rời trung tâm",
-            $"Điểm danh ra lúc {now:HH:mm} ngày {now:dd/MM/yyyy}.",
+            $"Điểm danh ra lúc {now:HH:mm} ngày {now:dd/MM/yyyy}."
+                + (pickupLabel != null ? $" Người đón: {pickupLabel}." : string.Empty),
             "Attendance", nameof(AttendanceRecord), record.AttendanceId);
+
+        if (unverifiedOverride)
+        {
+            var warn = $"{elderlyName} được giao cho người KHÔNG có trong danh sách được đón. Lý do: {request.OverrideReason!.Trim()}";
+            await CareLogShared.NotifyFamilyAsync(_context, record.ElderlyId, "Cảnh báo đón cụ", warn, "PickupAlert", nameof(AttendanceRecord), record.AttendanceId);
+            await CareLogShared.NotifyManagersAsync(_context, "Cảnh báo đón cụ", warn, "PickupAlert", nameof(AttendanceRecord), record.AttendanceId);
+        }
+
+        // BR-34: đón sau 19:30 → ghi sự cố đón trễ
+        if (TimeOnly.FromDateTime(now) > new TimeOnly(19, 30))
+        {
+            var late = new IncidentReport
+            {
+                ElderlyId = record.ElderlyId,
+                ReportedBy = userId,
+                IncidentType = "LATE_PICKUP",
+                Severity = "Low",
+                Description = $"Gia đình đón trễ lúc {now:HH:mm} (sau giờ đóng cửa 19:30).",
+                OccurredAt = now,
+                ReportedAt = now,
+                Status = "Open"
+            };
+            await _context.IncidentReports.AddAsync(late);
+            await CareLogShared.NotifyManagersAsync(_context, $"Đón trễ: {elderlyName}", late.Description, "Incident", nameof(IncidentReport), null);
+        }
+
         await _context.SaveChangesAsync();
 
         return new AttendanceActionResult<CheckOutResponseDto>

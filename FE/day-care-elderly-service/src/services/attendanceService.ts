@@ -12,6 +12,15 @@ export interface AttendanceItem {
 
 export type AttendanceDetail = AttendanceItem;
 
+export interface PickupPerson {
+  pickupPersonId: number;
+  elderlyId: number;
+  fullName: string;
+  relationship: string | null;
+  phoneNumber: string;
+  idCardLast4: string;
+}
+
 interface ApiResponse<T> { success: boolean; message?: string; data: T }
 
 const attendanceService = {
@@ -27,9 +36,14 @@ const attendanceService = {
     const response = await api.post<ApiResponse<unknown>>("/api/attendance/check-in", { elderlyId });
     return response.data;
   },
-  async checkOut(elderlyId: number) {
-    const response = await api.post<ApiResponse<unknown>>("/api/attendance/check-out", { elderlyId });
+  /** BR-30: kèm người đón + 4 số cuối CCCD; overrideReason khi giao cho người ngoài danh sách */
+  async checkOut(elderlyId: number, pickup?: { pickupPersonId?: number; idCardLast4?: string; overrideReason?: string }) {
+    const response = await api.post<ApiResponse<unknown>>("/api/attendance/check-out", { elderlyId, ...pickup });
     return response.data;
+  },
+  async getPickupPersons(elderlyId: number) {
+    const response = await api.get<ApiResponse<PickupPerson[]>>(`/api/attendance/elderly/${elderlyId}/pickup-persons`);
+    return response.data.data ?? [];
   },
   async getHistory(elderlyId: number) {
     const response = await api.get<ApiResponse<AttendanceItem[]>>(`/api/attendance/elderly/${elderlyId}/history`);
