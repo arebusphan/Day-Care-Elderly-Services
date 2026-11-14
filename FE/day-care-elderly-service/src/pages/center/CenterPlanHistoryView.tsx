@@ -253,21 +253,21 @@ export const CenterPlanHistoryView: React.FC<CenterPlanHistoryViewProps> = ({ on
                       <td className="py-3 px-4 text-center font-bold text-slate-800">
                         <span className="inline-flex items-center gap-1">
                           <Users size={13} className="text-slate-400" />
-                          <span>{item.TotalElderly || item.totalElderly} cụ</span>
+                          <span>{item.totalElderly} cụ</span>
                         </span>
                       </td>
 
                       <td className="py-3 px-4 text-center font-bold text-slate-800">
                         <span className="inline-flex items-center gap-1">
                           <UserCheck size={13} className="text-slate-400" />
-                          <span>{item.TotalStaff || item.totalStaff} staff</span>
+                          <span>{item.totalStaff} staff</span>
                         </span>
                       </td>
 
                       <td className="py-3 px-4 text-center font-bold text-slate-800">
                         <span className="inline-flex items-center gap-1">
                           <ShieldCheck size={13} className="text-slate-400" />
-                          <span>{item.TotalGroups || item.totalGroups} nhóm</span>
+                          <span>{item.totalGroups} nhóm</span>
                         </span>
                       </td>
 

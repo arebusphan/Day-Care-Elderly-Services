@@ -127,7 +127,9 @@ export const BillingView: React.FC<BillingViewProps> = ({ onNavigateToServices }
 
       {/* Danh sách hóa đơn */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {filteredInvoices.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center text-sm text-slate-500">Đang tải hóa đơn...</div>
+        ) : filteredInvoices.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
             <p className="text-base font-bold text-slate-700">Không tìm thấy hóa đơn nào</p>
             <p className="text-xs text-slate-400 mt-1">

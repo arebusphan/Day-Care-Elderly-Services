@@ -1,4 +1,3 @@
-import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import AuthDialog from "./components/AuthDialog";
@@ -44,7 +43,7 @@ function App() {
           <Route
             path="/dashboard/center"
             element={
-              <ProtectedRoute allowedRoles={["Admin", "Staff", "Center", "CenterManager"]}>
+              <ProtectedRoute allowedRoles={["Admin", "Center", "CenterManager"]}>
                 <CenterDashboard />
               </ProtectedRoute>
             }
@@ -70,7 +69,7 @@ function App() {
           <Route
             path="/dashboard/family"
             element={
-              <ProtectedRoute allowedRoles={["FamilyMember", "Admin", "Staff"]}>
+              <ProtectedRoute allowedRoles={["FamilyMember"]}>
                 <FamilyDashboard />
               </ProtectedRoute>
             }

@@ -29,7 +29,7 @@ export interface ServicePackageApiDto {
 
 export interface CreateRegistrationRequest {
   packageId: string;
-  elderlyId: string;
+  elderlyId: number;
   registrationType: string;
   monthlyPattern?: string;
   startDate: string; // ISO date (yyyy-MM-dd)

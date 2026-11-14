@@ -3,7 +3,6 @@ import elderlyService from "../../services/elderlyService";
 import type { ElderlyProfileDto } from "../../types/elderly";
 import {
   billingApiService,
-  type ServicePackageApiDto,
   type CreateRegistrationRequest,
 } from "../../services/billingApiService";
 
@@ -818,168 +817,9 @@ const VARIABLE_SCHEDULES: VariableSchedule = {
 // DỮ LIỆU PHÒNG & GIƯỜNG — FAKE DATA
 // =====================================================================
 
-interface BedBooking {
-  startDate: string;
-  endDate: string;
-  daysOfWeek: number[];
-  elderlyName: string;
-}
-
-interface BedData {
-  id: string;
-  label: string;
-  bookings: BedBooking[];
-}
-
-interface RoomData {
-  id: string;
-  name: string;
-  type: "large" | "small";
-  beds: BedData[];
-}
-
-function createRooms(
-  prefix: string,
-  largeRoomConfigs: number[],
-  smallRoomConfigs: number[]
-): RoomData[] {
-  const rooms: RoomData[] = [];
-  largeRoomConfigs.forEach((bedCount, i) => {
-    const roomId = `${prefix}1${String(i + 1).padStart(2, "0")}`;
-    rooms.push({
-      id: roomId,
-      name: `Phòng ${roomId}`,
-      type: "large",
-      beds: Array.from({ length: bedCount }, (_, j) => ({
-        id: `${roomId}-G${j + 1}`,
-        label: `Giường ${j + 1}`,
-        bookings: [],
-      })),
-    });
-  });
-  smallRoomConfigs.forEach((bedCount, i) => {
-    const roomId = `${prefix}2${String(i + 1).padStart(2, "0")}`;
-    rooms.push({
-      id: roomId,
-      name: `Phòng ${roomId}`,
-      type: "small",
-      beds: Array.from({ length: bedCount }, (_, j) => ({
-        id: `${roomId}-G${j + 1}`,
-        label: `Giường ${j + 1}`,
-        bookings: [],
-      })),
-    });
-  });
-  return rooms;
-}
-
-function addBookingPattern(
-  rooms: RoomData[],
-  bedIndices: number[],
-  daysOfWeek: number[],
-  elderlyNames: string[],
-  startOffset: number,
-  durationDays: number
-) {
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(start.getDate() + startOffset);
-  const end = new Date(start);
-  end.setDate(end.getDate() + durationDays);
-  const startStr = fmt(start);
-  const endStr = fmt(end);
-
-  let bedIdx = 0;
-  let assigned = 0;
-  for (const room of rooms) {
-    for (const bed of room.beds) {
-      if (bedIndices.includes(bedIdx) && assigned < elderlyNames.length) {
-        bed.bookings.push({
-          elderlyName: elderlyNames[assigned],
-          daysOfWeek,
-          startDate: startStr,
-          endDate: endStr,
-        });
-        assigned++;
-      }
-      bedIdx++;
-    }
-  }
-}
-
 function fmt(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-
-function buildAllRooms(): Record<string, RoomData[]> {
-  // Cơ bản: 45 giường = 5 phòng lớn (6g x5=30) + 5 phòng nhỏ (2g + 2g + 2g + 2g + 2g + 2g + 1g + 2g = 15)
-  const basicRooms = createRooms("A", [6, 6, 6, 6, 6], [2, 2, 2, 2, 2, 2, 2, 1]);
-  // Booking: 38 beds booked tomorrow (Sat=6), 7 free
-  const basicNames = [
-    "Nguyễn Văn Hùng","Trần Thị Mai","Lê Văn An","Phạm Thị Bé","Hoàng Văn Cường",
-    "Ngô Thị Dung","Bùi Văn Em","Đặng Thị Phượng","Vũ Văn Giang","Lý Thị Hoa",
-    "Trương Văn Ích","Dương Thị Kim","Phan Văn Long","Hồ Thị Mơ","Tạ Văn Nam",
-    "Đinh Thị Oanh","Cao Văn Phú","Lương Thị Quỳnh","Mạc Văn Rồng","Châu Thị Sen",
-    "Nguyễn Thị Tâm","Trần Văn Uy","Lê Thị Vân","Phạm Văn Xuân","Hoàng Thị Yến",
-    "Bùi Văn Ánh","Đặng Thị Bích","Vũ Văn Chiến","Lý Thị Đào","Trương Văn Ếch",
-    "Dương Văn Phong","Phan Thị Gấm","Hồ Văn Hải","Tạ Thị Ích","Đinh Văn Kiên",
-    "Cao Thị Lan","Lương Văn Minh","Mạc Thị Ngọc",
-  ];
-  // MWF pattern for 20 beds, TTS for 10, daily for 8 = 38 booked on any day
-  addBookingPattern(basicRooms, Array.from({length:20},(_, i)=>i), [1,3,5], basicNames.slice(0,20), -10, 40);
-  addBookingPattern(basicRooms, Array.from({length:10},(_, i)=>i+20), [2,4,6], basicNames.slice(20,30), -10, 40);
-  addBookingPattern(basicRooms, Array.from({length:8},(_, i)=>i+30), [1,2,3,4,5,6], basicNames.slice(30,38), -5, 30);
-
-  // Phục hồi: 20 giường = 2 phòng lớn (5g x2=10) + 5 phòng nhỏ (2g x5=10)
-  const rehabRooms = createRooms("B", [5, 5], [2, 2, 2, 2, 2]);
-  const rehabNames = [
-    "Nguyễn Văn Hùng B","Trần Thị Mai B","Lê Văn An B","Phạm Thị Bé B","Hoàng Văn Cường B",
-    "Ngô Thị Dung B","Bùi Văn Em B","Đặng Thị Phượng B","Vũ Văn Giang B","Lý Thị Hoa B",
-    "Trương Văn Ích B","Dương Thị Kim B","Phan Văn Long B","Hồ Thị Mơ B","Tạ Văn Nam B",
-  ];
-  addBookingPattern(rehabRooms, Array.from({length:8},(_, i)=>i), [1,3,5], rehabNames.slice(0,8), -10, 40);
-  addBookingPattern(rehabRooms, Array.from({length:7},(_, i)=>i+8), [2,4,6], rehabNames.slice(8,15), -10, 40);
-
-  // Sa sút trí tuệ: 15 giường = 2 phòng lớn (5g+4g=9) + 3 phòng nhỏ (2g x3=6)
-  const dementiaRooms = createRooms("C", [5, 4], [2, 2, 2]);
-  const dementiaNames = [
-    "Nguyễn Thị An C","Trần Văn Bình C","Lê Thị Cúc C","Phạm Văn Dũng C","Hoàng Thị Én C",
-    "Ngô Văn Phong C","Bùi Thị Gấm C","Đặng Văn Hải C","Vũ Thị Ích C","Lý Văn Kiên C",
-    "Trương Thị Lan C","Dương Văn Minh C","Phan Thị Ngọc C","Hồ Văn Oanh C","Tạ Thị Phú C",
-  ];
-  // ALL 15 beds booked daily → hết chỗ
-  addBookingPattern(dementiaRooms, Array.from({length:15},(_, i)=>i), [1,2,3,4,5,6], dementiaNames, -5, 40);
-
-  // Sau tai biến: 12 giường = 2 phòng lớn (4g x2=8) + 2 phòng nhỏ (2g x2=4)
-  const strokeRooms = createRooms("D", [4, 4], [2, 2]);
-  const strokeNames = [
-    "Nguyễn Văn Hùng D","Trần Thị Mai D","Lê Văn An D","Phạm Thị Bé D",
-    "Hoàng Văn Cường D","Ngô Thị Dung D","Bùi Văn Em D","Đặng Thị Phượng D",
-    "Vũ Văn Giang D",
-  ];
-  addBookingPattern(strokeRooms, Array.from({length:5},(_, i)=>i), [1,3,5], strokeNames.slice(0,5), -10, 40);
-  addBookingPattern(strokeRooms, Array.from({length:4},(_, i)=>i+5), [2,4,6], strokeNames.slice(5,9), -10, 40);
-
-  // Giai đoạn cuối: 8 giường = chỉ phòng nhỏ 1-2 người (2g x4=8)
-  const endOfLifeRooms = createRooms("E", [], [2, 2, 2, 2]);
-  const eolNames = [
-    "Nguyễn Thị Tâm E","Trần Văn Uy E","Lê Thị Vân E",
-    "Phạm Văn Xuân E","Hoàng Thị Yến E","Bùi Văn Ánh E",
-  ];
-  addBookingPattern(endOfLifeRooms, Array.from({length:6},(_, i)=>i), [1,2,3,4,5,6], eolNames, -5, 40);
-
-  return {
-    basic: basicRooms,
-    rehab: rehabRooms,
-    dementia: dementiaRooms,
-    stroke: strokeRooms,
-    endoflife: endOfLifeRooms,
-  };
-}
-
-// =====================================================================
-// HELPER FUNCTIONS
-// =====================================================================
 
 function formatCurrency(amount: number): string {
   return amount.toLocaleString("vi-VN") + " đ";
@@ -1028,21 +868,6 @@ function getPatternDays(pattern: string): number[] {
   return [];
 }
 
-function countDaysInRange(
-  startDate: Date,
-  endDate: Date,
-  daysOfWeek: number[]
-): number {
-  let count = 0;
-  const d = new Date(startDate);
-  while (d <= endDate) {
-    const dow = getDayOfWeek(d);
-    if (daysOfWeek.includes(dow)) count++;
-    d.setDate(d.getDate() + 1);
-  }
-  return count;
-}
-
 function listDatesInRange(
   startDate: Date,
   endDate: Date,
@@ -1056,52 +881,6 @@ function listDatesInRange(
     d.setDate(d.getDate() + 1);
   }
   return dates;
-}
-
-function isBedBookedOnDate(bed: BedData, dateString: string): boolean {
-  const d = parseDateStr(dateString);
-  const dow = getDayOfWeek(d);
-  return bed.bookings.some((b) => {
-    return (
-      b.daysOfWeek.includes(dow) &&
-      dateString >= b.startDate &&
-      dateString <= b.endDate
-    );
-  });
-}
-
-function getBedStatusForDates(
-  bed: BedData,
-  selectedDates: string[]
-): "empty" | "occupied" | "partial" {
-  if (selectedDates.length === 0) return "empty";
-  const overlapping = selectedDates.filter((d) => isBedBookedOnDate(bed, d));
-  if (overlapping.length === 0) return "empty";
-  if (overlapping.length === selectedDates.length) return "occupied";
-  return "partial";
-}
-
-function getBedOccupantOnDate(bed: BedData, dateString: string): string | null {
-  const d = parseDateStr(dateString);
-  const dow = getDayOfWeek(d);
-  const booking = bed.bookings.find(
-    (b) =>
-      b.daysOfWeek.includes(dow) &&
-      dateString >= b.startDate &&
-      dateString <= b.endDate
-  );
-  return booking ? booking.elderlyName : null;
-}
-
-function countAvailableTomorrow(rooms: RoomData[]): number {
-  const tomorrow = dateStr(getTomorrow());
-  let count = 0;
-  for (const room of rooms) {
-    for (const bed of room.beds) {
-      if (!isBedBookedOnDate(bed, tomorrow)) count++;
-    }
-  }
-  return count;
 }
 
 function calculatePrice(
@@ -1188,31 +967,6 @@ function calculatePrice(
   };
 }
 
-function getDayLabel(dayIndex: number): string {
-  const labels: Record<number, string> = {
-    1: "Thứ 2",
-    2: "Thứ 3",
-    3: "Thứ 4",
-    4: "Thứ 5",
-    5: "Thứ 6",
-    6: "Thứ 7",
-  };
-  return labels[dayIndex] || "";
-}
-
-function generateRegistrationCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "DK-";
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-// =====================================================================
-// COMPONENT CHÍNH
-// =====================================================================
-
 interface ServicePackagesViewProps {
   elderlyList?: ElderlyProfileDto[];
   onBackToProfile?: () => void;
@@ -1228,7 +982,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
   // Step 2
-  const [selectedElderlyId, setSelectedElderlyId] = useState<string>("");
+  const [selectedElderlyId, setSelectedElderlyId] = useState<number | null>(null);
   const [regType, setRegType] = useState<"daily" | "monthly">("monthly");
   const [monthlyPattern, setMonthlyPattern] = useState("all");
   const [monthlyStartDate, setMonthlyStartDate] = useState("");
@@ -1253,7 +1007,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionRegistrations, setSessionRegistrations] = useState<
-    { elderlyId: string; dates: string[] }[]
+    { elderlyId: number; dates: string[] }[]
   >([]);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1455,7 +1209,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
             setPaymentStatus("success");
             setSessionRegistrations((prev) => [
               ...prev,
-              { elderlyId: selectedElderlyId, dates: selectedDates },
+              { elderlyId: selectedElderlyId!, dates: selectedDates },
             ]);
             // Cập nhật số chỗ trống từ API
             const refreshPkg = await billingApiService.getActivePackages();
@@ -1487,7 +1241,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
   const handleStartOver = () => {
     setCurrentStep(1);
     setSelectedPackageId(null);
-    setSelectedElderlyId(elderlyProfiles.length > 0 ? elderlyProfiles[0].elderlyId : "");
+    setSelectedElderlyId(elderlyProfiles.length > 0 ? elderlyProfiles[0].elderlyId : null);
     setRegType("monthly");
     setMonthlyPattern("all");
     setMonthlyStartDate("");
@@ -1849,8 +1603,8 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
             Đăng ký cho:
           </label>
           <select
-            value={selectedElderlyId}
-            onChange={(e) => setSelectedElderlyId(e.target.value)}
+            value={selectedElderlyId ?? ""}
+            onChange={(e) => setSelectedElderlyId(e.target.value ? Number(e.target.value) : null)}
             className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-800 bg-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
           >
             {elderlyProfiles.map((el) => (
