@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
 import AccountMenu from "../../components/AccountMenu";
-import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package, ClipboardCheck, LayoutDashboard, BarChart3 } from "lucide-react";
+import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package, ClipboardCheck, LayoutDashboard, BarChart3, MessageSquare } from "lucide-react";
 import ShiftCalendarView from "./ShiftCalendarView";
 import CenterStaffView from "./CenterStaffView";
 import DailyPlanningWizard from "./DailyPlanningWizard";
@@ -14,6 +14,7 @@ import MedicalSuppliesView from "./MedicalSuppliesView";
 import CenterAttendanceView from "./CenterAttendanceView";
 import CenterOverviewView from "./CenterOverviewView";
 import CenterReportsView from "./CenterReportsView";
+import MessagesView from "../../components/MessagesView";
 
 export const CenterDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -73,6 +74,12 @@ export const CenterDashboard: React.FC = () => {
       label: "Vật Tư Y Tế",
       subLabel: "Tồn kho & cảnh báo sắp hết",
       icon: Package,
+    },
+    {
+      id: "messages",
+      label: "Tin Nhắn",
+      subLabel: "Trao đổi với gia đình",
+      icon: MessageSquare,
     },
     {
       id: "reports",
@@ -183,6 +190,8 @@ export const CenterDashboard: React.FC = () => {
         <div className="flex-1 p-6">
           {activeTab === "overview" ? (
             <CenterOverviewView onNavigate={setActiveTab} />
+          ) : activeTab === "messages" ? (
+            <MessagesView mode="center" />
           ) : activeTab === "reports" ? (
             <CenterReportsView />
           ) : activeTab === "daily-planning" ? (

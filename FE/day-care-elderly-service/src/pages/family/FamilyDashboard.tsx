@@ -9,6 +9,7 @@ import { BillingView } from "./BillingView";
 import FamilyAttendanceView from "./FamilyAttendanceView";
 import FamilyHealthTrackingView from "./FamilyHealthTrackingView";
 import FamilyOverviewView from "./FamilyOverviewView";
+import FamilyMessagesView from "./FamilyMessagesView";
 
 export const FamilyDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -19,6 +20,7 @@ export const FamilyDashboard: React.FC = () => {
     { id: "overview", label: "Tổng Quan Hoạt Động" },
     { id: "attendence", label: "Điểm danh" },
     { id: "health_tracking", label: "Theo Dõi Sức Khỏe" },
+    { id: "messages", label: "Tin Nhắn" },
 
     { id: "services", label: "Gói Dịch Vụ Đã Đăng Ký" },
     { id: "billing", label: "Hóa Đơn & Chi Phí" },
@@ -115,6 +117,8 @@ export const FamilyDashboard: React.FC = () => {
             <FamilyAttendanceView />
           ) : activeTab === "health_tracking" ? (
             <FamilyHealthTrackingView />
+          ) : activeTab === "messages" ? (
+            <FamilyMessagesView />
           ) : activeTab === "overview" ? (
             <FamilyOverviewView onNavigate={setActiveTab} />
           ) : (

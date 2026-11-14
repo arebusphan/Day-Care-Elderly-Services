@@ -8,6 +8,7 @@ import CareLogView from "./CareLogView";
 import AttendanceView from "./AttendanceView";
 import MedicationPlanView from "./MedicationPlanView";
 import StaffOverviewView from "./StaffOverviewView";
+import MessagesView from "../../components/MessagesView";
 
 export const StaffDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -19,6 +20,7 @@ export const StaffDashboard: React.FC = () => {
     { id: "attendance", label: "Điểm Danh" },
     { id: "carelog", label: "Carelog" },
     { id: "medication", label: "Kế Hoạch Thuốc" },
+    { id: "messages", label: "Tin Nhắn" },
   ];
 
   const [activeTab, setActiveTab] = useState<string>("overview");
@@ -103,6 +105,8 @@ export const StaffDashboard: React.FC = () => {
                       <AssignedElderlyView />
                   ) : activeTab === "carelog" ? (
                       <CareLogView />
+                  ) : activeTab === "messages" ? (
+                      <MessagesView mode="center" />
                   ) : activeTab === "medication" ? (
                       <MedicationPlanView />
                   ) : activeTab === "attendance" ? (
