@@ -142,6 +142,11 @@ public class MedicationService : IMedicationService
 
         await _context.SaveChangesAsync();
 
+        // Dọn các liều chưa uống trong tương lai không còn khớp kế hoạch mới
+        // (đổi giờ uống, đổi ngày bắt đầu/kết thúc, tạm dừng) — trước đây chúng bị giữ lại
+        // nên nhân viên vẫn thấy và vẫn bị nhắc liều ở giờ cũ.
+        var removed = await RemoveStalePendingDosesAsync(plan, times);
+
         if (plan.IsActive && times != null)
         {
             var from = dto.StartDate < VietnamTime.Today ? VietnamTime.Today : dto.StartDate;
@@ -149,7 +154,7 @@ public class MedicationService : IMedicationService
         }
 
         await AuditLogWriter.WriteAsync(_context, staff!.UserId, "UPDATE_MEDICATION_PLAN", nameof(MedicationPlan),
-            plan.MedicationPlanId.ToString(), new { plan.MedicationName, plan.IsActive });
+            plan.MedicationPlanId.ToString(), new { plan.MedicationName, plan.IsActive, RemovedPendingDoses = removed });
 
         return ApiResponse<MedicationPlanDto>.Ok(await ToDtoAsync(plan), "Cập nhật kế hoạch thuốc thành công.");
     }
@@ -278,6 +283,38 @@ public class MedicationService : IMedicationService
         }
 
         return (toAdd.Count, skipped);
+    }
+
+    /// <summary>
+    /// Xóa các liều Pending có ScheduledAt sau thời điểm hiện tại mà không còn hợp lệ:
+    /// kế hoạch đã tạm dừng, nằm ngoài [StartDate, EndDate], hoặc không thuộc giờ uống mới.
+    /// Liều đã qua giờ / đã cho uống / từ chối / bỏ lỡ giữ nguyên làm lịch sử.
+    /// </summary>
+    private async Task<int> RemoveStalePendingDosesAsync(MedicationPlan plan, List<TimeOnly>? newTimes)
+    {
+        var now = VietnamTime.Now;
+        var futurePending = await _context.MedicationRecords
+            .Where(r => r.MedicationPlanId == plan.MedicationPlanId
+                     && r.Status == DoseStatuses.Pending
+                     && r.ScheduledAt > now)
+            .ToListAsync();
+
+        var stale = futurePending.Where(r =>
+        {
+            var date = DateOnly.FromDateTime(r.ScheduledAt);
+            return !plan.IsActive
+                || date < plan.StartDate
+                || (plan.EndDate.HasValue && date > plan.EndDate.Value)
+                || (newTimes != null && !newTimes.Contains(TimeOnly.FromDateTime(r.ScheduledAt)));
+        }).ToList();
+
+        if (stale.Count > 0)
+        {
+            _context.MedicationRecords.RemoveRange(stale);
+            await _context.SaveChangesAsync();
+        }
+
+        return stale.Count;
     }
 
     private static DateOnly ResolveGenerateTo(DateOnly from, DateOnly? endDate, int days)
