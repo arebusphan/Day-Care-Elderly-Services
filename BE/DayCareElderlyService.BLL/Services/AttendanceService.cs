@@ -37,7 +37,7 @@ public class AttendanceService : IAttendanceService
             return FailCheckIn(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
+        var isStaff = HasRole(user, "Staff");
 
         var elderly = await _context.ElderlyMembers
             .FirstOrDefaultAsync(e => e.ElderlyId == request.ElderlyId);
@@ -47,8 +47,9 @@ public class AttendanceService : IAttendanceService
             return FailCheckIn(400, "Không tìm thấy người cao tuổi.");
         }
 
-        if (!isStaff && !await IsFamilyLinkedAsync(userId, request.ElderlyId))
-            return FailCheckIn(403, "Bạn chỉ có thể điểm danh người cao tuổi thuộc hồ sơ gia đình của mình.");
+        // BR-32 / SR-41: chỉ nhân viên chăm sóc được điểm danh; gia đình chỉ xem
+        if (!isStaff)
+            return FailCheckIn(403, "Chỉ nhân viên chăm sóc mới được điểm danh vào.");
 
         if (!elderly.IsActive)
         {
@@ -127,10 +128,9 @@ public class AttendanceService : IAttendanceService
             return FailCheckOut(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
-
-        if (!isStaff && !await IsFamilyLinkedAsync(userId, request.ElderlyId))
-            return FailCheckOut(403, "Bạn chỉ có thể điểm danh người cao tuổi thuộc hồ sơ gia đình của mình.");
+        // BR-32 / SR-41: chỉ nhân viên chăm sóc được điểm danh ra; gia đình chỉ xem
+        if (!HasRole(user, "Staff"))
+            return FailCheckOut(403, "Chỉ nhân viên chăm sóc mới được điểm danh ra.");
 
         var elderlyExists = await _context.ElderlyMembers
             .AsNoTracking()
@@ -198,15 +198,15 @@ public class AttendanceService : IAttendanceService
             return FailList(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
-        var familyElderlyIds = isStaff ? null : await GetFamilyElderlyIdsAsync(userId);
-        if (!isStaff && familyElderlyIds == null) return FailList(403, "Tài khoản không có quyền xem điểm danh.");
+        var canViewAll = CanViewAllAttendance(user); // Staff + Manager (SRS 3.1.3: Manager = V)
+        var familyElderlyIds = canViewAll ? null : await GetFamilyElderlyIdsAsync(userId);
+        if (!canViewAll && familyElderlyIds == null) return FailList(403, "Tài khoản không có quyền xem điểm danh.");
 
         var targetDate = date ?? VietnamTime.Today;
 
         var items = await _context.AttendanceRecords
             .AsNoTracking()
-            .Where(a => a.AttendanceDate == targetDate && (isStaff || familyElderlyIds!.Contains(a.ElderlyId)))
+            .Where(a => a.AttendanceDate == targetDate && (canViewAll || familyElderlyIds!.Contains(a.ElderlyId)))
             .OrderBy(a => a.CheckInAt)
             .Select(a => new AttendanceListItemDto
             {
@@ -252,8 +252,8 @@ public class AttendanceService : IAttendanceService
             return FailDetail(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
-        if (!isStaff && !await IsFamilyLinkedAsync(userId, await _context.AttendanceRecords.Where(a => a.AttendanceId == attendanceId).Select(a => a.ElderlyId).FirstOrDefaultAsync()))
+        var canViewAll = CanViewAllAttendance(user); // Staff + Manager (SRS 3.1.3: Manager = V)
+        if (!canViewAll && !await IsFamilyLinkedAsync(userId, await _context.AttendanceRecords.Where(a => a.AttendanceId == attendanceId).Select(a => a.ElderlyId).FirstOrDefaultAsync()))
             return FailDetail(403, "Bạn không có quyền xem bản ghi điểm danh này.");
 
         var detail = await _context.AttendanceRecords
@@ -313,8 +313,8 @@ public class AttendanceService : IAttendanceService
             return FailList(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
-        if (!isStaff && !await IsFamilyLinkedAsync(userId, elderlyId))
+        var canViewAll = CanViewAllAttendance(user); // Staff + Manager (SRS 3.1.3: Manager = V)
+        if (!canViewAll && !await IsFamilyLinkedAsync(userId, elderlyId))
             return FailList(403, "Bạn không có quyền xem lịch sử người cao tuổi này.");
 
         var elderlyExists = await _context.ElderlyMembers
@@ -370,9 +370,9 @@ public class AttendanceService : IAttendanceService
             return FailList(403, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        var isStaff = user.Roles?.Any(r => r.RoleName == "Staff") == true;
-        var familyElderlyIds = isStaff ? null : await GetFamilyElderlyIdsAsync(userId);
-        if (!isStaff && familyElderlyIds == null) return FailList(403, "Tài khoản không có quyền xem điểm danh.");
+        var canViewAll = CanViewAllAttendance(user); // Staff + Manager (SRS 3.1.3: Manager = V)
+        var familyElderlyIds = canViewAll ? null : await GetFamilyElderlyIdsAsync(userId);
+        if (!canViewAll && familyElderlyIds == null) return FailList(403, "Tài khoản không có quyền xem điểm danh.");
 
         var today = VietnamTime.Today;
 
@@ -381,7 +381,7 @@ public class AttendanceService : IAttendanceService
             .Where(a => a.AttendanceDate == today
                      && a.CheckInAt != null
                      && a.CheckOutAt == null
-                     && (isStaff || familyElderlyIds!.Contains(a.ElderlyId)))
+                     && (canViewAll || familyElderlyIds!.Contains(a.ElderlyId)))
             .OrderBy(a => a.CheckInAt)
             .Select(a => new AttendanceListItemDto
             {
@@ -444,6 +444,12 @@ public class AttendanceService : IAttendanceService
             _ => dayOfWeek != DayOfWeek.Sunday
         };
     }
+
+    private static bool HasRole(User user, params string[] roleNames) =>
+        user.Roles?.Any(r => roleNames.Contains(r.RoleName)) == true;
+
+    /// <summary>Staff và Manager (role Center/CenterManager) xem được điểm danh của mọi cụ.</summary>
+    private static bool CanViewAllAttendance(User user) => HasRole(user, "Staff", "Center", "CenterManager");
 
     private Task<bool> IsFamilyLinkedAsync(int userId, int elderlyId) =>
         _context.ElderlyFamilyRelationships.AnyAsync(r =>
