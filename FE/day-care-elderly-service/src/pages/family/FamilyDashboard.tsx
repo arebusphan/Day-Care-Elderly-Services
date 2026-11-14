@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
+import AccountMenu from "../../components/AccountMenu";
 import ElderlyProfileView from "./ElderlyProfileView";
 import { ServicePackagesView } from "./ServicePackagesView";
 import { BillingView } from "./BillingView";
@@ -92,7 +93,10 @@ export const FamilyDashboard: React.FC = () => {
         {/* Topbar */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 justify-between flex-shrink-0">
           <h1 className="text-base font-bold text-slate-800">{activeItem.label}</h1>
-          <NotificationBell />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <AccountMenu />
+          </div>
         </header>
 
         {/* Khu vực nội dung */}

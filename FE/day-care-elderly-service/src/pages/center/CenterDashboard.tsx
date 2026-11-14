@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
+import AccountMenu from "../../components/AccountMenu";
 import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package } from "lucide-react";
 import ShiftCalendarView from "./ShiftCalendarView";
 import CenterStaffView from "./CenterStaffView";
@@ -151,7 +152,10 @@ export const CenterDashboard: React.FC = () => {
               • {activeItem.subLabel}
             </span>
           </div>
-          <NotificationBell />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <AccountMenu />
+          </div>
         </header>
 
         {/* Vùng nội dung */}
