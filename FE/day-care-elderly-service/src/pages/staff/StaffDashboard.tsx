@@ -7,6 +7,7 @@ import AssignedElderlyView from "./AssignedElderlyView";
 import CareLogView from "./CareLogView";
 import AttendanceView from "./AttendanceView";
 import MedicationPlanView from "./MedicationPlanView";
+import StaffOverviewView from "./StaffOverviewView";
 
 export const StaffDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -96,7 +97,9 @@ export const StaffDashboard: React.FC = () => {
 
         {/* Vùng nội dung để trống */}
               <div className="flex-1 p-6">
-                  {activeTab === "assigned_elderly" ? (
+                  {activeTab === "overview" ? (
+                      <StaffOverviewView onNavigate={setActiveTab} />
+                  ) : activeTab === "assigned_elderly" ? (
                       <AssignedElderlyView />
                   ) : activeTab === "carelog" ? (
                       <CareLogView />

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
 import AccountMenu from "../../components/AccountMenu";
-import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package, ClipboardCheck } from "lucide-react";
+import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package, ClipboardCheck, LayoutDashboard, BarChart3 } from "lucide-react";
 import ShiftCalendarView from "./ShiftCalendarView";
 import CenterStaffView from "./CenterStaffView";
 import DailyPlanningWizard from "./DailyPlanningWizard";
@@ -12,12 +12,20 @@ import CenterPlanHistoryView from "./CenterPlanHistoryView";
 import IncidentReportsView from "./IncidentReportsView";
 import MedicalSuppliesView from "./MedicalSuppliesView";
 import CenterAttendanceView from "./CenterAttendanceView";
+import CenterOverviewView from "./CenterOverviewView";
+import CenterReportsView from "./CenterReportsView";
 
 export const CenterDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const menuItems = [
+    {
+      id: "overview",
+      label: "Tổng Quan",
+      subLabel: "Tình hình trong ngày",
+      icon: LayoutDashboard,
+    },
     {
       id: "daily-planning",
       label: "Lập Kế Hoạch Ngày Mai",
@@ -66,9 +74,15 @@ export const CenterDashboard: React.FC = () => {
       subLabel: "Tồn kho & cảnh báo sắp hết",
       icon: Package,
     },
+    {
+      id: "reports",
+      label: "Báo Cáo",
+      subLabel: "Thống kê theo khoảng ngày",
+      icon: BarChart3,
+    },
   ];
 
-  const [activeTab, setActiveTab] = useState<string>("daily-planning");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [calendarTargetDate, setCalendarTargetDate] = useState<string | undefined>(undefined);
 
   const handleLogout = () => {
@@ -167,7 +181,11 @@ export const CenterDashboard: React.FC = () => {
 
         {/* Vùng nội dung */}
         <div className="flex-1 p-6">
-          {activeTab === "daily-planning" ? (
+          {activeTab === "overview" ? (
+            <CenterOverviewView onNavigate={setActiveTab} />
+          ) : activeTab === "reports" ? (
+            <CenterReportsView />
+          ) : activeTab === "daily-planning" ? (
             <DailyPlanningWizard />
           ) : activeTab === "shift-assignment" ? (
             <ShiftCalendarView
