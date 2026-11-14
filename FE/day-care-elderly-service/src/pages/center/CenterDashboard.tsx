@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
-import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History } from "lucide-react";
+import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle } from "lucide-react";
 import ShiftCalendarView from "./ShiftCalendarView";
 import CenterStaffView from "./CenterStaffView";
 import DailyPlanningWizard from "./DailyPlanningWizard";
 import CenterElderlyView from "./CenterElderlyView";
 import CenterPlanHistoryView from "./CenterPlanHistoryView";
+import IncidentReportsView from "./IncidentReportsView";
 
 export const CenterDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -35,7 +36,7 @@ export const CenterDashboard: React.FC = () => {
     {
       id: "staff-list",
       label: "Quản Lý Nhân Viên",
-      subLabel: "Danh sách, tạo mới & ngày nghỉ",
+      subLabel: "Danh sách, tạo mới & lịch làm việc",
       icon: UserCheck,
     },
     {
@@ -43,6 +44,12 @@ export const CenterDashboard: React.FC = () => {
       label: "Danh Sách Người Cao Tuổi",
       subLabel: "Hồ sơ sức khỏe & phân loại",
       icon: Users2,
+    },
+    {
+      id: "incidents",
+      label: "Báo Cáo Sự Cố",
+      subLabel: "Xử lý & xác nhận vật tư",
+      icon: AlertTriangle,
     },
   ];
 
@@ -155,6 +162,8 @@ export const CenterDashboard: React.FC = () => {
             <CenterStaffView />
           ) : activeTab === "elderly-list" ? (
             <CenterElderlyView />
+          ) : activeTab === "incidents" ? (
+            <IncidentReportsView />
           ) : null}
         </div>
       </main>
