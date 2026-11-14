@@ -20,4 +20,18 @@ public class UpdateIncidentReportDto
 
     [StringLength(1000, ErrorMessage = "Ghi chú xử lý tối đa 1000 ký tự.")]
     public string? ResolutionNotes { get; set; }
+
+    /// <summary>Nhân viên xử lý (null = giữ nguyên)</summary>
+    public int? HandledBy { get; set; }
+
+    [StringLength(2000, ErrorMessage = "Các bước xử lý tối đa 2000 ký tự.")]
+    public string? HandlingActions { get; set; }
+
+    [StringLength(200, ErrorMessage = "Tên bệnh viện tối đa 200 ký tự.")]
+    public string? HospitalName { get; set; }
+
+    public DateTime? HospitalTransferAt { get; set; }
+
+    [StringLength(200, ErrorMessage = "Người đi cùng tối đa 200 ký tự.")]
+    public string? HospitalEscort { get; set; }
 }

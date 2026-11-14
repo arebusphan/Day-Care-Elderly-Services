@@ -80,6 +80,7 @@ public class IncidentReportService : IIncidentReportService
             var query = _context.IncidentReports
                 .Include(i => i.Elderly)
                 .Include(i => i.ReportedByNavigation)
+                .Include(i => i.HandledByNavigation)
                 .AsNoTracking();
 
             if (filter.ElderlyId.HasValue)
@@ -139,6 +140,7 @@ public class IncidentReportService : IIncidentReportService
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
                 .Include(i => i.ReportedByNavigation)
+                .Include(i => i.HandledByNavigation)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
@@ -163,6 +165,7 @@ public class IncidentReportService : IIncidentReportService
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
                 .Include(i => i.ReportedByNavigation)
+                .Include(i => i.HandledByNavigation)
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
             if (incident == null)
@@ -189,8 +192,29 @@ public class IncidentReportService : IIncidentReportService
                 incident.ResolutionNotes = FormatResolutionNotes(dto.ResolutionNotes.Trim(), currentSup);
             }
 
+            // Chi tiết xử lý / chuyển viện (SRS 3.9.1) — chỉ ghi khi client gửi lên
+            if (dto.HandledBy.HasValue)
+            {
+                var handlerOk = await _context.Users.AnyAsync(u => u.UserId == dto.HandledBy.Value && u.IsActive
+                    && u.Roles.Any(r => r.RoleName == "Staff" || r.RoleName == "Center" || r.RoleName == "CenterManager"));
+                if (!handlerOk)
+                {
+                    return ApiResponse<IncidentReportDto>.Fail("Người xử lý không hợp lệ.");
+                }
+                incident.HandledBy = dto.HandledBy.Value;
+            }
+            if (dto.HandlingActions != null) incident.HandlingActions = NullIfBlank(dto.HandlingActions);
+            if (dto.HospitalName != null) incident.HospitalName = NullIfBlank(dto.HospitalName);
+            if (dto.HospitalEscort != null) incident.HospitalEscort = NullIfBlank(dto.HospitalEscort);
+            if (dto.HospitalTransferAt.HasValue) incident.HospitalTransferAt = dto.HospitalTransferAt.Value;
+            if (incident.OccurredAt > VietnamTime.Now.AddMinutes(1))
+            {
+                return ApiResponse<IncidentReportDto>.Fail("Thời điểm xảy ra không được ở tương lai (BR-81).");
+            }
+
             // Lưu ý: Không cập nhật IsSupplyConfirmed qua API update thông thường
             await _context.SaveChangesAsync();
+            await _context.Entry(incident).Reference(i => i.HandledByNavigation).LoadAsync();
 
             return ApiResponse<IncidentReportDto>.Ok(MapToDto(incident), "Cập nhật thông tin sự cố thành công.");
         }
@@ -208,6 +232,7 @@ public class IncidentReportService : IIncidentReportService
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
                 .Include(i => i.ReportedByNavigation)
+                .Include(i => i.HandledByNavigation)
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
             if (incident == null)
@@ -256,6 +281,7 @@ public class IncidentReportService : IIncidentReportService
             var incident = await _context.IncidentReports
                 .Include(i => i.Elderly)
                 .Include(i => i.ReportedByNavigation)
+                .Include(i => i.HandledByNavigation)
                 .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
 
             if (incident == null)
@@ -300,6 +326,11 @@ public class IncidentReportService : IIncidentReportService
                 return ApiResponse<bool>.Fail("Không thể xóa sự cố đã được xác nhận vật tư.", new List<string> { "SUPPLY_ALREADY_CONFIRMED" });
             }
 
+            if (await _context.SupplyTransactions.AnyAsync(t => t.IncidentId == incident.IncidentId))
+            {
+                return ApiResponse<bool>.Fail("Không thể xóa sự cố đã ghi vật tư sử dụng (đã trừ kho).", new List<string> { "SUPPLY_ALREADY_CONFIRMED" });
+            }
+
             _context.IncidentReports.Remove(incident);
             await _context.SaveChangesAsync();
 
@@ -331,8 +362,23 @@ public class IncidentReportService : IIncidentReportService
             Status = i.Status,
             ResolutionNotes = i.ResolutionNotes,
             ResolvedAt = i.ResolvedAt,
-            IsSupplyConfirmed = i.IsSupplyConfirmed
+            IsSupplyConfirmed = i.IsSupplyConfirmed,
+            HandledBy = i.HandledBy,
+            HandledByName = i.HandledByNavigation?.FullName,
+            HandlingActions = i.HandlingActions,
+            HospitalName = i.HospitalName,
+            HospitalTransferAt = i.HospitalTransferAt,
+            HospitalEscort = i.HospitalEscort,
+            PhotoUrls = ParsePhotoUrls(i.PhotoUrls),
+            SupplyChargeAmount = i.SupplyChargeAmount
         };
+    }
+
+    internal static List<string> ParsePhotoUrls(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>(); }
+        catch (System.Text.Json.JsonException) { return new List<string>(); }
     }
 
     private static (string? ResolutionPart, string? SupplyPart) ParseResolutionNotes(string? rawNotes)
@@ -423,4 +469,6 @@ public class IncidentReportService : IIncidentReportService
         }
         return null;
     }
+
+    private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

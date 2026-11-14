@@ -8,13 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -37,6 +35,7 @@ import incidentReportService, {
 import type { IncidentReport, IncidentSeverity, IncidentStatus } from "../../services/incidentReportService";
 import type { PagedResult } from "../../types/common";
 import TablePagination from "../../components/TablePagination";
+import IncidentDetailDialog from "./IncidentDetailDialog";
 import { formatDateTimeVN } from "../../lib/date";
 
 const PAGE_SIZE = 10;
@@ -104,9 +103,6 @@ export function IncidentReportsView() {
 
   // chi tiết / xử lý
   const [detail, setDetail] = useState<IncidentReport | null>(null);
-  const [nextStatus, setNextStatus] = useState<IncidentStatus>("Open");
-  const [resolution, setResolution] = useState("");
-  const [savingStatus, setSavingStatus] = useState(false);
 
   // tạo / sửa
   const [formOpen, setFormOpen] = useState(false);
@@ -164,31 +160,11 @@ export function IncidentReportsView() {
     setPage(1);
   };
 
-  const openDetail = (i: IncidentReport) => {
-    setDetail(i);
-    setNextStatus(i.status);
-    setResolution(i.resolutionNotes ?? "");
-  };
+  const openDetail = (i: IncidentReport) => setDetail(i);
 
   const replaceRow = (updated: IncidentReport) => {
     setData((d) => d && { ...d, items: d.items.map((x) => (x.incidentId === updated.incidentId ? updated : x)) });
     setDetail((cur) => (cur && cur.incidentId === updated.incidentId ? updated : cur));
-  };
-
-  const saveStatus = async () => {
-    if (!detail) return;
-    setSavingStatus(true);
-    try {
-      const res = await incidentReportService.updateStatus(detail.incidentId, nextStatus, resolution.trim() || undefined);
-      if (res.success && res.data) {
-        replaceRow(res.data);
-        toast.success("Đã cập nhật trạng thái sự cố.");
-      } else toast.error(res.message || "Không cập nhật được trạng thái.");
-    } catch (err) {
-      toast.error(errMsg(err, "Không cập nhật được trạng thái."));
-    } finally {
-      setSavingStatus(false);
-    }
   };
 
   const toggleSupply = async (i: IncidentReport, value: boolean) => {
@@ -428,77 +404,13 @@ export function IncidentReportsView() {
         </CardContent>
       </Card>
 
-      {/* Chi tiết + xử lý */}
-      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="sm:max-w-lg">
-          {detail && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{detail.incidentType}</DialogTitle>
-                <DialogDescription>
-                  {detail.elderlyName} · {formatDateTimeVN(detail.occurredAt)}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 text-sm">
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge className={SEVERITY_CLASS[detail.severity] ?? ""}>
-                    {INCIDENT_SEVERITY_LABEL[detail.severity] ?? detail.severity}
-                  </Badge>
-                  <Badge variant={STATUS_VARIANT[detail.status] ?? "outline"}>
-                    {INCIDENT_STATUS_LABEL[detail.status] ?? detail.status}
-                  </Badge>
-                  {detail.isSupplyConfirmed && <Badge variant="outline">Đã xác nhận vật tư</Badge>}
-                </div>
-                <p className="whitespace-pre-line">{detail.description}</p>
-                <p className="text-xs text-muted-foreground">
-                  Báo cáo bởi {detail.reportedByName} lúc {formatDateTimeVN(detail.reportedAt)}
-                  {detail.resolvedAt && ` · Xử lý xong lúc ${formatDateTimeVN(detail.resolvedAt)}`}
-                </p>
-                <Separator />
-                <div className="grid gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Trạng thái</Label>
-                    <Select
-                      items={statusItems.slice(1)}
-                      value={nextStatus}
-                      onValueChange={(v) => setNextStatus(v as IncidentStatus)}
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusItems.slice(1).map((it) => (
-                          <SelectItem key={it.value} value={it.value}>
-                            {it.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="resolution">Ghi chú xử lý</Label>
-                    <Textarea
-                      id="resolution"
-                      rows={3}
-                      value={resolution}
-                      onChange={(e) => setResolution(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => openEdit(detail)}>
-                  Sửa thông tin
-                </Button>
-                <Button onClick={saveStatus} disabled={savingStatus}>
-                  {savingStatus && <Loader2 className="animate-spin" />}
-                  Cập nhật trạng thái
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Chi tiết: xử lý, chuyển viện, vật tư (trừ kho + phí), ảnh */}
+      <IncidentDetailDialog
+        incident={detail}
+        onClose={() => setDetail(null)}
+        onChanged={replaceRow}
+        onEdit={openEdit}
+      />
 
       {/* Tạo / sửa */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

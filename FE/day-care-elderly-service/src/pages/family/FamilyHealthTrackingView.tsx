@@ -258,6 +258,9 @@ const IncidentCard: React.FC<{ incident: FamilyIncident }> = ({ incident }) => (
       {incident.reportedByName && <span>Báo bởi: {incident.reportedByName}</span>}
     </div>
     {incident.resolutionNotes && <p className="mt-3 rounded-lg bg-white p-3 text-sm text-slate-600">Xử lý: {incident.resolutionNotes}</p>}
+    {incident.handlingActions && <p className="mt-2 text-sm text-slate-600">Đã xử lý: {incident.handlingActions}</p>}
+    {incident.hospitalName && <p className="mt-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">Chuyển viện: {incident.hospitalName}{incident.hospitalTransferAt ? ` lúc ${new Date(incident.hospitalTransferAt).toLocaleString("vi-VN")}` : ""}</p>}
+    {(incident.supplyChargeAmount ?? 0) > 0 && <p className="mt-2 text-sm font-medium text-slate-800">Phí vật tư y tế tính riêng: {(incident.supplyChargeAmount ?? 0).toLocaleString("vi-VN")} đ</p>}
     {incident.resolvedAt && <p className="mt-2 text-xs text-slate-400">Đã giải quyết {new Date(incident.resolvedAt).toLocaleString("vi-VN")}</p>}
   </article>
 );

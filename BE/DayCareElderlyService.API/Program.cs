@@ -72,6 +72,7 @@ builder.Services.AddScoped<ICenterStaffService, CenterStaffService>();
 builder.Services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
 builder.Services.AddScoped<IDailyPlanningService, DailyPlanningService>();
 builder.Services.AddScoped<IIncidentReportService, IncidentReportService>();
+builder.Services.AddScoped<IIncidentOperationsService, IncidentOperationsService>();
 builder.Services.AddScoped<IMedicalSupplyService, MedicalSupplyService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 

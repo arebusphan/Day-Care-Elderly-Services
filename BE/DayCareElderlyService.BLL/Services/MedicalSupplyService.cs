@@ -43,6 +43,8 @@ public class MedicalSupplyService : IMedicalSupplyService
                 Unit = dto.Unit.Trim(),
                 MinimumStock = dto.MinimumStock,
                 QuantityInStock = dto.QuantityInStock,
+                UnitPrice = dto.UnitPrice,
+                ExpiryDate = dto.ExpiryDate,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -151,6 +153,8 @@ public class MedicalSupplyService : IMedicalSupplyService
             supply.SupplyName = dto.SupplyName.Trim();
             supply.Unit = dto.Unit.Trim();
             supply.MinimumStock = dto.MinimumStock;
+            supply.UnitPrice = dto.UnitPrice;
+            supply.ExpiryDate = dto.ExpiryDate;
 
             await _context.SaveChangesAsync();
             await AuditLogWriter.WriteAsync(_context, actorUserId, "UPDATE_MEDICAL_SUPPLY", nameof(MedicalSupply), supply.SupplyId.ToString(), new
@@ -254,7 +258,9 @@ public class MedicalSupplyService : IMedicalSupplyService
             MinimumStock = s.MinimumStock,
             QuantityInStock = s.QuantityInStock,
             IsActive = s.IsActive,
-            CreatedAt = s.CreatedAt
+            CreatedAt = s.CreatedAt,
+            UnitPrice = s.UnitPrice,
+            ExpiryDate = s.ExpiryDate
         };
     }
 }

@@ -46,6 +46,11 @@ export interface FamilyIncident {
   status: string;
   resolutionNotes: string | null;
   resolvedAt: string | null;
+  handlingActions?: string | null;
+  hospitalName?: string | null;
+  hospitalTransferAt?: string | null;
+  /** Phí vật tư tính riêng (F-14) */
+  supplyChargeAmount?: number;
 }
 
 interface ApiResponse<T> {

@@ -35,6 +35,27 @@ export interface IncidentReport {
   resolutionNotes: string | null;
   resolvedAt: string | null;
   isSupplyConfirmed: boolean;
+  handledBy: number | null;
+  handledByName: string | null;
+  handlingActions: string | null;
+  hospitalName: string | null;
+  hospitalTransferAt: string | null;
+  hospitalEscort: string | null;
+  photoUrls: string[];
+  supplyChargeAmount: number;
+}
+
+export interface IncidentSupplyUsage {
+  supplyTransactionId: number;
+  supplyId: number;
+  supplyName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  occurredAt: string;
+  recordedByName: string;
+  notes: string | null;
 }
 
 export interface IncidentFilter {
@@ -61,6 +82,11 @@ export interface UpdateIncidentReportDto {
   description: string;
   occurredAt?: string;
   resolutionNotes?: string;
+  handledBy?: number;
+  handlingActions?: string;
+  hospitalName?: string;
+  hospitalTransferAt?: string;
+  hospitalEscort?: string;
 }
 
 const BASE = "/api/incident-reports";
@@ -93,6 +119,25 @@ export const incidentReportService = {
 
   async confirmSupply(id: number, isSupplyConfirmed: boolean, notes?: string): Promise<ApiResponse<IncidentReport>> {
     const res = await api.patch(`${BASE}/${id}/supply-confirmation`, { isSupplyConfirmed, notes });
+    return res.data;
+  },
+
+  /** F-14: vật tư đã dùng cho sự cố */
+  async getSupplies(id: number): Promise<ApiResponse<IncidentSupplyUsage[]>> {
+    const res = await api.get(`${BASE}/${id}/supplies`);
+    return res.data;
+  },
+
+  /** F-14: ghi vật tư đã dùng → trừ kho, cộng phí riêng, báo gia đình */
+  async recordSupplies(id: number, items: { supplyId: number; quantity: number }[], notes?: string): Promise<ApiResponse<IncidentSupplyUsage[]>> {
+    const res = await api.post(`${BASE}/${id}/supplies`, { items, notes });
+    return res.data;
+  },
+
+  async uploadPhotos(id: number, files: File[]): Promise<ApiResponse<string[]>> {
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f));
+    const res = await api.post(`${BASE}/${id}/photos`, form, { headers: { "Content-Type": "multipart/form-data" } });
     return res.data;
   },
 

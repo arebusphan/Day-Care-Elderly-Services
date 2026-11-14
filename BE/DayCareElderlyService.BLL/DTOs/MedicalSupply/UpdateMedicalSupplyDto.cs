@@ -14,4 +14,9 @@ public class UpdateMedicalSupplyDto
 
     [Range(0, (double)decimal.MaxValue, ErrorMessage = "Mức tồn kho tối thiểu phải lớn hơn hoặc bằng 0.")]
     public decimal MinimumStock { get; set; }
+
+    [Range(0, (double)decimal.MaxValue, ErrorMessage = "Đơn giá phải lớn hơn hoặc bằng 0.")]
+    public decimal UnitPrice { get; set; }
+
+    public DateOnly? ExpiryDate { get; set; }
 }

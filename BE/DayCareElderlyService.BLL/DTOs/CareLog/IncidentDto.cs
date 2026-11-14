@@ -17,4 +17,10 @@ public class IncidentDto
     public string Status { get; set; } = string.Empty;
     public string? ResolutionNotes { get; set; }
     public DateTime? ResolvedAt { get; set; }
+
+    public string? HandlingActions { get; set; }
+    public string? HospitalName { get; set; }
+    public DateTime? HospitalTransferAt { get; set; }
+    /// <summary>Phí vật tư tính riêng cho gia đình (F-14)</summary>
+    public decimal SupplyChargeAmount { get; set; }
 }

@@ -36,7 +36,12 @@ interface SupplyForm {
   unit: string;
   minimumStock: string;
   quantityInStock: string;
+  unitPrice: string;
+  expiryDate: string;
 }
+
+const EMPTY_FORM: SupplyForm = { supplyName: "", unit: "", minimumStock: "0", quantityInStock: "0", unitPrice: "0", expiryDate: "" };
+const money = (n: number) => `${n.toLocaleString("vi-VN")} đ`;
 
 export function MedicalSuppliesView() {
   const [data, setData] = useState<PagedResult<MedicalSupply> | null>(null);
@@ -48,7 +53,7 @@ export function MedicalSuppliesView() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MedicalSupply | null>(null);
-  const [form, setForm] = useState<SupplyForm>({ supplyName: "", unit: "", minimumStock: "0", quantityInStock: "0" });
+  const [form, setForm] = useState<SupplyForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
   const [stockTarget, setStockTarget] = useState<{ supply: MedicalSupply; mode: "in" | "out" } | null>(null);
@@ -92,7 +97,7 @@ export function MedicalSuppliesView() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ supplyName: "", unit: "", minimumStock: "0", quantityInStock: "0" });
+    setForm(EMPTY_FORM);
     setFormOpen(true);
   };
 
@@ -103,6 +108,8 @@ export function MedicalSuppliesView() {
       unit: s.unit,
       minimumStock: String(s.minimumStock),
       quantityInStock: String(s.quantityInStock),
+      unitPrice: String(s.unitPrice ?? 0),
+      expiryDate: s.expiryDate ?? "",
     });
     setFormOpen(true);
   };
@@ -111,12 +118,14 @@ export function MedicalSuppliesView() {
     e.preventDefault();
     const minimumStock = Number(form.minimumStock);
     const quantityInStock = Number(form.quantityInStock);
+    const unitPrice = Number(form.unitPrice);
+    if (!(unitPrice >= 0)) return toast.error("Đơn giá phải ≥ 0.");
     if (!form.supplyName.trim() || !form.unit.trim()) return toast.error("Nhập tên vật tư và đơn vị tính.");
     if (!(minimumStock >= 0)) return toast.error("Mức tối thiểu phải ≥ 0.");
     if (!editing && !(quantityInStock >= 0)) return toast.error("Tồn kho ban đầu phải ≥ 0.");
     setSaving(true);
     try {
-      const base = { supplyName: form.supplyName.trim(), unit: form.unit.trim(), minimumStock };
+      const base = { supplyName: form.supplyName.trim(), unit: form.unit.trim(), minimumStock, unitPrice, expiryDate: form.expiryDate || null };
       const res = editing
         ? await medicalSupplyService.update(editing.supplyId, base)
         : await medicalSupplyService.create({ ...base, quantityInStock });
@@ -223,6 +232,8 @@ export function MedicalSuppliesView() {
                 <TableHead>Đơn vị</TableHead>
                 <TableHead className="text-right">Tồn kho</TableHead>
                 <TableHead className="text-right">Tối thiểu</TableHead>
+                <TableHead className="text-right">Đơn giá</TableHead>
+                <TableHead>Hạn dùng</TableHead>
                 <TableHead>Đang dùng</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
@@ -230,13 +241,13 @@ export function MedicalSuppliesView() {
             <TableBody>
               {loading && !data ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center">
+                  <TableCell colSpan={8} className="py-8 text-center">
                     <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : !data || data.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                     Chưa có vật tư nào.
                   </TableCell>
                 </TableRow>
@@ -256,6 +267,16 @@ export function MedicalSuppliesView() {
                         {fmtQty(s.quantityInStock)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{fmtQty(s.minimumStock)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{money(s.unitPrice ?? 0)}</TableCell>
+                      <TableCell className="text-xs">
+                        {s.expiryDate ? (
+                          <span className={s.expiryDate < new Date().toISOString().slice(0, 10) ? "font-semibold text-destructive" : ""}>
+                            {new Date(s.expiryDate + "T00:00:00").toLocaleDateString("vi-VN")}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Switch checked={s.isActive} onCheckedChange={() => toggle(s)} aria-label="Đang sử dụng" />
                       </TableCell>
@@ -330,6 +351,16 @@ export function MedicalSuppliesView() {
                   />
                 </div>
               )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="sup-price">Đơn giá (tính phí sự cố)</Label>
+                <Input id="sup-price" type="number" min={0} step="1000" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sup-exp">Hạn dùng</Label>
+                <Input id="sup-exp" type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              </div>
             </div>
           </form>
           <DialogFooter>

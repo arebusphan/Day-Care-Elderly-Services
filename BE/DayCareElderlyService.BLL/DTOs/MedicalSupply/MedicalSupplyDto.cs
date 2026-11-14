@@ -12,6 +12,8 @@ public class MedicalSupplyDto
     public decimal MinimumStock { get; set; }
     public decimal QuantityInStock { get; set; }
     public bool IsLowStock => QuantityInStock <= MinimumStock;
+    public decimal UnitPrice { get; set; }
+    public DateOnly? ExpiryDate { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }

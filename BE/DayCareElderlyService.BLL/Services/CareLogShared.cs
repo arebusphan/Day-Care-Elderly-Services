@@ -96,7 +96,11 @@ internal static class CareLogShared
         ReportedByName = incident.ReportedByNavigation?.FullName ?? string.Empty,
         Status = incident.Status,
         ResolutionNotes = incident.ResolutionNotes,
-        ResolvedAt = incident.ResolvedAt
+        ResolvedAt = incident.ResolvedAt,
+        HandlingActions = incident.HandlingActions,
+        HospitalName = incident.HospitalName,
+        HospitalTransferAt = incident.HospitalTransferAt,
+        SupplyChargeAmount = incident.SupplyChargeAmount
     };
 
     public static DoseDto ToDoseDto(MedicationRecord record) => new()

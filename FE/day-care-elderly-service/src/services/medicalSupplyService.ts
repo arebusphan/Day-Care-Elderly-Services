@@ -12,6 +12,8 @@ export interface MedicalSupply {
   quantityInStock: number;
   isActive: boolean;
   createdAt: string;
+  unitPrice: number;
+  expiryDate: string | null;
 }
 
 export interface MedicalSupplyFilter {
@@ -27,12 +29,16 @@ export interface CreateMedicalSupplyDto {
   unit: string;
   minimumStock: number;
   quantityInStock: number;
+  unitPrice: number;
+  expiryDate?: string | null;
 }
 
 export interface UpdateMedicalSupplyDto {
   supplyName: string;
   unit: string;
   minimumStock: number;
+  unitPrice: number;
+  expiryDate?: string | null;
 }
 
 /** BE coi là sắp hết khi tồn kho <= mức tối thiểu */
