@@ -16,3 +16,8 @@ TestResults/
 ## OS generated files
 .DS_Store
 Thumbs.db
+
+## Node / front-end
+node_modules/
+**/node_modules/
+dist/
