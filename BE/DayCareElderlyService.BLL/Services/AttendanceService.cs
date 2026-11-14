@@ -105,6 +105,13 @@ public class AttendanceService : IAttendanceService
             record.AttendanceDate
         });
 
+        // WF-02 / SRS 3.6.1: báo gia đình khi cụ đến trung tâm
+        await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
+            $"{elderly.FullName} đã đến trung tâm",
+            $"Điểm danh vào lúc {now:HH:mm} ngày {now:dd/MM/yyyy}.",
+            "Attendance", nameof(AttendanceRecord), record.AttendanceId);
+        await _context.SaveChangesAsync();
+
         return new AttendanceActionResult<CheckInResponseDto>
         {
             StatusCode = 200,
@@ -173,6 +180,17 @@ public class AttendanceService : IAttendanceService
             record.ElderlyId,
             record.AttendanceDate
         });
+
+        // WF-02: báo gia đình khi cụ rời trung tâm
+        var elderlyName = await _context.ElderlyMembers
+            .Where(e => e.ElderlyId == record.ElderlyId)
+            .Select(e => e.FullName)
+            .FirstOrDefaultAsync() ?? "Người cao tuổi";
+        await CareLogShared.NotifyFamilyAsync(_context, record.ElderlyId,
+            $"{elderlyName} đã rời trung tâm",
+            $"Điểm danh ra lúc {now:HH:mm} ngày {now:dd/MM/yyyy}.",
+            "Attendance", nameof(AttendanceRecord), record.AttendanceId);
+        await _context.SaveChangesAsync();
 
         return new AttendanceActionResult<CheckOutResponseDto>
         {

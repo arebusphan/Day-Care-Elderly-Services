@@ -444,12 +444,33 @@ public class CareLogService : ICareLogService
             $"{plan.MedicationName} {plan.Dosage}: {DoseStatuses.Label(status)}", record.Notes, data, false);
         await _context.CareLogs.AddAsync(log);
 
-        if (status != DoseStatuses.Given)
+        // F-12 / WF-06: gia đình nhận thông báo mọi kết quả liều thuốc (CL-13: kèm lý do nếu từ chối/bỏ lỡ)
+        await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
+            $"{elderly.FullName}: {DoseStatuses.Label(status).ToLowerInvariant()}",
+            $"{plan.MedicationName} {plan.Dosage} lúc {record.ScheduledAt:HH:mm}."
+                + (status == DoseStatuses.Given ? string.Empty : $" Lý do: {record.Notes}"),
+            "Medication", nameof(MedicationRecord), record.MedicationRecordId);
+
+        // CL-07: từ chối uống 2 lần liên tiếp cùng một thuốc → cảnh báo gia đình và quản lý
+        if (status == DoseStatuses.Refused)
         {
-            await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
-                $"{elderly.FullName}: {DoseStatuses.Label(status).ToLowerInvariant()}",
-                $"{plan.MedicationName} {plan.Dosage} lúc {record.ScheduledAt:HH:mm}. Lý do: {record.Notes}",
-                "Medication", nameof(MedicationRecord), record.MedicationRecordId);
+            var previous = await _context.MedicationRecords
+                .Where(r => r.MedicationPlanId == record.MedicationPlanId
+                         && r.MedicationRecordId != record.MedicationRecordId
+                         && r.ScheduledAt < record.ScheduledAt
+                         && r.Status != DoseStatuses.Pending)
+                .OrderByDescending(r => r.ScheduledAt)
+                .Select(r => r.Status)
+                .FirstOrDefaultAsync();
+            if (previous == DoseStatuses.Refused)
+            {
+                var title = $"Cảnh báo: {elderly.FullName} từ chối thuốc 2 lần liên tiếp";
+                var message = $"{plan.MedicationName} {plan.Dosage} bị từ chối ở 2 liều liên tiếp (gần nhất lúc {record.ScheduledAt:HH:mm dd/MM}).";
+                await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId, title, message,
+                    "MedicationAlert", nameof(MedicationRecord), record.MedicationRecordId);
+                await CareLogShared.NotifyManagersAsync(_context, title, message,
+                    "MedicationAlert", nameof(MedicationRecord), record.MedicationRecordId);
+            }
         }
 
         await _context.SaveChangesAsync();

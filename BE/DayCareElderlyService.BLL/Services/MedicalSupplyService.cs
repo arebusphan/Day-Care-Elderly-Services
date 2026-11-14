@@ -190,7 +190,9 @@ public class MedicalSupplyService : IMedicalSupplyService
                     new List<string> { "INVALID_STOCK_QUANTITY" });
             }
 
-            supply.QuantityInStock = newStock;
+            // D2: ghi sổ cái SupplyTransactions + cảnh báo quản lý khi vừa chạm mức tối thiểu
+            await SupplyStock.ApplyAsync(_context, supply, dto.AdjustmentQuantity,
+                dto.AdjustmentQuantity >= 0 ? SupplyStock.TypeIn : SupplyStock.TypeOut, actorUserId, dto.Notes);
             await _context.SaveChangesAsync();
             await AuditLogWriter.WriteAsync(_context, actorUserId, "ADJUST_MEDICAL_SUPPLY_STOCK", nameof(MedicalSupply), supply.SupplyId.ToString(), new
             {

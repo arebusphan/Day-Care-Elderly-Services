@@ -128,7 +128,31 @@ internal static class CareLogShared
             .Distinct()
             .ToListAsync();
 
-        foreach (var userId in userIds)
+        await AddNotificationsAsync(context, userIds, title, message, notificationType, relatedEntityType, relatedEntityId);
+    }
+
+    /// <summary>
+    /// Thêm thông báo cho Quản lý trung tâm (role Center / CenterManager đang hoạt động) — chưa SaveChanges
+    /// </summary>
+    public static async Task NotifyManagersAsync(AppDbContext context, string title, string message,
+        string notificationType, string? relatedEntityType, int? relatedEntityId)
+    {
+        var userIds = await context.Users
+            .Where(u => u.IsActive && u.Roles.Any(r => r.RoleName == "Center" || r.RoleName == "CenterManager"))
+            .Select(u => u.UserId)
+            .ToListAsync();
+
+        await AddNotificationsAsync(context, userIds, title, message, notificationType, relatedEntityType, relatedEntityId);
+    }
+
+    /// <summary>
+    /// Thêm cùng một thông báo cho danh sách người dùng (bỏ trùng) — chưa SaveChanges
+    /// </summary>
+    public static async Task AddNotificationsAsync(AppDbContext context, IEnumerable<int> userIds, string title, string message,
+        string notificationType, string? relatedEntityType, int? relatedEntityId)
+    {
+        var now = VietnamTime.Now;
+        foreach (var userId in userIds.Distinct())
         {
             await context.Notifications.AddAsync(new Notification
             {
@@ -139,7 +163,7 @@ internal static class CareLogShared
                 RelatedEntityType = relatedEntityType,
                 RelatedEntityId = relatedEntityId,
                 IsRead = false,
-                CreatedAt = VietnamTime.Now
+                CreatedAt = now
             });
         }
     }

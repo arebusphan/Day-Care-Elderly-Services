@@ -26,6 +26,8 @@ public class MedicationReminderService : IMedicationReminderService
         await CareLogSchema.EnsureColumnsAsync(_context);
 
         var now = VietnamTime.Now;
+        // CL-07: liều quá giờ hơn 30 phút mà chưa ghi nhận → cảnh báo staff phụ trách và quản lý
+        var overdueCreated = await ProcessOverdueDosesAsync(now, cancellationToken);
         var windowFrom = now.AddMinutes(-GraceMinutes);
         var windowTo = now.AddMinutes(LeadMinutes);
 
@@ -39,7 +41,7 @@ public class MedicationReminderService : IMedicationReminderService
 
         if (dueDoses.Count == 0)
         {
-            return 0;
+            return overdueCreated;
         }
 
         var recordIds = dueDoses.Select(r => r.MedicationRecordId).ToList();
@@ -117,6 +119,77 @@ public class MedicationReminderService : IMedicationReminderService
             await _context.SaveChangesAsync(cancellationToken);
         }
 
+        return created + overdueCreated;
+    }
+
+    public const string OverdueNotificationType = "MedicationOverdue";
+    private const int OverdueMinutes = 30;
+
+    /// <summary>
+    /// CL-07: liều Pending trong hôm nay đã quá giờ hơn 30 phút → mỗi liều cảnh báo một lần
+    /// cho staff được phân cụ hôm nay (không có thì mọi staff) và quản lý trung tâm.
+    /// </summary>
+    private async Task<int> ProcessOverdueDosesAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        var (dayStart, _) = VietnamTime.DayRange(VietnamTime.Today);
+        var threshold = now.AddMinutes(-OverdueMinutes);
+        var overdue = await _context.MedicationRecords
+            .Include(r => r.MedicationPlan).ThenInclude(p => p.Elderly)
+            .Where(r => r.Status == DoseStatuses.Pending
+                     && r.MedicationPlan.IsActive
+                     && r.ScheduledAt >= dayStart
+                     && r.ScheduledAt <= threshold)
+            .ToListAsync(cancellationToken);
+        if (overdue.Count == 0)
+        {
+            return 0;
+        }
+
+        var ids = overdue.Select(r => r.MedicationRecordId).ToList();
+        var alerted = (await _context.Notifications
+            .Where(n => n.NotificationType == OverdueNotificationType
+                     && n.RelatedEntityType == RelatedEntityType
+                     && n.RelatedEntityId != null
+                     && ids.Contains(n.RelatedEntityId.Value))
+            .Select(n => n.RelatedEntityId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        var today = VietnamTime.Today;
+        var elderlyIds = overdue.Select(r => r.MedicationPlan.ElderlyId).Distinct().ToList();
+        var assigned = (await _context.StaffCareAssignments
+                .Where(a => a.Plan.PlanDate == today && elderlyIds.Contains(a.ElderlyId))
+                .Select(a => new { a.ElderlyId, a.StaffId })
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.ElderlyId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.StaffId).ToList());
+        var managerIds = await _context.Users
+            .Where(u => u.IsActive && u.Roles.Any(r => r.RoleName == "Center" || r.RoleName == "CenterManager"))
+            .Select(u => u.UserId)
+            .ToListAsync(cancellationToken);
+        List<int>? allStaff = null;
+
+        var created = 0;
+        foreach (var dose in overdue.Where(d => !alerted.Contains(d.MedicationRecordId)))
+        {
+            if (!assigned.TryGetValue(dose.MedicationPlan.ElderlyId, out var staffIds) || staffIds.Count == 0)
+            {
+                allStaff ??= await GetAllActiveStaffIdsAsync(cancellationToken);
+                staffIds = allStaff;
+            }
+            var lateMinutes = (int)(now - dose.ScheduledAt).TotalMinutes;
+            var title = $"Thuốc quá giờ: {dose.MedicationPlan.Elderly?.FullName ?? "Người cao tuổi"}";
+            var message = $"{dose.MedicationPlan.MedicationName} {dose.MedicationPlan.Dosage} lúc {dose.ScheduledAt:HH:mm} đã trễ {lateMinutes} phút mà chưa ghi nhận.";
+            var recipients = staffIds.Concat(managerIds).Distinct().ToList();
+            await CareLogShared.AddNotificationsAsync(_context, recipients, title, message,
+                OverdueNotificationType, RelatedEntityType, dose.MedicationRecordId);
+            created += recipients.Count;
+        }
+
+        if (created > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
         return created;
     }
 
