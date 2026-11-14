@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { nextWorkingDay } from "../../lib/date";
+import AiShiftSuggestPanel from "./AiShiftSuggestPanel";
 import dailyPlanningService, {
   type DailyPlanSummary,
   type AttendanceForecastResult,
@@ -1122,6 +1123,9 @@ const Step4GenerateAssignment: React.FC<{
         {loading ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
         {loading ? "Đang phân công tự động..." : "Nhấn để Generate Assignment"}
       </button>
+
+      {/* F-06: AI gợi ý phân nhân viên cho các nhóm (bản nháp, Manager duyệt) */}
+      <AiShiftSuggestPanel planId={planId} onApplied={onAssigned} />
 
       {/* Assignment Output */}
       {resultPlan && (
