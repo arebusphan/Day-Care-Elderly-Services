@@ -80,11 +80,15 @@ builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 // 4. CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    // SR-43: chỉ cho phép origin khai báo trong Cors:AllowedOrigins; để trống = cho phép tất cả (dev).
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+    options.AddPolicy("Frontend", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins);
+        else
+            policy.AllowAnyOrigin();
+        policy.AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -158,7 +162,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
