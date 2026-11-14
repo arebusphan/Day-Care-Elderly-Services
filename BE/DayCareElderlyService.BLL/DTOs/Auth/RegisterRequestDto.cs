@@ -10,7 +10,8 @@ public class RegisterRequestDto
     public string Email { get; set; } = null!;
 
     [Required(ErrorMessage = "Mật khẩu là bắt buộc.")]
-    [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự.")]
+    [MinLength(8, ErrorMessage = "Mật khẩu phải có ít nhất 8 ký tự.")]
+    [RegularExpression(@"^(?=.*[A-Za-z])(?=.*d).+$", ErrorMessage = "Mật khẩu phải có cả chữ và số.")]
     [StringLength(100)]
     public string Password { get; set; } = null!;
 
