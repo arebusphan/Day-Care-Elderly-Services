@@ -14,4 +14,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Script schema chạy lặp lại được; BE tự áp dụng khi khởi động (Data/OperationsSchema.cs) -->
+    <EmbeddedResource Include="Migrations\Apply_AddOperationsFeatures.sql" LogicalName="Apply_AddOperationsFeatures.sql" />
+  </ItemGroup>
+
 </Project>
