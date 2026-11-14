@@ -23,7 +23,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);
         if (elderly == null)
         {
-            return ApiResponse<CareLogDayDto>.Fail("Không tìm thấy người cao tuổi hoặc bạn không có quyền xem care log.");
+            return ApiResponse<CareLogDayDto>.Fail(AccessDenied.ElderlyMessage, AccessDenied.Errors);
         }
 
         var day = await CareLogShared.BuildDayAsync(_context, elderly, date ?? VietnamTime.Today, includeInternal: false);
@@ -46,7 +46,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);
         if (elderly == null)
         {
-            return ApiResponse<List<CareLogDaySummaryDto>>.Fail("Không tìm thấy người cao tuổi hoặc bạn không có quyền xem care log.");
+            return ApiResponse<List<CareLogDaySummaryDto>>.Fail(AccessDenied.ElderlyMessage, AccessDenied.Errors);
         }
 
         var rangeFrom = VietnamTime.DayRange(fromDate).From;
@@ -77,7 +77,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);
         if (elderly == null)
         {
-            return ApiResponse<List<CareLogDayDto>>.Fail("Không tìm thấy người cao tuổi hoặc bạn không có quyền xem care log.");
+            return ApiResponse<List<CareLogDayDto>>.Fail(AccessDenied.ElderlyMessage, AccessDenied.Errors);
         }
 
         var toDate = VietnamTime.Today;
@@ -121,7 +121,7 @@ public class FamilyCareLogService : IFamilyCareLogService
         var elderly = await GetViewableElderlyAsync(userId, elderlyId);
         if (elderly == null)
         {
-            return ApiResponse<HealthHistoryDto>.Fail("Không tìm thấy người cao tuổi hoặc bạn không có quyền xem care log.");
+            return ApiResponse<HealthHistoryDto>.Fail(AccessDenied.ElderlyMessage, AccessDenied.Errors);
         }
 
         var toDate = VietnamTime.Today;

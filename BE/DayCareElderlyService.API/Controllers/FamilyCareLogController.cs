@@ -90,6 +90,11 @@ public class FamilyCareLogController : ControllerBase
             }
 
             var result = await action(userId.Value);
+            if (AccessDenied.Is(result))
+            {
+                // NFR-03 / DS-03b: cụ không thuộc gia đình này → 403
+                return StatusCode(StatusCodes.Status403Forbidden, result);
+            }
             if (!result.Success)
             {
                 return BadRequest(result);
