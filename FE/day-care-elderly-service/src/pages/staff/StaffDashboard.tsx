@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBell from "../../components/NotificationBell";
 import AssignedElderlyView from "./AssignedElderlyView";
 import CareLogView from "./CareLogView";
 import AttendanceView from "./AttendanceView";
@@ -84,6 +85,7 @@ export const StaffDashboard: React.FC = () => {
         {/* Topbar hiển thị tên mục hiện tại */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 justify-between flex-shrink-0">
           <h1 className="text-base font-bold text-slate-800">{activeItem.label}</h1>
+          <NotificationBell />
         </header>
 
         {/* Vùng nội dung để trống */}

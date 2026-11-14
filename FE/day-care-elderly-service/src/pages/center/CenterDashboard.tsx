@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBell from "../../components/NotificationBell";
 import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History } from "lucide-react";
 import ShiftCalendarView from "./ShiftCalendarView";
 import CenterStaffView from "./CenterStaffView";
@@ -136,6 +137,7 @@ export const CenterDashboard: React.FC = () => {
               • {activeItem.subLabel}
             </span>
           </div>
+          <NotificationBell />
         </header>
 
         {/* Vùng nội dung */}

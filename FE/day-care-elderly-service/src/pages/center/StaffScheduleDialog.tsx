@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import centerStaffService from "../../services/centerStaffService";
 import type { CenterStaff, StaffSchedule } from "../../services/centerStaffService";
 import { formatDateVN, localToday } from "../../lib/date";
@@ -178,7 +177,7 @@ export function StaffScheduleDialog({ staff, onClose, onChanged }: Props) {
               Chưa có lịch nào.
             </p>
           ) : (
-            <ScrollArea className="max-h-72 rounded-lg border">
+            <div className="max-h-72 overflow-y-auto rounded-lg border">
               <ul className="divide-y">
                 {schedules.map((s) => {
                   const isPast = s.workDate < today;
@@ -217,7 +216,7 @@ export function StaffScheduleDialog({ staff, onClose, onChanged }: Props) {
                   );
                 })}
               </ul>
-            </ScrollArea>
+            </div>
           )}
         </div>
 
