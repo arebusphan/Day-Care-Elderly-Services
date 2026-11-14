@@ -4,11 +4,13 @@ import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
 import AccountMenu from "../../components/AccountMenu";
 import UserManagementView from "./UserManagementView";
+import CenterStaffView from "../center/CenterStaffView";
 
 export const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Đã có API: Người dùng, Nhân viên. Các tab còn lại giữ chỗ, chờ BE bổ sung API.
   const menuItems = [
     { id: "overview", label: "Tổng Quan Hệ Thống" },
     { id: "users", label: "Quản Lý Người Dùng" },
@@ -22,7 +24,7 @@ export const AdminDashboard: React.FC = () => {
     { id: "settings", label: "Cài Đặt Hệ Thống" },
   ];
 
-  const [activeTab, setActiveTab] = useState<string>("overview");
+  const [activeTab, setActiveTab] = useState<string>("users");
 
   const handleLogout = () => {
     logout();
@@ -85,7 +87,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* BÊN PHẢI: ĐỂ TRỐNG ĐỂ THIẾT KẾ NỘI DUNG SAU */}
+      {/* BÊN PHẢI: NỘI DUNG TAB */}
       <main className="flex-1 flex flex-col overflow-y-auto bg-slate-50">
         {/* Topbar hiển thị tên mục hiện tại */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 justify-between flex-shrink-0">
@@ -100,6 +102,8 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex-1 p-6">
           {activeTab === "users" ? (
             <UserManagementView />
+          ) : activeTab === "staff" ? (
+            <CenterStaffView />
           ) : (
             <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50 flex items-center justify-center">
               <p className="text-slate-400 text-sm">
