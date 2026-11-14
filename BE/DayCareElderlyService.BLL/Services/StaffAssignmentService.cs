@@ -499,7 +499,7 @@ public class StaffAssignmentService : IStaffAssignmentService
                 FullName = e.FullName,
                 DateOfBirth = e.DateOfBirth,
                 Gender = e.Gender,
-                MobilityStatus = e.MobilityStatus ?? "Normal",
+                MobilityStatus = IsNeedSupport(e) ? "Support" : "Normal",
                 CareNotes = e.CareNotes,
                 EmergencyContactName = e.EmergencyContactName,
                 EmergencyContactPhone = e.EmergencyContactPhone

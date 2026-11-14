@@ -27,8 +27,20 @@ public class DailyPlanningService : IDailyPlanningService
     private static DateOnly GetVietnamToday()
         => DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
 
+    /// <summary>
+    /// Cụ cần hỗ trợ (nhóm Support, tỉ lệ 1:4). Dữ liệu dùng lẫn nhãn tiếng Anh và tiếng Việt
+    /// ("Support" / "Cần hỗ trợ"), nên phải nhận cả hai — trước đây cụ "Cần hỗ trợ" bị xếp vào nhóm Normal.
+    /// Giữ cùng quy tắc với StaffAssignmentService.IsNeedSupport.
+    /// </summary>
     private static bool IsSupport(ElderlyMember? e)
-        => string.Equals(e?.MobilityStatus?.Trim(), "Support", StringComparison.OrdinalIgnoreCase);
+    {
+        var status = e?.MobilityStatus?.Trim();
+        if (string.IsNullOrEmpty(status)) return false;
+        return status.Equals("Support", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cần hỗ trợ", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Need Support", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Yếu", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string NormalizeStatus(string? status)
     {
@@ -257,7 +269,7 @@ public class DailyPlanningService : IDailyPlanningService
                 ElderlyId = f.ElderlyId,
                 MemberCode = $"ELD-{f.ElderlyId:D4}",
                 FullName = e?.FullName ?? "—",
-                MobilityStatus = e?.MobilityStatus ?? "Normal",
+                MobilityStatus = IsSupport(e) ? "Support" : "Normal",
                 Gender = e?.Gender,
                 DateOfBirth = e?.DateOfBirth,
                 ServicePackageName = pkgName,
@@ -445,7 +457,7 @@ public class DailyPlanningService : IDailyPlanningService
                 ElderlyId = e.ElderlyId,
                 MemberCode = $"ELD-{e.ElderlyId:D4}",
                 FullName = e.FullName,
-                MobilityStatus = e.MobilityStatus ?? "Normal",
+                MobilityStatus = IsSupport(e) ? "Support" : "Normal",
                 ServicePackageName = e.ServiceRegistrations.FirstOrDefault(r => r.Status == "Confirmed")?.Package?.PackageName ?? "Gói cơ bản"
             }).ToList();
 
@@ -470,7 +482,7 @@ public class DailyPlanningService : IDailyPlanningService
             ElderlyId = m.ElderlyId,
             MemberCode = $"ELD-{m.ElderlyId:D4}",
             FullName = m.Elderly?.FullName ?? "—",
-            MobilityStatus = m.Elderly?.MobilityStatus ?? "Normal",
+            MobilityStatus = IsSupport(m.Elderly) ? "Support" : "Normal",
             ServicePackageName = m.Elderly?.ServiceRegistrations.FirstOrDefault(r => r.Status == "Confirmed")?.Package?.PackageName
         }).ToList()
     };
