@@ -105,6 +105,75 @@ public class BillingService : IBillingService
             return ApiResponse<ServiceRegistrationResultDto>.Fail("Gói dịch vụ không tồn tại hoặc đã tạm dừng cung cấp.");
         }
 
+        // 3a. BR-83: chỉ đăng ký cho người cao tuổi đã liên kết với tài khoản gia đình.
+        // Trước đây hàm này tự tạo liên kết → gia đình bất kỳ có thể "nhận" cụ của nhà khác và xem care log.
+        var isLinked = await _context.ElderlyFamilyRelationships
+            .AnyAsync(r => r.FamilyMemberId == familyMember.FamilyMemberId && r.ElderlyId == elderly.ElderlyId);
+        if (!isLinked)
+        {
+            return ApiResponse<ServiceRegistrationResultDto>.Fail("Bạn chỉ có thể đăng ký gói cho người thân thuộc tài khoản của mình.");
+        }
+
+        // 3b. Kiểm tra hình thức đăng ký và lịch ngày
+        var registrationType = dto.RegistrationType?.Trim().ToLowerInvariant();
+        if (registrationType is not ("daily" or "monthly"))
+        {
+            return ApiResponse<ServiceRegistrationResultDto>.Fail("Hình thức đăng ký không hợp lệ (daily hoặc monthly).");
+        }
+        if (registrationType == "monthly" && !PackagePricing.MonthlyPatterns.Contains(dto.MonthlyPattern?.Trim().ToLowerInvariant()))
+        {
+            return ApiResponse<ServiceRegistrationResultDto>.Fail("Lịch theo tháng không hợp lệ (all, mwf hoặc tts).");
+        }
+        if (dto.StartDate < VietnamTime.Today)
+        {
+            return ApiResponse<ServiceRegistrationResultDto>.Fail("Ngày bắt đầu không được ở quá khứ.");
+        }
+
+        var numDays = dto.TotalDays;
+        if (registrationType == "daily")
+        {
+            var dates = new List<DateOnly>();
+            foreach (var raw in dto.SelectedDates ?? new List<string>())
+            {
+                if (!DateOnly.TryParse(raw, out var date))
+                {
+                    return ApiResponse<ServiceRegistrationResultDto>.Fail($"Ngày \"{raw}\" không hợp lệ.");
+                }
+                dates.Add(date);
+            }
+            dates = dates.Distinct().ToList();
+            if (dates.Count == 0)
+            {
+                return ApiResponse<ServiceRegistrationResultDto>.Fail("Vui lòng chọn ít nhất một ngày.");
+            }
+            if (dates.Any(d => d < VietnamTime.Today))
+            {
+                return ApiResponse<ServiceRegistrationResultDto>.Fail("Không thể đăng ký ngày đã qua.");
+            }
+            if (dates.Any(d => d.DayOfWeek == DayOfWeek.Sunday))
+            {
+                return ApiResponse<ServiceRegistrationResultDto>.Fail("Trung tâm nghỉ Chủ nhật, vui lòng bỏ chọn ngày Chủ nhật.");
+            }
+            numDays = dates.Count; // số ngày tính tiền lấy từ danh sách ngày, không tin TotalDays từ client
+        }
+
+        // 3c. Gói đã đủ chỗ thì không nhận đăng ký mới (tiêu chí F-03)
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var activeBookings = await _context.ServiceRegistrations
+            .CountAsync(r => r.PackageId == package.PackageId && r.Status == "Confirmed" && (r.EndDate == null || r.EndDate >= today));
+        if (activeBookings >= package.TotalSlots)
+        {
+            return ApiResponse<ServiceRegistrationResultDto>.Fail($"Gói \"{package.PackageName}\" đã hết chỗ ({package.TotalSlots}/{package.TotalSlots}).");
+        }
+
+        // 3d. BR-83 / SR-42: server tự tính tiền; client phải xác nhận đúng giá này (BR-17)
+        var quote = PackagePricing.Calculate(package, elderly, registrationType, dto.MonthlyPattern, numDays, dto.RoomType);
+        if (dto.TotalAmount != quote.Total)
+        {
+            return ApiResponse<ServiceRegistrationResultDto>.Fail(
+                $"Tổng tiền không khớp với giá hiện hành ({quote.Total:N0} đ). Vui lòng tải lại trang và xác nhận lại giá.");
+        }
+
         // 4. Sinh mã đăng ký và số hóa đơn
         var random = new Random();
         var datePrefix = DateTime.UtcNow.ToString("yyyyMMdd");
@@ -112,21 +181,7 @@ public class BillingService : IBillingService
         var invoiceNo = $"HD-{datePrefix}-{random.Next(1000, 9999)}";
         var invoiceVatNo = $"VAT-{datePrefix}-{random.Next(100000, 999999)}";
 
-        // Đảm bảo liên kết gia đình với người cao tuổi để xem được hóa đơn
-        var hasRel = await _context.ElderlyFamilyRelationships
-            .AnyAsync(r => r.FamilyMemberId == familyMember.FamilyMemberId && r.ElderlyId == elderly.ElderlyId);
-        if (!hasRel)
-        {
-            await _context.ElderlyFamilyRelationships.AddAsync(new ElderlyFamilyRelationship
-            {
-                FamilyMemberId = familyMember.FamilyMemberId,
-                ElderlyId = elderly.ElderlyId,
-                Relationship = "Người thân",
-                IsPrimaryContact = true
-            });
-        }
-
-        var endDate = dto.EndDate ?? (dto.RegistrationType == "monthly" ? dto.StartDate.AddMonths(1).AddDays(-1) : dto.StartDate);
+        var endDate = dto.EndDate ?? (registrationType == "monthly" ? dto.StartDate.AddMonths(1).AddDays(-1) : dto.StartDate);
 
         // 5. Lưu ServiceRegistration
         var registration = new ServiceRegistration
@@ -138,13 +193,13 @@ public class BillingService : IBillingService
             Status = "Confirmed",
             CreatedAt = DateTime.UtcNow,
             RegistrationCode = registrationCode,
-            RegistrationType = dto.RegistrationType,
+            RegistrationType = registrationType,
             MonthlyPattern = dto.MonthlyPattern,
             RoomType = dto.RoomType,
-            TotalDays = dto.TotalDays,
-            SupportSurcharge = dto.SupportSurcharge,
-            RoomSurcharge = dto.RoomSurcharge,
-            TotalAmount = dto.TotalAmount,
+            TotalDays = numDays,
+            SupportSurcharge = quote.SupportSurcharge,
+            RoomSurcharge = quote.RoomSurcharge,
+            TotalAmount = quote.Total,
             SelectedDatesJson = dto.SelectedDates != null ? JsonSerializer.Serialize(dto.SelectedDates) : null
         };
 
@@ -160,7 +215,7 @@ public class BillingService : IBillingService
             RegistrationId = registration.RegistrationId,
             InvoiceNo = invoiceNo,
             InvoiceVatNo = invoiceVatNo,
-            TotalAmount = dto.TotalAmount,
+            TotalAmount = quote.Total,
             Status = "Paid",
             IssuedAt = DateTime.UtcNow
         };
@@ -172,7 +227,7 @@ public class BillingService : IBillingService
         {
             RegistrationId = registration.RegistrationId,
             InvoiceId = invoice.InvoiceId,
-            Amount = dto.TotalAmount,
+            Amount = quote.Total,
             PaymentMethod = method,
             PaymentStatus = "Paid",
             TransactionReference = $"TXN-{Random.Shared.Next(10000000, 99999999)}",
@@ -201,7 +256,7 @@ public class BillingService : IBillingService
             PaymentId = payment.PaymentId,
             InvoiceNo = invoiceNo,
             InvoiceVatNo = invoiceVatNo,
-            TotalAmount = dto.TotalAmount,
+            TotalAmount = quote.Total,
             Status = registration.Status,
             CreatedAt = registration.CreatedAt
         };
