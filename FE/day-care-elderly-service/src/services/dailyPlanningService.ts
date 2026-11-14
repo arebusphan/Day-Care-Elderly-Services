@@ -239,6 +239,14 @@ export const dailyPlanningService = {
     return res.data;
   },
 
+  async bulkUpdateStaffAvailability(
+    date: string,
+    updates: { staffId: number; availability: string; note?: string }[]
+  ): Promise<ApiResponse<StaffAvailabilityResult>> {
+    const res = await api.put(`${BASE}/${date}/staff-availability/bulk`, { updates });
+    return res.data;
+  },
+
   // STEP 4: Generate & Reassign Staff
   async generateAssignment(planId: number): Promise<ApiResponse<any>> {
     const res = await api.post(`${BASE}/${planId}/generate-assignment`);

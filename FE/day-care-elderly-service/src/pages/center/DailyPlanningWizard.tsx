@@ -6,6 +6,8 @@ import {
   Plus, Trash2, ArrowRightLeft, ShieldCheck, HeartHandshake,
   UserCheck2, HelpCircle
 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import dailyPlanningService, {
   type DailyPlanSummary,
   type AttendanceForecastResult,
@@ -849,6 +851,31 @@ const Step3StaffAvailability: React.FC<{
     setUpdatingId(null);
   };
 
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  /** Chuyển các NV đang hiển thị (trừ người nghỉ phép) sang Working trong 1 request */
+  const setAllWorking = async () => {
+    const targets = filteredStaff.filter(s => s.availability === "Off");
+    if (targets.length === 0) return;
+    setBulkUpdating(true);
+    try {
+      const res = await dailyPlanningService.bulkUpdateStaffAvailability(
+        date,
+        targets.map(s => ({ staffId: s.userId, availability: "Working" }))
+      );
+      if (res.success && res.data) {
+        onDataLoaded(res.data);
+        onChanged();
+        toast.success(`Đã chuyển ${targets.length} nhân viên sang Working.`);
+      } else {
+        toast.error(res.message || "Không cập nhật được tình trạng nhân viên.");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Không cập nhật được tình trạng nhân viên.");
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
   const filteredStaff = useMemo(() => {
     if (!data) return [];
     return data.staff.filter(s => {
@@ -926,6 +953,16 @@ const Step3StaffAvailability: React.FC<{
               <option value="Off">Off (Nghỉ ca)</option>
               <option value="Leave">Leave (Nghỉ phép)</option>
             </select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulkUpdating || !filteredStaff.some(s => s.availability === "Off")}
+              onClick={setAllWorking}
+              title="Chuyển tất cả nhân viên Off đang hiển thị sang Working (không đổi người nghỉ phép)"
+            >
+              {bulkUpdating ? <Loader2 className="animate-spin" /> : <CheckCircle />}
+              Tất cả Off → Working
+            </Button>
           </div>
 
           {/* Staff List Table */}
