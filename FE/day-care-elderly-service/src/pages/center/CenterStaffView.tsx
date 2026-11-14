@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import centerStaffService from "../../services/centerStaffService";
+import StaffScheduleDialog from "./StaffScheduleDialog";
 import type {
   CenterStaff,
   CenterStaffFilter,
   CreateCenterStaffDto,
   DeactivationWarning,
-  StaffLeave,
   PagedResult,
 } from "../../services/centerStaffService";
 
@@ -43,18 +43,8 @@ export const CenterStaffView: React.FC = () => {
   const [checkingWarning, setCheckingWarning] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
 
-  // ── Staff Leaves Modal State ──────────────────────────────
-  const [leaveTarget, setLeaveTarget] = useState<CenterStaff | null>(null);
-  const [leaves, setLeaves] = useState<StaffLeave[]>([]);
-  const [loadingLeaves, setLoadingLeaves] = useState(false);
-  const [newLeaveDate, setNewLeaveDate] = useState("");
-  const [newLeaveReason, setNewLeaveReason] = useState("");
-  const [leaveError, setLeaveError] = useState<string | null>(null);
-  const [submittingLeave, setSubmittingLeave] = useState(false);
-  const [deletingLeaveId, setDeletingLeaveId] = useState<number | null>(null);
-
-  // Helper date formatted today YYYY-MM-DD
-  const todayStr = new Date().toISOString().split("T")[0];
+  // ── Staff Schedule Dialog ─────────────────────────────────
+  const [scheduleTarget, setScheduleTarget] = useState<CenterStaff | null>(null);
 
   // ── Fetch Staff List ──────────────────────────────────────
   const fetchStaffList = useCallback(async () => {
@@ -156,7 +146,7 @@ export const CenterStaffView: React.FC = () => {
     setStatusTarget(staff);
     setDeactWarning(null);
 
-    // If currently active, manager wants to deactivate -> check upcoming leaves/shifts
+    // If currently active, manager wants to deactivate -> check upcoming schedules
     if (staff.isActive) {
       setCheckingWarning(true);
       try {
@@ -189,112 +179,6 @@ export const CenterStaffView: React.FC = () => {
       alert(err?.response?.data?.message || "Lỗi khi cập nhật trạng thái nhân viên.");
     } finally {
       setTogglingStatus(false);
-    }
-  };
-
-  // ── Handle Staff Leaves Modal ─────────────────────────────
-  const handleOpenLeavesModal = async (staff: CenterStaff) => {
-    setLeaveTarget(staff);
-    setLeaves([]);
-    setNewLeaveDate("");
-    setNewLeaveReason("");
-    setLeaveError(null);
-    setLoadingLeaves(true);
-
-    try {
-      const res = await centerStaffService.getLeaves(staff.userId);
-      if (res.success && res.data) {
-        setLeaves(res.data);
-      } else {
-        setLeaveError(res.message || "Không thể tải danh sách ngày nghỉ.");
-      }
-    } catch (err: any) {
-      setLeaveError(err?.response?.data?.message || "Lỗi kết nối máy chủ khi tải ngày nghỉ.");
-    } finally {
-      setLoadingLeaves(false);
-    }
-  };
-
-  const handleAddLeave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLeaveError(null);
-
-    if (!leaveTarget) return;
-    if (!newLeaveDate) {
-      setLeaveError("Vui lòng chọn ngày nghỉ.");
-      return;
-    }
-
-    // Check past date
-    if (newLeaveDate < todayStr) {
-      setLeaveError("Không thể đặt ngày nghỉ cho ngày đã qua.");
-      return;
-    }
-
-    // Check Sunday
-    const chosenDate = new Date(newLeaveDate + "T00:00:00");
-    if (chosenDate.getDay() === 0) {
-      setLeaveError("Không thể đặt ngày nghỉ vào Chủ nhật (trung tâm nghỉ cố định).");
-      return;
-    }
-
-    setSubmittingLeave(true);
-    try {
-      const res = await centerStaffService.addLeave(leaveTarget.userId, {
-        leaveDate: newLeaveDate,
-        reason: newLeaveReason.trim() || undefined,
-      });
-
-      if (res.success && res.data) {
-        setLeaves((prev) => [res.data!, ...prev].sort((a, b) => b.leaveDate.localeCompare(a.leaveDate)));
-        setNewLeaveDate("");
-        setNewLeaveReason("");
-        setSuccessMsg("Đã thêm ngày nghỉ cho nhân viên thành công.");
-        fetchStaffList(); // refresh today status if applicable
-      } else {
-        setLeaveError(res.message || "Không thể thêm ngày nghỉ.");
-      }
-    } catch (err: any) {
-      setLeaveError(err?.response?.data?.message || "Lỗi khi lưu ngày nghỉ.");
-    } finally {
-      setSubmittingLeave(false);
-    }
-  };
-
-  const handleDeleteLeave = async (leaveId: number) => {
-    if (!leaveTarget) return;
-    if (!confirm("Bạn có chắc chắn muốn xóa ngày nghỉ này?")) return;
-
-    setDeletingLeaveId(leaveId);
-    try {
-      const res = await centerStaffService.deleteLeave(leaveTarget.userId, leaveId);
-      if (res.success) {
-        setLeaves((prev) => prev.filter((l) => l.leaveId !== leaveId));
-        setSuccessMsg("Đã xóa ngày nghỉ.");
-        fetchStaffList();
-      } else {
-        alert(res.message || "Không thể xóa ngày nghỉ.");
-      }
-    } catch (err: any) {
-      alert(err?.response?.data?.message || "Lỗi khi xóa ngày nghỉ.");
-    } finally {
-      setDeletingLeaveId(null);
-    }
-  };
-
-  const formatDateVN = (dStr: string) => {
-    try {
-      const d = new Date(dStr + "T00:00:00");
-      const days = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-      const dayName = days[d.getDay()];
-      const dateFormatted = d.toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-      return `${dayName}, ${dateFormatted}`;
-    } catch {
-      return dStr;
     }
   };
 
@@ -487,11 +371,11 @@ export const CenterStaffView: React.FC = () => {
                       <div className="inline-flex items-center gap-2">
                         {/* Nút Ngày nghỉ */}
                         <button
-                          onClick={() => handleOpenLeavesModal(staff)}
+                          onClick={() => setScheduleTarget(staff)}
                           className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition"
-                          title="Quản lý lịch nghỉ phép của nhân viên"
+                          title="Quản lý lịch làm việc của nhân viên"
                         >
-                          📅 Ngày nghỉ
+                          📅 Lịch làm việc
                         </button>
 
                         {/* Nút Bật / Tắt hoạt động */}
@@ -725,7 +609,7 @@ export const CenterStaffView: React.FC = () => {
                       </p>
                       <p>{deactWarning.message}</p>
                       <p className="text-[11px] text-rose-600">
-                        Vui lòng lưu ý sắp xếp lại ca trực hoặc cập nhật ngày nghỉ trước khi ngừng hoạt động.
+                        Vui lòng lưu ý sắp xếp lại ca trực hoặc cập nhật lịch làm việc trước khi ngừng hoạt động.
                       </p>
                     </div>
                   ) : null}
@@ -764,172 +648,11 @@ export const CenterStaffView: React.FC = () => {
         </div>
       )}
 
-      {/* ── MODAL: QUẢN LÝ NGÀY NGHỈ (STAFF LEAVES) ───────────── */}
-      {leaveTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="p-1 bg-amber-100 text-amber-700 rounded-md">📅</span>
-                  Quản Lý Ngày Nghỉ: {leaveTarget.fullName}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">{leaveTarget.email}</p>
-              </div>
-              <button
-                onClick={() => setLeaveTarget(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Content Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {/* Form Thêm Ngày Nghỉ */}
-              <form onSubmit={handleAddLeave} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  + Thêm Ngày Nghỉ Mới
-                </h4>
-
-                {leaveError && (
-                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
-                    {leaveError}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Chọn ngày nghỉ <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      min={todayStr}
-                      required
-                      value={newLeaveDate}
-                      onChange={(e) => {
-                        setNewLeaveDate(e.target.value);
-                        setLeaveError(null);
-                      }}
-                      className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Chỉ chọn từ hôm nay trở đi (trừ Chủ nhật).
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Lý do nghỉ</label>
-                    <input
-                      type="text"
-                      placeholder="Nghỉ phép cá nhân, ốm, việc gia đình..."
-                      value={newLeaveReason}
-                      onChange={(e) => setNewLeaveReason(e.target.value)}
-                      className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="submit"
-                    disabled={submittingLeave}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {submittingLeave && (
-                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                    )}
-                    Lưu Ngày Nghỉ
-                  </button>
-                </div>
-              </form>
-
-              {/* Danh sách các ngày nghỉ */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Danh Sách Ngày Nghỉ Đã Đặt ({leaves.length})
-                  </h4>
-                  <span className="text-[11px] text-slate-400">
-                    Dữ liệu dùng để tự động loại trừ khi xếp ca làm việc
-                  </span>
-                </div>
-
-                {loadingLeaves ? (
-                  <div className="py-8 text-center text-xs text-slate-400">Đang tải ngày nghỉ...</div>
-                ) : leaves.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                    Nhân viên này hiện chưa có ngày nghỉ nào được ghi nhận.
-                  </div>
-                ) : (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
-                    {leaves.map((leave) => {
-                      const isPast = leave.leaveDate < todayStr;
-                      return (
-                        <div
-                          key={leave.leaveId}
-                          className={`p-3.5 flex items-center justify-between text-xs transition ${
-                            isPast ? "bg-slate-50/50 opacity-60" : "bg-white hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-800 text-sm">
-                                {formatDateVN(leave.leaveDate)}
-                              </span>
-                              {isPast ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-200 text-slate-600">
-                                  Đã qua
-                                </span>
-                              ) : leave.leaveDate === todayStr ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                  Hôm nay
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                                  Sắp tới
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-slate-500">
-                              Lý do: <span className="text-slate-700 font-medium">{leave.reason || "Không ghi chú"}</span>
-                            </p>
-                          </div>
-
-                          <button
-                            onClick={() => handleDeleteLeave(leave.leaveId)}
-                            disabled={deletingLeaveId === leave.leaveId}
-                            className="px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg transition disabled:opacity-40"
-                            title="Xóa ngày nghỉ này"
-                          >
-                            {deletingLeaveId === leave.leaveId ? "Đang xóa..." : "Xóa"}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setLeaveTarget(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StaffScheduleDialog
+        staff={scheduleTarget}
+        onClose={() => setScheduleTarget(null)}
+        onChanged={fetchStaffList}
+      />
     </div>
   );
 };

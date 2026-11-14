@@ -27,22 +27,24 @@ export interface CreateCenterStaffDto {
 
 export interface DeactivationWarning {
   hasFutureSchedules: boolean;
-  futureLeavesCount: number;
-  futureShiftsCount: number;
+  futureSchedulesCount: number;
   message: string | null;
 }
 
-export interface StaffLeave {
-  leaveId: number;
-  userId: number;
-  leaveDate: string;
-  reason: string | null;
+/** Lịch làm việc theo ngày: isWorking = true (đi làm) / false (nghỉ) */
+export interface StaffSchedule {
+  scheduleId: number;
+  staffId: number;
+  workDate: string; // yyyy-MM-dd
+  isWorking: boolean;
+  note: string | null;
   createdAt: string;
 }
 
-export interface CreateStaffLeaveDto {
-  leaveDate: string;
-  reason?: string;
+export interface CreateStaffScheduleDto {
+  workDate: string;
+  isWorking: boolean;
+  note?: string;
 }
 
 export interface PagedResult<T> {
@@ -95,21 +97,21 @@ export const centerStaffService = {
     return res.data;
   },
 
-  /** Lấy danh sách ngày nghỉ */
-  async getLeaves(userId: number): Promise<ApiResponse<StaffLeave[]>> {
-    const res = await api.get(`${BASE}/${userId}/leaves`);
+  /** Lấy lịch làm việc của nhân viên */
+  async getSchedules(userId: number): Promise<ApiResponse<StaffSchedule[]>> {
+    const res = await api.get(`${BASE}/${userId}/schedules`);
     return res.data;
   },
 
-  /** Thêm ngày nghỉ */
-  async addLeave(userId: number, dto: CreateStaffLeaveDto): Promise<ApiResponse<StaffLeave>> {
-    const res = await api.post(`${BASE}/${userId}/leaves`, dto);
+  /** Thêm/cập nhật lịch 1 ngày (BE tự upsert theo ngày) */
+  async setSchedule(userId: number, dto: CreateStaffScheduleDto): Promise<ApiResponse<StaffSchedule>> {
+    const res = await api.post(`${BASE}/${userId}/schedules`, dto);
     return res.data;
   },
 
-  /** Xóa ngày nghỉ */
-  async deleteLeave(userId: number, leaveId: number): Promise<ApiResponse<boolean>> {
-    const res = await api.delete(`${BASE}/${userId}/leaves/${leaveId}`);
+  /** Xóa lịch 1 ngày */
+  async deleteSchedule(userId: number, scheduleId: number): Promise<ApiResponse<boolean>> {
+    const res = await api.delete(`${BASE}/${userId}/schedules/${scheduleId}`);
     return res.data;
   },
 };
