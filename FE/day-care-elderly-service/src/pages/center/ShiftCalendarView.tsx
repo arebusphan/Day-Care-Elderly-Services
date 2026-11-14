@@ -13,6 +13,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import staffAssignmentService from "../../services/staffAssignmentService";
+import { nextWorkingDay } from "../../lib/date";
 import type {
   DailySchedulePlan,
   ElderlyInGroup
@@ -35,10 +36,9 @@ function getTodayString(): string {
   return formatDateString(new Date());
 }
 
+/** Ngày làm việc kế tiếp — bỏ qua Chủ nhật (trung tâm đóng cửa, BE không có kế hoạch) */
 function getTomorrowString(): string {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return formatDateString(tomorrow);
+  return nextWorkingDay();
 }
 
 function getDayAfterTomorrowString(): string {

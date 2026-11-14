@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { nextWorkingDay } from "../../lib/date";
 import dailyPlanningService, {
   type DailyPlanSummary,
   type AttendanceForecastResult,
@@ -18,12 +19,6 @@ import dailyPlanningService, {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function getTomorrowString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 const STEPS = [
   { id: 0, label: "1. Attendance Forecast\nXác nhận người đến", icon: ClipboardList, short: "1. Điểm danh" },
   { id: 1, label: "2. Group Arrangement\nKiểm tra nhóm", icon: Users, short: "2. Xếp nhóm" },
@@ -33,7 +28,8 @@ const STEPS = [
 ];
 
 export const DailyPlanningWizard: React.FC = () => {
-  const [selectedDate, setSelectedDate] = useState(getTomorrowString());
+  // Mặc định ngày làm việc kế tiếp (bỏ qua Chủ nhật — BE trả 400 "Chủ nhật trung tâm đóng cửa")
+  const [selectedDate, setSelectedDate] = useState(nextWorkingDay());
   const [currentStep, setCurrentStep] = useState(0);
   const [planSummary, setPlanSummary] = useState<DailyPlanSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,8 +53,9 @@ export const DailyPlanningWizard: React.FC = () => {
       } else {
         setError(res.message);
       }
-    } catch {
-      setError("Không thể tải kế hoạch cho ngày đã chọn.");
+    } catch (err: any) {
+      // Hiện đúng lý do từ BE (VD: chọn Chủ nhật) thay vì thông báo chung chung
+      setError(err?.response?.data?.message || "Không thể tải kế hoạch cho ngày đã chọn.");
     } finally {
       setLoading(false);
     }
