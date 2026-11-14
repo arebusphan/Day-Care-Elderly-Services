@@ -448,8 +448,11 @@ public class AttendanceService : IAttendanceService
     private static bool HasRole(User user, params string[] roleNames) =>
         user.Roles?.Any(r => roleNames.Contains(r.RoleName)) == true;
 
-    /// <summary>Staff và Manager (role Center/CenterManager) xem được điểm danh của mọi cụ.</summary>
-    private static bool CanViewAllAttendance(User user) => HasRole(user, "Staff", "Center", "CenterManager");
+    /// <summary>
+    /// Staff, Manager (role Center/CenterManager) và Admin xem được điểm danh của mọi cụ
+    /// (Admin dùng chung dashboard Center như các API /api/center khác). Chỉ Staff được check-in/out.
+    /// </summary>
+    private static bool CanViewAllAttendance(User user) => HasRole(user, "Staff", "Center", "CenterManager", "Admin");
 
     private Task<bool> IsFamilyLinkedAsync(int userId, int elderlyId) =>
         _context.ElderlyFamilyRelationships.AnyAsync(r =>
