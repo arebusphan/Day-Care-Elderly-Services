@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import centerStaffService from "../../services/centerStaffService";
 import StaffScheduleDialog from "./StaffScheduleDialog";
+import StaffProfileDialog from "./StaffProfileDialog";
 import type {
   CenterStaff,
   CenterStaffFilter,
@@ -45,6 +46,8 @@ export const CenterStaffView: React.FC = () => {
 
   // ── Staff Schedule Dialog ─────────────────────────────────
   const [scheduleTarget, setScheduleTarget] = useState<CenterStaff | null>(null);
+  // F-04: hồ sơ nghề nghiệp
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
 
   // ── Fetch Staff List ──────────────────────────────────────
   const fetchStaffList = useCallback(async () => {
@@ -371,6 +374,13 @@ export const CenterStaffView: React.FC = () => {
                       <div className="inline-flex items-center gap-2">
                         {/* Nút Ngày nghỉ */}
                         <button
+                          onClick={() => setProfileUserId(staff.userId)}
+                          className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition"
+                          title="Hồ sơ nhân viên (chức vụ, chứng chỉ, ngày vào làm)"
+                        >
+                          Hồ sơ
+                        </button>
+                        <button
                           onClick={() => setScheduleTarget(staff)}
                           className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition"
                           title="Quản lý lịch làm việc của nhân viên"
@@ -648,6 +658,7 @@ export const CenterStaffView: React.FC = () => {
         </div>
       )}
 
+      <StaffProfileDialog userId={profileUserId} onClose={() => setProfileUserId(null)} onSaved={fetchStaffList} />
       <StaffScheduleDialog
         staff={scheduleTarget}
         onClose={() => setScheduleTarget(null)}

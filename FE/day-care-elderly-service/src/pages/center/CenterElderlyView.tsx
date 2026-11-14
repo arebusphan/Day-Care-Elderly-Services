@@ -4,6 +4,8 @@ import {
   Phone, MapPin, AlertCircle, X, Eye, Loader2, RefreshCw
 } from "lucide-react";
 import api from "../../services/api";
+import ElderlyEditDialog from "./ElderlyEditDialog";
+import InactiveElderlyDialog from "./InactiveElderlyDialog";
 
 export interface CenterElderlyItem {
   elderlyId: number;
@@ -37,6 +39,9 @@ export const CenterElderlyView: React.FC = () => {
 
   // Selected for detail modal
   const [selectedElderly, setSelectedElderly] = useState<CenterElderlyItem | null>(null);
+  // SRS 3.4.3: Manager sửa / vô hiệu hóa hồ sơ
+  const [editId, setEditId] = useState<number | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const fetchElderlyList = useCallback(async () => {
     setLoading(true);
@@ -151,6 +156,13 @@ export const CenterElderlyView: React.FC = () => {
               title="Làm mới"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            </button>
+            <button
+              onClick={() => setShowInactive(true)}
+              className="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"
+              title="Hồ sơ đã vô hiệu hóa"
+            >
+              Đã vô hiệu hóa
             </button>
           </div>
         </div>
@@ -322,7 +334,13 @@ export const CenterElderlyView: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <button
+                onClick={() => { setEditId(selectedElderly.elderlyId); setSelectedElderly(null); }}
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              >
+                Sửa hồ sơ
+              </button>
               <button
                 onClick={() => setSelectedElderly(null)}
                 className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
@@ -333,6 +351,9 @@ export const CenterElderlyView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ElderlyEditDialog elderlyId={editId} onClose={() => setEditId(null)} onChanged={fetchElderlyList} />
+      <InactiveElderlyDialog open={showInactive} onClose={() => setShowInactive(false)} onChanged={fetchElderlyList} />
     </div>
   );
 };
