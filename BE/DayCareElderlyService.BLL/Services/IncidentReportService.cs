@@ -103,6 +103,16 @@ public class IncidentReportService : IIncidentReportService
                 query = query.Where(i => i.IsSupplyConfirmed == filter.IsSupplyConfirmed.Value);
             }
 
+            if (filter.FromDate.HasValue)
+            {
+                query = query.Where(i => i.OccurredAt >= filter.FromDate.Value);
+            }
+
+            if (filter.ToDate.HasValue)
+            {
+                query = query.Where(i => i.OccurredAt <= filter.ToDate.Value);
+            }
+
             if (!string.IsNullOrWhiteSpace(filter.Search))
             {
                 var term = filter.Search.Trim().ToLower();

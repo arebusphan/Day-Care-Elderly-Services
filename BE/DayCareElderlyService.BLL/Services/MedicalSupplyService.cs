@@ -185,6 +185,11 @@ public class MedicalSupplyService : IMedicalSupplyService
                 return ApiResponse<MedicalSupplyDto>.Fail("Không tìm thấy vật tư y tế.", new List<string> { "SUPPLY_NOT_FOUND" });
             }
 
+            if (dto.AdjustmentQuantity == 0)
+            {
+                return ApiResponse<MedicalSupplyDto>.Fail("Số lượng điều chỉnh kho phải khác 0.", new List<string> { "ZERO_ADJUSTMENT_QUANTITY" });
+            }
+
             var previousStock = supply.QuantityInStock;
             var newStock = previousStock + dto.AdjustmentQuantity;
             if (newStock < 0)
