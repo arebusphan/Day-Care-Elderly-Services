@@ -75,6 +75,7 @@ builder.Services.AddScoped<IIncidentReportService, IncidentReportService>();
 builder.Services.AddScoped<IIncidentOperationsService, IncidentOperationsService>();
 builder.Services.AddScoped<AiShiftSuggestionService>();
 builder.Services.AddScoped<IMedicalSupplyService, MedicalSupplyService>();
+builder.Services.AddScoped<IMedicalSupplyAnalyticsService, MedicalSupplyAnalyticsService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 // 4. CORS
