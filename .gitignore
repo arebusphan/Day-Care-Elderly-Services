@@ -21,3 +21,6 @@ Thumbs.db
 node_modules/
 **/node_modules/
 dist/
+
+## Test scripts chạy local, không đưa lên git
+tests/

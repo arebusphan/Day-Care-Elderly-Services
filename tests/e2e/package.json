@@ -1,9 +1,0 @@
-{
-  "name": "daycare-e2e",
-  "private": true,
-  "type": "module",
-  "description": "E2E: gọi API qua service FE thật (Vite SSR) + smoke UI bằng trình duyệt headless",
-  "dependencies": {
-    "playwright-core": "1.56.1"
-  }
-}
