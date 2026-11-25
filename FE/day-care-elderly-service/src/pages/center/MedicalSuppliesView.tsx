@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Loader2, Package, Pencil, Plus, RefreshCw, Search } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, BarChart3, Loader2, Package, Pencil, Plus, RefreshCw, Search } from "lucide-react";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import medicalSupplyService, { isLowStock } from "../../services/medicalSupplySe
 import type { MedicalSupply } from "../../services/medicalSupplyService";
 import type { PagedResult } from "../../types/common";
 import TablePagination from "../../components/TablePagination";
+import MedicalSupplyAnalyticsPanel from "./MedicalSupplyAnalyticsPanel";
 
 const PAGE_SIZE = 10;
 
@@ -48,6 +49,7 @@ export function MedicalSuppliesView() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [view, setView] = useState<View>("all");
+  const [mainTab, setMainTab] = useState<"inventory" | "analytics">("inventory");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
@@ -184,7 +186,31 @@ export function MedicalSuppliesView() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      {/* Tab điều hướng chính: Kho vật tư vs Báo cáo phân tích */}
+      <div className="flex items-center gap-2 border-b pb-2">
+        <Button
+          variant={mainTab === "inventory" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMainTab("inventory")}
+          className="gap-2"
+        >
+          <Package className="size-4" /> Danh mục & Tồn kho
+        </Button>
+        <Button
+          variant={mainTab === "analytics" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMainTab("analytics")}
+          className="gap-2"
+        >
+          <BarChart3 className="size-4" /> Báo cáo & Phân tích tiêu hao
+        </Button>
+      </div>
+
+      {mainTab === "analytics" ? (
+        <MedicalSupplyAnalyticsPanel />
+      ) : (
+        <>
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="size-4 text-sky-600" /> Vật tư y tế
@@ -406,6 +432,8 @@ export function MedicalSuppliesView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }
