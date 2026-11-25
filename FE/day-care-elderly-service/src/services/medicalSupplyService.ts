@@ -1,6 +1,19 @@
 import api from "./api";
 import { cleanParams } from "../types/common";
 import type { ApiResponse, PagedResult } from "../types/common";
+import type {
+  SupplyConsumptionSummary,
+  TopUsedSupply,
+  ExpiringSupplyAlert,
+  ElderlySupplyChargeReport,
+} from "../types/supplyAnalytics";
+
+export type {
+  SupplyConsumptionSummary,
+  TopUsedSupply,
+  ExpiringSupplyAlert,
+  ElderlySupplyChargeReport,
+} from "../types/supplyAnalytics";
 
 export interface MedicalSupply {
   supplyId: number;
@@ -76,6 +89,44 @@ export const medicalSupplyService = {
 
   async toggleStatus(id: number): Promise<ApiResponse<MedicalSupply>> {
     const res = await api.patch(`${BASE}/${id}/toggle-status`);
+    return res.data;
+  },
+
+  /**
+   * WF-05 / D2: Thống kê tổng quan tồn kho, giá trị tài sản vật tư và chi phí sự cố.
+   */
+  async getAnalyticsSummary(): Promise<ApiResponse<SupplyConsumptionSummary>> {
+    const res = await api.get(`${BASE}/analytics/summary`);
+    return res.data;
+  },
+
+  /**
+   * Thống kê top vật tư y tế tiêu hao nhiều nhất theo số lượng và chi phí.
+   */
+  async getTopConsumed(limit = 10, months: number | null = 1): Promise<ApiResponse<TopUsedSupply[]>> {
+    const res = await api.get(`${BASE}/analytics/top-consumed`, {
+      params: cleanParams({ limit, months }),
+    });
+    return res.data;
+  },
+
+  /**
+   * SR-04: Quét và cảnh báo danh sách vật tư y tế sắp hết hạn hoặc đã quá hạn sử dụng.
+   */
+  async getExpiringSupplies(thresholdDays = 30): Promise<ApiResponse<ExpiringSupplyAlert[]>> {
+    const res = await api.get(`${BASE}/analytics/expiring`, {
+      params: cleanParams({ thresholdDays }),
+    });
+    return res.data;
+  },
+
+  /**
+   * Báo cáo tổng hợp chi phí vật tư sơ cấp cứu phát sinh theo từng người cao tuổi.
+   */
+  async getElderlyCharges(months: number | null = 1): Promise<ApiResponse<ElderlySupplyChargeReport[]>> {
+    const res = await api.get(`${BASE}/analytics/elderly-charges`, {
+      params: cleanParams({ months }),
+    });
     return res.data;
   },
 };
