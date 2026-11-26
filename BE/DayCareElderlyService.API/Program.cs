@@ -60,6 +60,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IElderlyService, ElderlyService>();
+builder.Services.AddHttpClient<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ICareLogService, CareLogService>();
 builder.Services.AddScoped<IFamilyCareLogService, FamilyCareLogService>();

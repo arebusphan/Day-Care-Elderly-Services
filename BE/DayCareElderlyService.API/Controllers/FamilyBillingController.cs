@@ -97,6 +97,95 @@ public class FamilyBillingController : ControllerBase
     }
 
     /// <summary>
+    /// Tạo liên kết thanh toán PayOS cho đăng ký gói dịch vụ
+    /// </summary>
+    [HttpPost("packages/payos/create")]
+    [ProducesResponseType(typeof(ApiResponse<PayOSRegistrationResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PayOSRegistrationResultDto>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreatePayOSPayment([FromBody] CreatePayOSRegistrationDto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(ApiResponse<PayOSRegistrationResultDto>.Fail("Dữ liệu không hợp lệ.", errors));
+            }
+
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse.Fail("Không xác định được người dùng."));
+
+            var result = await _billingService.CreatePayOSRegistrationAsync(userId.Value, dto);
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi tạo thanh toán PayOS: {Message}", ex.Message);
+            var detail = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message;
+            return StatusCode(500, ApiResponse.Fail($"Lỗi khi tạo thanh toán PayOS: {detail}"));
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra trạng thái giao dịch PayOS và tự động xác nhận nếu đã thanh toán
+    /// </summary>
+    [HttpGet("packages/payos/status/{orderCode:long}")]
+    [ProducesResponseType(typeof(ApiResponse<PayOSStatusResultDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPayOSStatus(long orderCode)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse.Fail("Không xác định được người dùng."));
+
+            var result = await _billingService.GetPayOSStatusAsync(userId.Value, orderCode);
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi kiểm tra trạng thái PayOS {OrderCode}", orderCode);
+            return StatusCode(500, ApiResponse.Fail($"Lỗi kiểm tra trạng thái PayOS: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Hủy liên kết thanh toán PayOS đang chờ
+    /// </summary>
+    [HttpPost("packages/payos/cancel/{orderCode:long}")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> CancelPayOSPayment(long orderCode)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse.Fail("Không xác định được người dùng."));
+
+            var result = await _billingService.CancelPayOSPaymentAsync(userId.Value, orderCode);
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi hủy thanh toán PayOS {OrderCode}", orderCode);
+            return StatusCode(500, ApiResponse.Fail($"Lỗi hủy thanh toán PayOS: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
     /// Lấy danh sách hóa đơn của gia đình
     /// </summary>
     [HttpGet("billing/invoices")]

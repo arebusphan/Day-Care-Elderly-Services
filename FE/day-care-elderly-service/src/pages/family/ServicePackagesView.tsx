@@ -3,7 +3,8 @@ import elderlyService from "../../services/elderlyService";
 import type { ElderlyProfileDto } from "../../types/elderly";
 import {
   billingApiService,
-  type CreateRegistrationRequest,
+  type CreatePayOSRegistrationRequest,
+  type PayOSRegistrationResultDto,
 } from "../../services/billingApiService";
 
 // =====================================================================
@@ -1000,6 +1001,8 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
   const [countdown, setCountdown] = useState(900);
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed" | "expired" | null>(null);
   const [registrationCode, setRegistrationCode] = useState("");
+  const [payosInfo, setPayosInfo] = useState<PayOSRegistrationResultDto | null>(null);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   // Data
   const [packages, setPackages] = useState<ServicePackage[]>(DEFAULT_PACKAGES);
@@ -1161,81 +1164,150 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
     setCurrentStep(4);
     setHoldActive(false);
     setPaymentStatus(null);
+    setPayosInfo(null);
     setCountdown(900);
   };
 
-  const handleHoldAndPay = () => {
-    setHoldActive(true);
-    setCountdown(900);
-    setPaymentStatus("pending");
+  const completePayOSSuccess = useCallback(
+    async (regCode?: string) => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setHoldActive(false);
+      if (regCode) setRegistrationCode(regCode);
+      setPaymentStatus("success");
+      if (selectedElderlyId) {
+        setSessionRegistrations((prev) => [
+          ...prev,
+          { elderlyId: selectedElderlyId, dates: selectedDates },
+        ]);
+      }
+      try {
+        const refreshPkg = await billingApiService.getActivePackages();
+        if (refreshPkg.success && refreshPkg.data) {
+          setPackages((prev) =>
+            prev.map((p) => {
+              const updated = refreshPkg.data?.find((d) => d.packageId === p.id);
+              return updated ? { ...p, availableSlots: updated.availableSlots } : p;
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Lỗi cập nhật danh sách gói:", err);
+      }
+    },
+    [selectedElderlyId, selectedDates]
+  );
+
+  const checkPayOSStatusOnce = useCallback(
+    async (orderCode: number, showPendingAlert = false) => {
+      try {
+        const res = await billingApiService.getPayOSStatus(orderCode);
+        if (!res.success || !res.data) return;
+
+        const status = (res.data.status || "").toUpperCase();
+        if (status === "PAID") {
+          await completePayOSSuccess(res.data.registrationCode);
+        } else if (status === "CANCELLED") {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setHoldActive(false);
+          setPaymentStatus("failed");
+        } else if (status === "EXPIRED") {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setHoldActive(false);
+          setPaymentStatus("expired");
+        } else if (showPendingAlert) {
+          alert("Hệ thống chưa ghi nhận thanh toán. Vui lòng hoàn tất chuyển khoản hoặc đợi vài giây rồi thử lại.");
+        }
+      } catch (err) {
+        console.error("Lỗi kiểm tra trạng thái PayOS:", err);
+      }
+    },
+    [completePayOSSuccess]
+  );
+
+  // Tự động kiểm tra trạng thái PayOS mỗi 3 giây khi đang chờ thanh toán
+  useEffect(() => {
+    if (paymentStatus !== "pending" || !payosInfo?.orderCode) return;
+
+    const interval = setInterval(() => {
+      void checkPayOSStatusOnce(payosInfo.orderCode, false);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [paymentStatus, payosInfo?.orderCode, checkPayOSStatusOnce]);
+
+  const handleHoldAndPay = async () => {
+    if (!selectedPackage || !selectedElderly || !pricing) return;
+
+    setIsSubmitting(true);
+    try {
+      const startIso =
+        regType === "monthly"
+          ? monthlyStartDate || fmt(new Date())
+          : selectedDates[0] || fmt(new Date());
+      const endIso =
+        regType === "monthly" && monthlyStartDate
+          ? fmt(getMonthEndDate(parseDateStr(monthlyStartDate)))
+          : selectedDates[selectedDates.length - 1] || startIso;
+
+      const returnUrl = `${window.location.origin}/dashboard/family`;
+      const req: CreatePayOSRegistrationRequest = {
+        packageId: selectedPackage.id,
+        elderlyId: selectedElderly.elderlyId,
+        registrationType: regType,
+        monthlyPattern: regType === "monthly" ? monthlyPattern : undefined,
+        startDate: startIso,
+        endDate: endIso,
+        roomType: roomType,
+        totalDays: totalDays,
+        packagePrice: pricing.packagePrice,
+        supportSurcharge: pricing.supportSurcharge,
+        roomSurcharge: pricing.roomSurcharge,
+        totalAmount: pricing.total,
+        selectedDates: selectedDates,
+        paymentMethod: "Chuyển khoản QR (PayOS)",
+        returnUrl,
+        cancelUrl: returnUrl,
+      };
+
+      const res = await billingApiService.createPayOSPayment(req);
+      if (res.success && res.data) {
+        setPayosInfo(res.data);
+        setRegistrationCode(res.data.registrationCode);
+        setHoldActive(true);
+        setCountdown(900);
+        setPaymentStatus("pending");
+      } else {
+        alert(res.message || "Không thể tạo liên kết thanh toán PayOS.");
+      }
+    } catch (err: any) {
+      console.error("Lỗi tạo thanh toán PayOS:", err);
+      alert(err?.response?.data?.message || "Có lỗi xảy ra khi khởi tạo thanh toán PayOS.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handlePaymentResult = async (result: "success" | "failed") => {
+  const handleCheckPayOSNow = async () => {
+    if (!payosInfo?.orderCode) return;
+    setIsCheckingPayment(true);
+    try {
+      await checkPayOSStatusOnce(payosInfo.orderCode, true);
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  };
+
+  const handleCancelPayOS = async () => {
     if (countdownRef.current) clearInterval(countdownRef.current);
     setHoldActive(false);
-    if (result === "success") {
-      if (selectedPackage && selectedElderly && pricing) {
-        setIsSubmitting(true);
-        try {
-          const startIso =
-            regType === "monthly"
-              ? monthlyStartDate || fmt(new Date())
-              : selectedDates[0] || fmt(new Date());
-          const endIso =
-            regType === "monthly" && monthlyStartDate
-              ? fmt(getMonthEndDate(parseDateStr(monthlyStartDate)))
-              : selectedDates[selectedDates.length - 1] || startIso;
-
-          const req: CreateRegistrationRequest = {
-            packageId: selectedPackage.id,
-            elderlyId: selectedElderly.elderlyId,
-            registrationType: regType,
-            monthlyPattern: regType === "monthly" ? monthlyPattern : undefined,
-            startDate: startIso,
-            endDate: endIso,
-            roomType: roomType,
-            totalDays: totalDays,
-            packagePrice: pricing.packagePrice,
-            supportSurcharge: pricing.supportSurcharge,
-            roomSurcharge: pricing.roomSurcharge,
-            totalAmount: pricing.total,
-            selectedDates: selectedDates,
-            paymentMethod: "Chuyển khoản QR (VietQR / VNPay)",
-          };
-
-          const res = await billingApiService.registerPackage(req);
-          if (res.success && res.data) {
-            setRegistrationCode(res.data.registrationCode);
-            setPaymentStatus("success");
-            setSessionRegistrations((prev) => [
-              ...prev,
-              { elderlyId: selectedElderlyId!, dates: selectedDates },
-            ]);
-            // Cập nhật số chỗ trống từ API
-            const refreshPkg = await billingApiService.getActivePackages();
-            if (refreshPkg.success && refreshPkg.data) {
-              setPackages((prev) =>
-                prev.map((p) => {
-                  const updated = refreshPkg.data?.find((d) => d.packageId === p.id);
-                  return updated ? { ...p, availableSlots: updated.availableSlots } : p;
-                })
-              );
-            }
-          } else {
-            alert(res.message || "Đăng ký không thành công");
-            setPaymentStatus("failed");
-          }
-        } catch (err: any) {
-          console.error("Lỗi đăng ký dịch vụ:", err);
-          alert(err?.response?.data?.message || "Có lỗi xảy ra khi lưu đăng ký gói vào hệ thống");
-          setPaymentStatus("failed");
-        } finally {
-          setIsSubmitting(false);
-        }
+    if (payosInfo?.orderCode) {
+      try {
+        await billingApiService.cancelPayOSPayment(payosInfo.orderCode);
+      } catch (err) {
+        console.error("Lỗi hủy giao dịch PayOS:", err);
       }
-    } else {
-      setPaymentStatus("failed");
     }
+    setPaymentStatus("failed");
   };
 
   const handleStartOver = () => {
@@ -1249,6 +1321,7 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
     setRoomType("large");
     setHoldActive(false);
     setPaymentStatus(null);
+    setPayosInfo(null);
     setCountdown(900);
     setRegistrationCode("");
   };
@@ -2184,67 +2257,97 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
       );
     }
 
-    // Payment pending screen
-    if (paymentStatus === "pending") {
+    // Payment pending screen (Real PayOS)
+    if (paymentStatus === "pending" && payosInfo) {
+      const vietQrUrl =
+        payosInfo.bin && payosInfo.accountNumber
+          ? `https://img.vietqr.io/image/${payosInfo.bin}-${payosInfo.accountNumber}-compact2.png?amount=${payosInfo.amount}&addInfo=${encodeURIComponent(
+              payosInfo.description
+            )}&accountName=${encodeURIComponent(payosInfo.accountName || "")}`
+          : "";
+
       return (
         <div className="max-w-lg mx-auto text-center">
           <div className="bg-white rounded-2xl border border-blue-200 shadow-lg p-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-2">
-              Thanh toán
+              Thanh toán qua PayOS
             </h2>
             <div
-              className={`text-4xl font-bold font-mono mb-4 ${
+              className={`text-4xl font-bold font-mono mb-2 ${
                 countdown <= 60 ? "text-red-600" : "text-blue-700"
               }`}
             >
               {formatCountdown(countdown)}
             </div>
-            <p className="text-base text-slate-500 mb-6">
-              Chỗ đang được giữ. Vui lòng hoàn tất thanh toán.
+            <p className="text-sm text-slate-500 mb-5">
+              Quét mã QR bằng ứng dụng ngân hàng hoặc mở trang thanh toán PayOS để hoàn tất.
             </p>
 
-            <div className="bg-slate-50 rounded-xl p-4 text-left text-lg font-bold text-slate-800 mb-6">
-              Số tiền: {formatCurrency(pricing.total)}
+            {vietQrUrl && (
+              <div className="flex justify-center mb-5">
+                <img
+                  src={vietQrUrl}
+                  alt="Mã QR thanh toán PayOS"
+                  className="w-64 h-auto rounded-xl border border-slate-200 shadow-sm"
+                />
+              </div>
+            )}
+
+            <div className="bg-slate-50 rounded-xl p-4 text-left text-sm space-y-2 mb-5 border border-slate-200">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Mã đơn PayOS:</span>
+                <span className="font-mono font-semibold text-slate-800">{payosInfo.orderCode}</span>
+              </div>
+              {payosInfo.accountNumber && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Số tài khoản:</span>
+                  <span className="font-mono font-semibold text-slate-800">{payosInfo.accountNumber}</span>
+                </div>
+              )}
+              {payosInfo.accountName && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Chủ tài khoản:</span>
+                  <span className="font-semibold text-slate-800">{payosInfo.accountName}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nội dung CK:</span>
+                <span className="font-mono font-semibold text-slate-800">{payosInfo.description}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-slate-200 text-base">
+                <span className="font-bold text-slate-700">Số tiền:</span>
+                <span className="font-bold text-blue-700">{formatCurrency(payosInfo.amount)}</span>
+              </div>
             </div>
 
-            <p className="text-sm text-slate-400 mb-4">
-              (Đây là thanh toán giả để thử nghiệm)
-            </p>
+            <div className="flex items-center justify-center gap-2 text-xs text-blue-600 mb-5">
+              <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <span>Đang tự động kiểm tra trạng thái thanh toán...</span>
+            </div>
+
             <div className="space-y-3">
+              {payosInfo.checkoutUrl && (
+                <a
+                  href={payosInfo.checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-3 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 transition shadow-sm"
+                >
+                  Mở trang thanh toán PayOS ↗
+                </a>
+              )}
               <button
-                onClick={() => handlePaymentResult("success")}
-                disabled={isSubmitting}
-                className={`w-full py-3 bg-green-600 text-white rounded-xl text-base font-semibold transition flex items-center justify-center gap-2 ${
-                  isSubmitting
-                    ? "opacity-60 cursor-not-allowed"
-                    : "hover:bg-green-700 cursor-pointer shadow-sm"
-                }`}
+                onClick={handleCheckPayOSNow}
+                disabled={isCheckingPayment}
+                className="w-full py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 transition disabled:opacity-60 cursor-pointer"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu đăng ký vào hệ thống...</span>
-                  </>
-                ) : (
-                  <span>Mô phỏng: Thanh toán thành công</span>
-                )}
+                {isCheckingPayment ? "Đang kiểm tra..." : "Tôi đã thanh toán — Kiểm tra ngay"}
               </button>
               <button
-                onClick={() => handlePaymentResult("failed")}
-                className="w-full py-3 bg-red-500 text-white rounded-xl text-base font-semibold hover:bg-red-600 transition"
+                onClick={handleCancelPayOS}
+                className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl text-base font-semibold hover:bg-slate-200 transition cursor-pointer"
               >
-                Mô phỏng: Thanh toán thất bại
-              </button>
-              <button
-                onClick={() => {
-                  if (countdownRef.current) clearInterval(countdownRef.current);
-                  setHoldActive(false);
-                  setCountdown(0);
-                  setPaymentStatus("expired");
-                }}
-                className="w-full py-3 bg-amber-500 text-white rounded-xl text-base font-semibold hover:bg-amber-600 transition"
-              >
-                Mô phỏng: Hết thời gian giữ chỗ
+                Hủy thanh toán
               </button>
             </div>
           </div>
@@ -2392,9 +2495,10 @@ export const ServicePackagesView: React.FC<ServicePackagesViewProps> = ({
           </button>
           <button
             onClick={handleHoldAndPay}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-base font-bold hover:bg-blue-700 transition shadow-md"
+            disabled={isSubmitting}
+            className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-base font-bold hover:bg-blue-700 transition shadow-md disabled:opacity-60 cursor-pointer"
           >
-            Giữ chỗ và thanh toán
+            {isSubmitting ? "Đang tạo mã thanh toán PayOS..." : "Thanh toán qua PayOS"}
           </button>
         </div>
       </div>
