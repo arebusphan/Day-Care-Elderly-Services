@@ -25,10 +25,14 @@ const AttendanceView: React.FC = () => {
   const reload = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const [list, group] = await Promise.all([attendanceService.getByDate(localDate()), staffAssignmentService.getMyCareGroup(localDate())]);
+      const [all, group] = await Promise.all([attendanceService.getByDate(localDate()), staffAssignmentService.getMyCareGroup(localDate())]);
+      const people = group.data?.elderlyList ?? [];
+      // API điểm danh trả về cả trung tâm: chỉ giữ cụ thuộc nhóm nhân viên phụ trách hôm nay
+      const mine = new Set(people.map(p => p.elderlyId));
+      const list = all.filter(x => mine.has(x.elderlyId));
       setAttendance(list);
-      setAssigned(group.data?.elderlyList ?? []);
-      if (date === localDate()) setPresent(await attendanceService.getPresentToday());
+      setAssigned(people);
+      if (date === localDate()) setPresent((await attendanceService.getPresentToday()).filter(x => mine.has(x.elderlyId)));
       else setPresent(list.filter(x => x.checkInAt && !x.checkOutAt));
     } catch (err: any) { setError(err?.response?.data?.message || "Không tải được danh sách điểm danh."); }
     finally { setLoading(false); }
