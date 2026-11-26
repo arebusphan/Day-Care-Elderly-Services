@@ -136,22 +136,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Bổ sung schema cho các tính năng mới (script idempotent, xem Models/Migrations/Apply_AddOperationsFeatures.sql)
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
-    {
-        await OperationsSchema.EnsureAsync(db);
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "Không áp dụng được Apply_AddOperationsFeatures.sql — hãy chạy script này thủ công.");
-    }
-}
-
-// Run DB Initializer to seed default Roles and Admin user
-//await DbInitializer.SeedDefaultDataAsync(app.Services);
+// Database migrations and seeders are intentionally not run during API startup.
 
 if (app.Environment.IsDevelopment())
 {
