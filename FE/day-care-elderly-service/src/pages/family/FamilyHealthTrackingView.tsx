@@ -2,19 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import elderlyService from "../../services/elderlyService";
 import familyCareLogService from "../../services/familyCareLogService";
 import type { CareLogDay, CareLogEntry } from "../../services/careLogService";
-import type { CareLogDaySummary, DoseRecord, FamilyIncident, HealthHistory } from "../../services/familyCareLogService";
+import type { DoseRecord, FamilyIncident, HealthHistory } from "../../services/familyCareLogService";
 import type { ElderlyProfileDto } from "../../types/elderly";
-
-const typeLabels: Record<string, string> = {
-  MEAL: "Ăn uống",
-  HYGIENE: "Vệ sinh",
-  NAP: "Nghỉ ngơi",
-  MOOD: "Tâm trạng",
-  ACTIVITY: "Hoạt động",
-  NOTE: "Ghi nhận",
-  VITALS: "Chỉ số sức khỏe",
-  MEDICATION: "Thuốc",
-};
+import CareLogDataDetails from "../../components/CareLogDataDetails";
+import { careTypeLabels as typeLabels, incidentStatusLabels, incidentTypeLabels, severityLabels } from "../../lib/careLogLabels";
 
 const formatDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("vi-VN", {
   weekday: "long",
@@ -28,8 +19,6 @@ const formatTime = (value: string) => new Date(value).toLocaleTimeString("vi-VN"
   minute: "2-digit",
 });
 
-const dateParam = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
 type TrackingSection = "timeline" | "health" | "incidents";
 
 const FamilyHealthTrackingView: React.FC = () => {
@@ -39,7 +28,6 @@ const FamilyHealthTrackingView: React.FC = () => {
   const [refreshTick, setRefreshTick] = useState(0);
   const [today, setToday] = useState<CareLogDay | null>(null);
   const [timeline, setTimeline] = useState<CareLogDay[]>([]);
-  const [history, setHistory] = useState<CareLogDaySummary[]>([]);
   const [health, setHealth] = useState<HealthHistory | null>(null);
   const [incidents, setIncidents] = useState<FamilyIncident[]>([]);
   const [activeSection, setActiveSection] = useState<TrackingSection>("timeline");
@@ -74,21 +62,17 @@ const FamilyHealthTrackingView: React.FC = () => {
     let cancelled = false;
     setLoadingTimeline(true);
     setError("");
-    const toDate = new Date();
-    const fromDate = new Date(toDate);
-    fromDate.setDate(fromDate.getDate() - days + 1);
+    // Số đếm lấy từ chính các mục đang hiển thị (timeline), không dùng /history vì API đó đếm khác.
     Promise.all([
       familyCareLogService.getTimeline(selectedId, days),
       familyCareLogService.getDay(selectedId),
-      familyCareLogService.getHistory(selectedId, dateParam(fromDate), dateParam(toDate)),
       familyCareLogService.getHealth(selectedId, days),
       familyCareLogService.getIncidents(days),
     ])
-      .then(([timelineResult, todayResult, historyResult, healthResult, incidentResult]) => {
+      .then(([timelineResult, todayResult, healthResult, incidentResult]) => {
         if (cancelled) return;
         setTimeline(timelineResult);
         setToday(todayResult);
-        setHistory(historyResult);
         setHealth(healthResult);
         setIncidents(incidentResult.filter((incident) => incident.elderlyId === selectedId));
       })
@@ -96,7 +80,6 @@ const FamilyHealthTrackingView: React.FC = () => {
         if (!cancelled) {
           setTimeline([]);
           setToday(null);
-          setHistory([]);
           setHealth(null);
           setIncidents([]);
           setError(err?.response?.data?.message || "Không tải được dòng thời gian chăm sóc.");
@@ -118,7 +101,6 @@ const FamilyHealthTrackingView: React.FC = () => {
     [profiles, selectedId],
   );
   const entryCount = timeline.reduce((count, day) => count + day.entries.length, 0);
-  const historyEntryCount = history.reduce((count, day) => count + day.entryCount, 0);
   const selectedIncidents = incidents.filter((incident) => incident.elderlyId === selectedId);
 
   return (
@@ -156,7 +138,7 @@ const FamilyHealthTrackingView: React.FC = () => {
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <SummaryCard label="Ghi nhận hôm nay" value={today?.entries.length ?? 0} detail="trong ngày" />
-              <SummaryCard label="Ngày có ghi nhận" value={history.length} detail={`${historyEntryCount} ghi nhận`} />
+              <SummaryCard label="Ngày có ghi nhận" value={timeline.length} detail={`${entryCount} ghi nhận`} />
               <SummaryCard label="Chỉ số sức khỏe" value={health?.vitals.length ?? 0} detail="lần đo" />
               <SummaryCard label="Lịch sử thuốc" value={health?.doses.length ?? 0} detail="liều trong kỳ" />
               <SummaryCard label="Sự cố / cảnh báo" value={selectedIncidents.length} detail="ghi nhận" />
@@ -172,7 +154,7 @@ const FamilyHealthTrackingView: React.FC = () => {
               <SectionHeader title="Dòng thời gian chăm sóc" subtitle={selected?.fullName} />
               {loadingTimeline ? <LoadingMessage />
                 : timeline.length === 0 ? <EmptyMessage text="Chưa có ghi nhận chăm sóc trong khoảng thời gian này." />
-                  : <div className="space-y-8">{timeline.map((day) => <TimelineDay key={day.date} day={day} summary={history.find((item) => item.date === day.date)} />)}</div>}
+                  : <div className="space-y-8">{timeline.map((day) => <TimelineDay key={day.date} day={day} />)}</div>}
             </section>}
 
             {activeSection === "health" && <div className="grid gap-5 xl:grid-cols-2">
@@ -248,13 +230,13 @@ const DoseCard: React.FC<{ dose: DoseRecord }> = ({ dose }) => (
 const IncidentCard: React.FC<{ incident: FamilyIncident }> = ({ incident }) => (
   <article className="rounded-xl border border-rose-100 bg-rose-50/50 p-4">
     <div className="flex flex-wrap items-start justify-between gap-2">
-      <div><h4 className="font-semibold text-slate-900">{incident.incidentType}</h4><p className="mt-1 text-sm text-slate-700">{incident.description}</p></div>
-      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(incident.severity)}`}>{incident.severity}</span>
+      <div><h4 className="font-semibold text-slate-900">{incidentTypeLabels[incident.incidentType] ?? incident.incidentType}</h4><p className="mt-1 text-sm text-slate-700">{incident.description}</p></div>
+      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(incident.severity)}`}>Mức: {severityLabels[incident.severity] ?? incident.severity}</span>
     </div>
     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
       <span>{new Date(incident.occurredAt).toLocaleString("vi-VN")}</span>
       <span>Báo lúc: {new Date(incident.reportedAt).toLocaleString("vi-VN")}</span>
-      <span>Trạng thái: {incident.status}</span>
+      <span>Trạng thái: {incidentStatusLabels[incident.status] ?? incident.status}</span>
       {incident.reportedByName && <span>Báo bởi: {incident.reportedByName}</span>}
     </div>
     {incident.resolutionNotes && <p className="mt-3 rounded-lg bg-white p-3 text-sm text-slate-600">Xử lý: {incident.resolutionNotes}</p>}
@@ -265,12 +247,12 @@ const IncidentCard: React.FC<{ incident: FamilyIncident }> = ({ incident }) => (
   </article>
 );
 
-const TimelineDay: React.FC<{ day: CareLogDay; summary?: CareLogDaySummary }> = ({ day, summary }) => (
+const TimelineDay: React.FC<{ day: CareLogDay }> = ({ day }) => (
   <section>
     <div className="mb-4 flex items-center gap-3">
       <span className="h-3 w-3 rounded-full bg-teal-600 ring-4 ring-teal-50" />
       <h4 className="font-semibold capitalize text-slate-800">{formatDate(day.date)}</h4>
-      <span className="text-xs text-slate-400">{summary?.entryCount ?? day.entries.length} ghi nhận</span>
+      <span className="text-xs text-slate-400">{day.entries.length} ghi nhận</span>
     </div>
     <ol className="ml-1.5 space-y-4 border-l-2 border-teal-100 pl-5 sm:ml-1.5 sm:pl-7">
       {[...day.entries].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)).map((entry) => <TimelineEntry key={entry.careLogId} entry={entry} />)}
@@ -288,18 +270,12 @@ const TimelineEntry: React.FC<{ entry: CareLogEntry }> = ({ entry }) => (
       </div>
       <p className="mt-3 whitespace-pre-wrap text-sm font-medium text-slate-800">{entry.description}</p>
       {entry.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{entry.notes}</p>}
-      {entry.data && <DataDetails data={entry.data} />}
+      <CareLogDataDetails data={entry.data} />
       {entry.photos.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{entry.photos.map((photo) => <a key={photo.photoId} href={photo.url} target="_blank" rel="noreferrer"><img src={photo.url} alt="Ảnh ghi nhận chăm sóc" className="h-20 w-20 rounded-lg object-cover ring-1 ring-slate-200" /></a>)}</div>}
       {(entry.activityName || entry.jobTitle) && <p className="mt-3 text-xs text-slate-500">{entry.activityName && <>Hoạt động: {entry.activityName}</>}{entry.activityName && entry.jobTitle && " · "}{entry.jobTitle}</p>}
       <p className="mt-1 text-xs text-slate-400">Nhân viên: {entry.staffName || "Nhân viên chăm sóc"}</p>
     </article>
   </li>
 );
-
-const DataDetails: React.FC<{ data: Record<string, unknown> }> = ({ data }) => {
-  const fields = Object.entries(data).filter(([, value]) => value !== null && value !== undefined && value !== "");
-  if (fields.length === 0) return null;
-  return <dl className="mt-3 grid gap-x-4 gap-y-2 rounded-lg bg-white p-3 text-xs sm:grid-cols-2">{fields.map(([key, value]) => <div key={key} className="flex justify-between gap-3"><dt className="text-slate-500">{key}</dt><dd className="text-right font-medium text-slate-700">{String(value)}</dd></div>)}</dl>;
-};
 
 export default FamilyHealthTrackingView;
