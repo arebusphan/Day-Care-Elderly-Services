@@ -5,9 +5,7 @@ import {
   AlertOctagon,
   AlertTriangle,
   BarChart3,
-  Calendar,
   Clock,
-  Layers,
   Loader2,
   Package,
   RefreshCw,
@@ -15,7 +13,7 @@ import {
   User,
   Wallet,
 } from "lucide-react";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -83,7 +81,7 @@ export function MedicalSupplyAnalyticsPanel() {
         <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
           <BarChart3 className="size-4 text-sky-600" />
           <span>Khoảng thời gian thống kê:</span>
-          <Select value={monthsFilter} onValueChange={setMonthsFilter}>
+          <Select value={monthsFilter} onValueChange={(val) => setMonthsFilter(val ?? "3")}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="Chọn thời gian" />
             </SelectTrigger>

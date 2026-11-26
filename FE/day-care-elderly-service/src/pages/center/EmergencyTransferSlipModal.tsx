@@ -2,15 +2,10 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   Building2,
-  Calendar,
-  Clock,
   FileText,
   Package,
   Printer,
-  ShieldAlert,
   User,
-  UserCheck,
-  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -22,10 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import incidentReportService, {
   INCIDENT_SEVERITY_LABEL,
-  INCIDENT_STATUS_LABEL,
 } from "../../services/incidentReportService";
 import type { IncidentReport, IncidentSupplyUsage } from "../../services/incidentReportService";
 import { formatDateTimeVN } from "../../lib/date";
@@ -40,16 +33,13 @@ const money = (n: number) => `${(n || 0).toLocaleString("vi-VN")} đ`;
 
 export function EmergencyTransferSlipModal({ incident, open, onClose }: Props) {
   const [supplies, setSupplies] = useState<IncidentSupplyUsage[]>([]);
-  const [loadingSupplies, setLoadingSupplies] = useState(false);
 
   useEffect(() => {
     if (!incident || !open) return;
-    setLoadingSupplies(true);
     incidentReportService
       .getSupplies(incident.incidentId)
       .then((res) => setSupplies(res.data ?? []))
-      .catch(() => setSupplies([]))
-      .finally(() => setLoadingSupplies(false));
+      .catch(() => setSupplies([]));
   }, [incident, open]);
 
   if (!incident) return null;

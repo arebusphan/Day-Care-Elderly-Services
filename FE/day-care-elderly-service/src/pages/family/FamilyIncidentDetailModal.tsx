@@ -1,19 +1,11 @@
 import { useEffect, useState } from "react";
 import {
-  AlertTriangle,
   Building2,
-  Calendar,
   Clock,
-  ExternalLink,
-  FileSpreadsheet,
-  FileText,
   Image as ImageIcon,
   Loader2,
-  Package,
   Receipt,
   ShieldAlert,
-  User,
-  UserCheck,
   X,
 } from "lucide-react";
 import {
@@ -26,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import incidentReportService from "../../services/incidentReportService";
 import type { IncidentReport, IncidentSupplyUsage } from "../../services/incidentReportService";
 import type { FamilyIncident } from "../../services/familyCareLogService";
