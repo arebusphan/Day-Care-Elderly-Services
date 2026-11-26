@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using DayCareElderlyService.BLL.Common;
+using DayCareElderlyService.BLL.DTOs.CareLog;
 using DayCareElderlyService.BLL.DTOs.Medication;
 using DayCareElderlyService.BLL.DTOs.Notification;
 using DayCareElderlyService.BLL.Services.Interfaces;
@@ -53,6 +54,26 @@ public class StaffMedicationController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<GenerateDosesResultDto>), StatusCodes.Status200OK)]
     public Task<IActionResult> GenerateDoses(int planId, [FromBody] GenerateDosesDto dto) =>
         RunAsync(userId => _medicationService.GenerateDosesAsync(userId, planId, dto), "tạo lịch liều thuốc");
+
+    /// <summary>
+    /// Lịch sử cho uống thuốc (MedicationRecords). Lọc elderlyId, from/to, status. Mặc định 7 ngày gần nhất.
+    /// </summary>
+    [HttpGet("doses/history")]
+    [ProducesResponseType(typeof(ApiResponse<List<DoseDto>>), StatusCodes.Status200OK)]
+    public Task<IActionResult> GetDoseHistory(
+        [FromQuery] int? elderlyId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? status,
+        [FromQuery] int take = 100) =>
+        RunAsync(userId => _medicationService.GetDoseHistoryAsync(userId, new DoseHistoryFilterDto
+        {
+            ElderlyId = elderlyId,
+            From = from,
+            To = to,
+            Status = status,
+            Take = take
+        }), "lấy lịch sử cho uống thuốc");
 
     [HttpGet("notifications")]
     [ProducesResponseType(typeof(ApiResponse<NotificationListDto>), StatusCodes.Status200OK)]

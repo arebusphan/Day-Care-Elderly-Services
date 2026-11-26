@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 namespace DayCareElderlyService.Models.Data;
 
 /// <summary>
-/// Áp dụng các script Migrations/Apply_*.sql (idempotent) khi BE khởi động,
-/// để DB của mọi thành viên tự có các bảng / cột mới mà không cần chạy script tay.
-/// (EF migrations snapshot hiện không dùng được để sinh migration mới.)
+/// Explicit helper for applying the idempotent Migrations/Apply_*.sql scripts.
+/// It is not called automatically when the API starts.
+/// (The current EF migrations snapshot cannot generate new migrations.)
 /// </summary>
 public static class OperationsSchema
 {
-    /// <summary>Chạy theo thứ tự; script sau có thể dựa vào bảng của script trước.</summary>
+    /// <summary>Runs scripts in order; later scripts may depend on earlier ones.</summary>
     private static readonly string[] ResourceNames =
     {
         "Apply_AddOperationsFeatures.sql",

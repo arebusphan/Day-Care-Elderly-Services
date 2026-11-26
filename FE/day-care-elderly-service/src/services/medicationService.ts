@@ -54,6 +54,31 @@ export interface GenerateDosesResult {
   skippedExistingCount: number;
 }
 
+/** Một dòng MedicationRecords (lịch sử cho uống). */
+export interface DoseHistoryItem {
+  medicationRecordId: number;
+  medicationPlanId: number;
+  elderlyId: number;
+  elderlyName: string;
+  medicationName: string;
+  dosage: string;
+  instructions: string | null;
+  scheduledAt: string;
+  status: string;
+  statusLabel: string;
+  recordedAt: string | null;
+  notes: string | null;
+  staffName: string;
+}
+
+export interface DoseHistoryFilter {
+  elderlyId?: number;
+  from?: string;
+  to?: string;
+  status?: string;
+  take?: number;
+}
+
 const BASE = "/api/staff";
 
 export const medicationService = {
@@ -76,6 +101,11 @@ export const medicationService = {
 
   async generateDoses(planId: number, dto: GenerateDosesDto): Promise<ApiResponse<GenerateDosesResult>> {
     const res = await api.post(`${BASE}/medication-plans/${planId}/doses/generate`, dto);
+    return res.data;
+  },
+
+  async getDoseHistory(filter: DoseHistoryFilter = {}): Promise<ApiResponse<DoseHistoryItem[]>> {
+    const res = await api.get(`${BASE}/doses/history`, { params: filter });
     return res.data;
   },
 };

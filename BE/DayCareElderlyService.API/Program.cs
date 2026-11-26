@@ -60,6 +60,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IElderlyService, ElderlyService>();
+builder.Services.AddHttpClient<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ICareLogService, CareLogService>();
 builder.Services.AddScoped<IFamilyCareLogService, FamilyCareLogService>();
@@ -136,23 +137,11 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Bổ sung schema cho các tính năng mới (script idempotent, xem Models/Migrations/Apply_AddOperationsFeatures.sql)
-using (var scope = app.Services.CreateScope())
+// Idempotent schema sync + demo seed (Development only; không xóa data thật)
+if (app.Environment.IsDevelopment())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
-    {
-        await OperationsSchema.EnsureAsync(db);
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "Không áp dụng được Apply_AddOperationsFeatures.sql — hãy chạy script này thủ công.");
-    }
+    await DbInitializer.SeedDefaultDataAsync(app.Services);
 }
-
-// Run DB Initializer to seed default Roles and Admin user
-await DbInitializer.SeedDefaultDataAsync(app.Services);
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

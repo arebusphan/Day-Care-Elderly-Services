@@ -55,6 +55,39 @@ export interface RegistrationResultDto {
   createdAt: string;
 }
 
+export interface CreatePayOSRegistrationRequest extends CreateRegistrationRequest {
+  returnUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface PayOSRegistrationResultDto {
+  registrationId: number;
+  registrationCode: string;
+  paymentId: number;
+  invoiceNo: string;
+  invoiceVatNo: string;
+  orderCode: number;
+  amount: number;
+  description: string;
+  checkoutUrl: string;
+  qrCode: string;
+  paymentLinkId: string;
+  bin: string;
+  accountNumber: string;
+  accountName: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface PayOSStatusResultDto {
+  orderCode: number;
+  status: "PENDING" | "PAID" | "CANCELLED" | "EXPIRED" | string;
+  registrationCode: string;
+  invoiceNo: string;
+  totalAmount: number;
+  paidAt?: string;
+}
+
 export const billingApiService = {
   /** Lấy danh sách gói dịch vụ từ BE */
   getActivePackages: async (): Promise<ApiResponse<ServicePackageApiDto[]>> => {
@@ -65,6 +98,33 @@ export const billingApiService = {
   /** Đăng ký gói dịch vụ */
   registerPackage: async (data: CreateRegistrationRequest): Promise<ApiResponse<RegistrationResultDto>> => {
     const response = await api.post<ApiResponse<RegistrationResultDto>>("/api/family/packages/register", data);
+    return response.data;
+  },
+
+  /** Tạo liên kết thanh toán PayOS */
+  createPayOSPayment: async (
+    data: CreatePayOSRegistrationRequest
+  ): Promise<ApiResponse<PayOSRegistrationResultDto>> => {
+    const response = await api.post<ApiResponse<PayOSRegistrationResultDto>>(
+      "/api/family/packages/payos/create",
+      data
+    );
+    return response.data;
+  },
+
+  /** Kiểm tra trạng thái thanh toán PayOS */
+  getPayOSStatus: async (orderCode: number): Promise<ApiResponse<PayOSStatusResultDto>> => {
+    const response = await api.get<ApiResponse<PayOSStatusResultDto>>(
+      `/api/family/packages/payos/status/${orderCode}`
+    );
+    return response.data;
+  },
+
+  /** Hủy giao dịch thanh toán PayOS */
+  cancelPayOSPayment: async (orderCode: number): Promise<ApiResponse<boolean>> => {
+    const response = await api.post<ApiResponse<boolean>>(
+      `/api/family/packages/payos/cancel/${orderCode}`
+    );
     return response.data;
   },
 

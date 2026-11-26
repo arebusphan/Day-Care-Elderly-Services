@@ -438,6 +438,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Notes).HasMaxLength(1000);
             entity.Property(e => e.RecordedAt).HasPrecision(0);
             entity.Property(e => e.ScheduledAt).HasPrecision(0);
+            // Legacy columns trên DB live (thường NOT NULL) — luôn set khi tạo record từ ScheduledAt.
+            entity.Property(e => e.AdministeredDate);
+            entity.Property(e => e.AdministeredTime).HasColumnType("time");
             entity.Property(e => e.Status)
                 .HasMaxLength(30)
                 .HasDefaultValue("Pending");

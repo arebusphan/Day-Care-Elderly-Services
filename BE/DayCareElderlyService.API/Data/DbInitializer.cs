@@ -1,3 +1,4 @@
+using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.Security;
 using DayCareElderlyService.Models.Data;
 using DayCareElderlyService.Models.Entities;
@@ -353,6 +354,108 @@ public static class DbInitializer
                 await context.SaveChangesAsync();
                 logger?.LogInformation("Tài khoản Admin mặc định (admin@daycare.com / Admin@123456) đã được tạo.");
             }
+
+            // 5.5. Bridge schema live DB (CenterId / EFR / PriceAtPurchase) — không tạo bảng mới
+            var syncCenterBridgeSql = @"
+                IF OBJECT_ID(N'dbo.Centers', N'U') IS NOT NULL
+                   AND NOT EXISTS (SELECT 1 FROM Centers)
+                BEGIN
+                    INSERT INTO Centers (CenterName, Address, PhoneNumber, Email, IsActive, CreatedAt)
+                    VALUES (N'Day Care Demo Center', N'Hà Nội', N'0900000000', N'center@daycare.com', 1, SYSDATETIME());
+                END
+
+                DECLARE @CenterId INT = (SELECT TOP 1 CenterId FROM Centers ORDER BY CenterId);
+                DECLARE @sql NVARCHAR(500);
+
+                IF @CenterId IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('ServicePackages', 'CenterId') IS NOT NULL
+                       AND NOT EXISTS (
+                           SELECT 1 FROM sys.default_constraints dc
+                           JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                           WHERE c.object_id = OBJECT_ID('ServicePackages') AND c.name = 'CenterId')
+                    BEGIN
+                        SET @sql = N'ALTER TABLE ServicePackages ADD CONSTRAINT DF_ServicePackages_CenterId DEFAULT ('
+                                 + CAST(@CenterId AS NVARCHAR(10)) + N') FOR CenterId';
+                        EXEC sp_executesql @sql;
+                    END
+
+                    IF COL_LENGTH('ElderlyMembers', 'CenterId') IS NOT NULL
+                       AND NOT EXISTS (
+                           SELECT 1 FROM sys.default_constraints dc
+                           JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                           WHERE c.object_id = OBJECT_ID('ElderlyMembers') AND c.name = 'CenterId')
+                    BEGIN
+                        SET @sql = N'ALTER TABLE ElderlyMembers ADD CONSTRAINT DF_ElderlyMembers_CenterId DEFAULT ('
+                                 + CAST(@CenterId AS NVARCHAR(10)) + N') FOR CenterId';
+                        EXEC sp_executesql @sql;
+                    END
+
+                    IF COL_LENGTH('ServiceRegistrations', 'CenterId') IS NOT NULL
+                       AND NOT EXISTS (
+                           SELECT 1 FROM sys.default_constraints dc
+                           JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                           WHERE c.object_id = OBJECT_ID('ServiceRegistrations') AND c.name = 'CenterId')
+                    BEGIN
+                        SET @sql = N'ALTER TABLE ServiceRegistrations ADD CONSTRAINT DF_ServiceRegistrations_CenterId DEFAULT ('
+                                 + CAST(@CenterId AS NVARCHAR(10)) + N') FOR CenterId';
+                        EXEC sp_executesql @sql;
+                    END
+
+                    IF COL_LENGTH('DailySchedulePlans', 'CenterId') IS NOT NULL
+                       AND NOT EXISTS (
+                           SELECT 1 FROM sys.default_constraints dc
+                           JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                           WHERE c.object_id = OBJECT_ID('DailySchedulePlans') AND c.name = 'CenterId')
+                    BEGIN
+                        SET @sql = N'ALTER TABLE DailySchedulePlans ADD CONSTRAINT DF_DailySchedulePlans_CenterId DEFAULT ('
+                                 + CAST(@CenterId AS NVARCHAR(10)) + N') FOR CenterId';
+                        EXEC sp_executesql @sql;
+                    END
+                END
+
+                IF OBJECT_ID(N'dbo.MedicationPlans', N'U') IS NOT NULL
+                   AND COL_LENGTH('MedicationPlans', 'Frequency') IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1 FROM sys.default_constraints dc
+                       JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                       WHERE c.object_id = OBJECT_ID('MedicationPlans') AND c.name = 'Frequency')
+                BEGIN
+                    ALTER TABLE MedicationPlans ADD CONSTRAINT DF_MedicationPlans_Frequency DEFAULT N'2 lần/ngày' FOR Frequency;
+                END
+
+                IF OBJECT_ID(N'dbo.ElderlyFamilyRelationships', N'U') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('ElderlyFamilyRelationships', 'Relationship') IS NULL
+                        ALTER TABLE ElderlyFamilyRelationships ADD Relationship NVARCHAR(50) NULL;
+
+                    IF COL_LENGTH('ElderlyFamilyRelationships', 'CanViewCareLogs') IS NULL
+                        ALTER TABLE ElderlyFamilyRelationships ADD CanViewCareLogs BIT NOT NULL
+                            CONSTRAINT DF_EFR_CanViewCareLogs DEFAULT 1;
+
+                    IF COL_LENGTH('ElderlyFamilyRelationships', 'CanReceiveNotifications') IS NULL
+                        ALTER TABLE ElderlyFamilyRelationships ADD CanReceiveNotifications BIT NOT NULL
+                            CONSTRAINT DF_EFR_CanReceiveNotifications DEFAULT 1;
+
+                    IF COL_LENGTH('ElderlyFamilyRelationships', 'RelationshipType') IS NOT NULL
+                       AND COL_LENGTH('ElderlyFamilyRelationships', 'Relationship') IS NOT NULL
+                    BEGIN
+                        SET @sql = N'UPDATE ElderlyFamilyRelationships SET Relationship = RelationshipType WHERE Relationship IS NULL AND RelationshipType IS NOT NULL';
+                        EXEC sp_executesql @sql;
+                    END
+                END
+
+                IF OBJECT_ID(N'dbo.ServiceRegistrations', N'U') IS NOT NULL
+                   AND COL_LENGTH('ServiceRegistrations', 'PriceAtPurchase') IS NULL
+                    ALTER TABLE ServiceRegistrations ADD PriceAtPurchase DECIMAL(18,2) NOT NULL
+                        CONSTRAINT DF_ServiceRegistrations_PriceAtPurchase DEFAULT 0;
+
+                IF OBJECT_ID(N'dbo.ElderlyMembers', N'U') IS NOT NULL
+                   AND COL_LENGTH('ElderlyMembers', 'ChronicConditions') IS NULL
+                    ALTER TABLE ElderlyMembers ADD ChronicConditions NVARCHAR(200) NULL;
+            ";
+            await context.Database.ExecuteSqlRawAsync(syncCenterBridgeSql);
+            logger?.LogInformation("Đã đồng bộ Center mặc định và cột bridge (CenterId/EFR/PriceAtPurchase).");
 
             // 6. Seed 5 Service Packages (INT identity — upsert by name)
             var packagesToSeed = new List<ServicePackage>
@@ -748,10 +851,533 @@ public static class DbInitializer
                     logger?.LogInformation("Đã liên kết tài khoản family_test@daycare.com với người cao tuổi đầu tiên.");
                 }
             }
+
+            // 11. Demo seed idempotent (không xóa user/data thật)
+            await SeedDemoDataAsync(context, passwordHasher, logger);
         }
         catch (Exception ex)
         {
             logger?.LogWarning(ex, "Lỗi trong quá trình seed dữ liệu mặc định: {Message}", ex.Message);
         }
+    }
+
+    private const string DemoPassword = "Demo@123456";
+    private const string DemoElderlyMarker = "[SEED_DEMO]";
+    private const string DemoPlanNotes = "[SEED_DEMO] Kế hoạch phân công hôm nay";
+    private const string DemoMedMarker = "[SEED_DEMO]";
+
+    private static async Task SeedDemoDataAsync(
+        AppDbContext context,
+        IPasswordHasher passwordHasher,
+        ILogger? logger)
+    {
+        var staffRole = await context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Staff");
+        var familyRole = await context.Roles.FirstOrDefaultAsync(r => r.RoleName == "FamilyMember");
+        if (staffRole == null || familyRole == null)
+        {
+            logger?.LogWarning("Seed demo bỏ qua: thiếu role Staff/FamilyMember.");
+            return;
+        }
+
+        var passwordHash = passwordHasher.HashPassword(DemoPassword);
+        var now = VietnamTime.Now;
+        var today = VietnamTime.Today;
+
+        // --- 3 Staff (email chuẩn + migrate từ *.demo@ nếu còn) ---
+        var staffSpecs = new (string Email, string LegacyEmail, string FullName, string Phone, string Position)[]
+        {
+            ("staff1@daycare.com", "staff1.demo@daycare.com", "Nguyễn Thị Lan (Demo Staff)", "0911000001", "Điều dưỡng"),
+            ("staff2@daycare.com", "staff2.demo@daycare.com", "Trần Văn Minh (Demo Staff)", "0911000002", "Nhân viên chăm sóc"),
+            ("staff3@daycare.com", "staff3.demo@daycare.com", "Lê Thu Hà (Demo Staff)", "0911000003", "Điều dưỡng trưởng"),
+        };
+
+        var staffUsers = new List<User>();
+        foreach (var (email, legacyEmail, fullName, phone, position) in staffSpecs)
+        {
+            var user = await EnsureDemoUserAsync(context, staffRole, email, legacyEmail, fullName, phone, passwordHash, now);
+            staffUsers.Add(user);
+
+            try
+            {
+                var profile = await context.StaffProfiles.FindAsync(user.UserId);
+                if (profile == null)
+                {
+                    await context.StaffProfiles.AddAsync(new StaffProfile
+                    {
+                        UserId = user.UserId,
+                        Position = position,
+                        Qualification = "Demo seed",
+                        StartDate = DateOnly.FromDateTime(now.AddYears(-1)),
+                        UpdatedAt = now
+                    });
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "Bỏ qua StaffProfile cho {Email}.", email);
+                context.ChangeTracker.Clear();
+            }
+        }
+
+        // --- 2 Family ---
+        var familySpecs = new (string Email, string LegacyEmail, string FullName, string Phone, string Address)[]
+        {
+            ("family1@daycare.com", "family1.demo@daycare.com", "Phạm Quốc Anh (Demo Family)", "0922000001", "Cầu Giấy, Hà Nội"),
+            ("family2@daycare.com", "family2.demo@daycare.com", "Hoàng Thị Mai (Demo Family)", "0922000002", "Thanh Xuân, Hà Nội"),
+        };
+
+        var familyMembers = new List<FamilyMember>();
+        foreach (var (email, legacyEmail, fullName, phone, address) in familySpecs)
+        {
+            var user = await EnsureDemoUserAsync(context, familyRole, email, legacyEmail, fullName, phone, passwordHash, now);
+            var fm = await context.FamilyMembers.FirstOrDefaultAsync(f => f.UserId == user.UserId);
+            if (fm == null)
+            {
+                fm = new FamilyMember
+                {
+                    UserId = user.UserId,
+                    Address = address,
+                    EmergencyContact = phone
+                };
+                await context.FamilyMembers.AddAsync(fm);
+                await context.SaveChangesAsync();
+            }
+            familyMembers.Add(fm);
+        }
+
+        // --- 15 Elderly IsActive (idempotent via CareNotes marker) ---
+        var elderlyNames = new (string FullName, string Gender, string Mobility, int BirthYear)[]
+        {
+            ("Nguyễn Văn Hùng", "Male", "Normal", 1945),
+            ("Trần Thị Bích", "Female", "Normal", 1948),
+            ("Lê Văn Cường", "Male", "Support", 1942),
+            ("Phạm Thị Dung", "Female", "Normal", 1950),
+            ("Hoàng Văn Em", "Male", "Support", 1940),
+            ("Vũ Thị Phương", "Female", "Normal", 1952),
+            ("Đặng Văn Giang", "Male", "Normal", 1947),
+            ("Bùi Thị Hoa", "Female", "Support", 1944),
+            ("Đỗ Văn Ích", "Male", "Normal", 1949),
+            ("Ngô Thị Kim", "Female", "Normal", 1951),
+            ("Dương Văn Long", "Male", "Support", 1943),
+            ("Lý Thị My", "Female", "Normal", 1953),
+            ("Phan Văn Nam", "Male", "Normal", 1946),
+            ("Tô Thị Oanh", "Female", "Support", 1941),
+            ("Cao Văn Phúc", "Male", "Normal", 1954),
+        };
+
+        var elderlyList = new List<ElderlyMember>();
+        for (var i = 0; i < elderlyNames.Length; i++)
+        {
+            var spec = elderlyNames[i];
+            var marker = $"{DemoElderlyMarker}#{i + 1:D2}";
+            var elderly = await context.ElderlyMembers
+                .FirstOrDefaultAsync(e => e.CareNotes != null && e.CareNotes.Contains(marker));
+
+            if (elderly == null)
+            {
+                elderly = new ElderlyMember
+                {
+                    FullName = spec.FullName,
+                    DateOfBirth = new DateOnly(spec.BirthYear, (i % 12) + 1, 10),
+                    Gender = spec.Gender,
+                    Address = i < 8 ? familySpecs[0].Address : familySpecs[1].Address,
+                    EmergencyContactName = i < 8 ? familySpecs[0].FullName : familySpecs[1].FullName,
+                    EmergencyContactPhone = i < 8 ? familySpecs[0].Phone : familySpecs[1].Phone,
+                    Allergies = i % 3 == 0 ? "Không" : null,
+                    MedicalHistory = i % 4 == 0 ? "Tăng huyết áp" : null,
+                    MobilityStatus = spec.Mobility,
+                    CareNotes = $"{marker} Hồ sơ demo — không xóa tay nếu còn dùng seed.",
+                    IsActive = true,
+                    CreatedAt = now
+                };
+                await context.ElderlyMembers.AddAsync(elderly);
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                elderly.IsActive = true;
+                elderly.FullName = spec.FullName;
+                elderly.MobilityStatus = spec.Mobility;
+                await context.SaveChangesAsync();
+            }
+            elderlyList.Add(elderly);
+        }
+
+        // --- Link Family–NCT + CanViewCareLogs / CanReceiveNotifications ---
+        for (var i = 0; i < elderlyList.Count; i++)
+        {
+            var fm = i < 8 ? familyMembers[0] : familyMembers[1];
+            var elderly = elderlyList[i];
+            var existingRel = await context.ElderlyFamilyRelationships
+                .FirstOrDefaultAsync(r => r.ElderlyId == elderly.ElderlyId && r.FamilyMemberId == fm.FamilyMemberId);
+
+            if (existingRel == null)
+            {
+                await context.ElderlyFamilyRelationships.AddAsync(new ElderlyFamilyRelationship
+                {
+                    ElderlyId = elderly.ElderlyId,
+                    FamilyMemberId = fm.FamilyMemberId,
+                    Relationship = i % 2 == 0 ? "Con" : "Cháu",
+                    IsPrimaryContact = true,
+                    CanViewCareLogs = true,
+                    CanReceiveNotifications = true
+                });
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                existingRel.CanViewCareLogs = true;
+                existingRel.CanReceiveNotifications = true;
+                existingRel.IsPrimaryContact = true;
+                await context.SaveChangesAsync();
+            }
+
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(@"
+                    IF COL_LENGTH('ElderlyFamilyRelationships', 'RelationshipType') IS NOT NULL
+                        UPDATE ElderlyFamilyRelationships
+                        SET RelationshipType = Relationship
+                        WHERE ElderlyId = {0} AND FamilyMemberId = {1}
+                          AND (RelationshipType IS NULL OR RelationshipType = '')",
+                    elderly.ElderlyId, fm.FamilyMemberId);
+            }
+            catch { /* ignore schema drift */ }
+        }
+
+        // --- Registration Confirmed cho TẤT CẢ NCT (monthly full_week, phủ hôm nay) ---
+        var packages = await context.ServicePackages
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.PackageId)
+            .Take(3)
+            .ToListAsync();
+
+        if (packages.Count == 0)
+        {
+            logger?.LogWarning("Seed demo: chưa có ServicePackage — bỏ qua Registration.");
+        }
+        else
+        {
+            for (var i = 0; i < elderlyList.Count; i++)
+            {
+                var code = $"DEMO-REG-{i + 1:D2}";
+                var existingReg = await context.ServiceRegistrations
+                    .FirstOrDefaultAsync(r => r.RegistrationCode == code);
+
+                var pkg = packages[i % packages.Count];
+                var elderly = elderlyList[i];
+                var fm = i < 8 ? familyMembers[0] : familyMembers[1];
+                var start = today.AddDays(-7);
+                DateOnly? end = today.AddMonths(1);
+                var support = elderly.MobilityStatus == "Support" ? 500000m : 0m;
+                var basePrice = pkg.PriceMonthFullWeek > 0 ? pkg.PriceMonthFullWeek : pkg.Price;
+
+                if (existingReg == null)
+                {
+                    var reg = new ServiceRegistration
+                    {
+                        ElderlyId = elderly.ElderlyId,
+                        PackageId = pkg.PackageId,
+                        StartDate = start,
+                        EndDate = end,
+                        PriceAtPurchase = basePrice,
+                        Status = "Confirmed",
+                        CreatedAt = now,
+                        RegistrationCode = code,
+                        RegistrationType = "monthly",
+                        MonthlyPattern = "full_week",
+                        RoomType = "large",
+                        TotalDays = 22,
+                        SupportSurcharge = support,
+                        RoomSurcharge = 0,
+                        TotalAmount = basePrice + support
+                    };
+                    await context.ServiceRegistrations.AddAsync(reg);
+                    await context.SaveChangesAsync();
+
+                    try
+                    {
+                        await context.Database.ExecuteSqlRawAsync(@"
+                            IF COL_LENGTH('ServiceRegistrations', 'FamilyMemberId') IS NOT NULL
+                                UPDATE ServiceRegistrations SET FamilyMemberId = {0}
+                                WHERE RegistrationId = {1}",
+                            fm.FamilyMemberId, reg.RegistrationId);
+                    }
+                    catch { /* ignore */ }
+                }
+                else
+                {
+                    existingReg.Status = "Confirmed";
+                    existingReg.StartDate = start;
+                    existingReg.EndDate = end;
+                    existingReg.RegistrationType = "monthly";
+                    existingReg.MonthlyPattern = "full_week";
+                    existingReg.PackageId = pkg.PackageId;
+                    await context.SaveChangesAsync();
+                }
+            }
+        }
+
+        // --- Phân công hôm nay (GetAssignedElderlyIdsAsync: Published/Confirmed + StaffCareAssignments / CareGroups) ---
+        // staff1: 5 NCT đầu, staff2: 5 tiếp, staff3: phần còn lại
+        var assignmentBuckets = new[]
+        {
+            (Staff: staffUsers[0], Elderly: elderlyList.Take(5).ToList()),
+            (Staff: staffUsers[1], Elderly: elderlyList.Skip(5).Take(5).ToList()),
+            (Staff: staffUsers[2], Elderly: elderlyList.Skip(10).ToList()),
+        };
+
+        var plan = await context.DailySchedulePlans.FirstOrDefaultAsync(p => p.PlanDate == today);
+        if (plan == null)
+        {
+            plan = new DailySchedulePlan
+            {
+                PlanDate = today,
+                Status = "Published",
+                ConfirmedAt = now,
+                ConfirmedBy = staffUsers[0].UserId,
+                TotalStaff = 3,
+                TotalElderly = elderlyList.Count,
+                Notes = DemoPlanNotes,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            await context.DailySchedulePlans.AddAsync(plan);
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            plan.Status = "Published";
+            plan.ConfirmedAt ??= now;
+            plan.ConfirmedBy ??= staffUsers[0].UserId;
+            plan.TotalStaff = 3;
+            plan.TotalElderly = elderlyList.Count;
+            plan.Notes = string.IsNullOrWhiteSpace(plan.Notes) ? DemoPlanNotes : plan.Notes;
+            plan.UpdatedAt = now;
+            await context.SaveChangesAsync();
+        }
+
+        foreach (var bucket in assignmentBuckets)
+        {
+            foreach (var elderly in bucket.Elderly)
+            {
+                var assignment = await context.StaffCareAssignments
+                    .FirstOrDefaultAsync(a => a.PlanId == plan.PlanId && a.ElderlyId == elderly.ElderlyId);
+                if (assignment == null)
+                {
+                    await context.StaffCareAssignments.AddAsync(new StaffCareAssignment
+                    {
+                        PlanId = plan.PlanId,
+                        StaffId = bucket.Staff.UserId,
+                        ElderlyId = elderly.ElderlyId,
+                        Notes = DemoElderlyMarker,
+                        CreatedAt = now
+                    });
+                }
+                else
+                {
+                    assignment.StaffId = bucket.Staff.UserId;
+                    assignment.Notes = DemoElderlyMarker;
+                }
+            }
+        }
+        await context.SaveChangesAsync();
+
+        // Mirror qua DailyCareGroups + CareGroupMembers (cùng guard)
+        var demoElderlyIds = elderlyList.Select(e => e.ElderlyId).ToList();
+        var staleMembers = await context.CareGroupMembers
+            .Where(m => m.Group.PlanId == plan.PlanId && demoElderlyIds.Contains(m.ElderlyId))
+            .ToListAsync();
+        if (staleMembers.Count > 0)
+        {
+            context.CareGroupMembers.RemoveRange(staleMembers);
+            await context.SaveChangesAsync();
+        }
+
+        foreach (var bucket in assignmentBuckets)
+        {
+            var groupName = $"Demo-{bucket.Staff.Email.Split('@')[0]}";
+            var group = await context.DailyCareGroups
+                .FirstOrDefaultAsync(g => g.PlanId == plan.PlanId && g.StaffId == bucket.Staff.UserId);
+            if (group == null)
+            {
+                group = new DailyCareGroup
+                {
+                    PlanId = plan.PlanId,
+                    GroupName = groupName,
+                    GroupType = "Normal",
+                    StaffId = bucket.Staff.UserId,
+                    MaxNormalCapacity = 10,
+                    MaxSupportCapacity = 4,
+                    Notes = DemoElderlyMarker,
+                    CreatedAt = now
+                };
+                await context.DailyCareGroups.AddAsync(group);
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                group.GroupName = groupName;
+                group.StaffId = bucket.Staff.UserId;
+                group.Notes = DemoElderlyMarker;
+                await context.SaveChangesAsync();
+            }
+
+            foreach (var elderly in bucket.Elderly)
+            {
+                var member = await context.CareGroupMembers
+                    .FirstOrDefaultAsync(m => m.GroupId == group.GroupId && m.ElderlyId == elderly.ElderlyId);
+                if (member == null)
+                {
+                    await context.CareGroupMembers.AddAsync(new CareGroupMember
+                    {
+                        GroupId = group.GroupId,
+                        ElderlyId = elderly.ElderlyId,
+                        AssignedAt = now,
+                        Notes = DemoElderlyMarker
+                    });
+                }
+            }
+            await context.SaveChangesAsync();
+        }
+
+        // --- Optional: MedicationPlan + Pending doses hôm nay cho 2 NCT của staff1 ---
+        // DB live còn AdministeredDate/Time NOT NULL — insert record qua SQL raw.
+        try
+        {
+            var medTargets = elderlyList.Take(2).ToList();
+            var medSpecs = new (string Name, string Dosage)[]
+            {
+                ("Amlodipine (Demo)", "5mg"),
+                ("Metformin (Demo)", "500mg"),
+            };
+
+            for (var i = 0; i < medTargets.Count; i++)
+            {
+                var elderly = medTargets[i];
+                var (medName, dosage) = medSpecs[i];
+                var planMed = await context.MedicationPlans
+                    .FirstOrDefaultAsync(p => p.ElderlyId == elderly.ElderlyId && p.MedicationName == medName);
+
+                if (planMed == null)
+                {
+                    planMed = new MedicationPlan
+                    {
+                        ElderlyId = elderly.ElderlyId,
+                        MedicationName = medName,
+                        Dosage = dosage,
+                        Instructions = $"{DemoMedMarker} Uống sau ăn — seed test Given",
+                        StartDate = today.AddDays(-14),
+                        EndDate = null,
+                        IsActive = true,
+                        CreatedAt = now
+                    };
+                    await context.MedicationPlans.AddAsync(planMed);
+                    await context.SaveChangesAsync();
+
+                    try
+                    {
+                        await context.Database.ExecuteSqlRawAsync(@"
+                            IF COL_LENGTH('MedicationPlans', 'Frequency') IS NOT NULL
+                                UPDATE MedicationPlans SET Frequency = N'2 lần/ngày'
+                                WHERE MedicationPlanId = {0} AND (Frequency IS NULL OR Frequency = '')",
+                            planMed.MedicationPlanId);
+                    }
+                    catch { /* ignore */ }
+                }
+                else
+                {
+                    planMed.IsActive = true;
+                    planMed.Dosage = dosage;
+                    planMed.Instructions = $"{DemoMedMarker} Uống sau ăn — seed test Given";
+                    await context.SaveChangesAsync();
+                }
+
+                var doseTimes = new[] { new TimeOnly(8, 0), new TimeOnly(14, 0) };
+                foreach (var t in doseTimes)
+                {
+                    var scheduledAt = today.ToDateTime(t);
+                    var exists = await context.MedicationRecords.AnyAsync(r =>
+                        r.MedicationPlanId == planMed.MedicationPlanId
+                        && r.ScheduledAt == scheduledAt);
+                    if (exists) continue;
+
+                    await context.Database.ExecuteSqlRawAsync(@"
+                        INSERT INTO MedicationRecords
+                            (MedicationPlanId, AdministeredDate, AdministeredTime, Status, StaffId, Notes, CreatedAt, ScheduledAt, RecordedAt)
+                        VALUES
+                            ({0}, {1}, {2}, N'Pending', NULL, N'[SEED_DEMO]', SYSDATETIME(), {3}, NULL)",
+                        planMed.MedicationPlanId,
+                        today,
+                        t.ToTimeSpan(),
+                        scheduledAt);
+                }
+            }
+        }
+        catch (Exception medEx)
+        {
+            logger?.LogWarning(medEx, "Seed demo thuốc (optional) lỗi — phân công Staff/NCT vẫn dùng được.");
+        }
+
+        var assignSummary = string.Join(" | ", assignmentBuckets.Select(b =>
+            $"{b.Staff.Email}:[{string.Join(",", b.Elderly.Select(e => e.ElderlyId))}]"));
+        logger?.LogInformation(
+            "DEMO SEED OK — password={Password}; Staff=staff1/2/3@daycare.com; Family=family1/2@daycare.com; PlanDate={Today} Published; Assign={Assign}",
+            DemoPassword, today, assignSummary);
+    }
+
+    private static async Task<User> EnsureDemoUserAsync(
+        AppDbContext context,
+        Role role,
+        string email,
+        string legacyEmail,
+        string fullName,
+        string phone,
+        string passwordHash,
+        DateTime now)
+    {
+        var user = await context.Users.Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null && !string.IsNullOrWhiteSpace(legacyEmail))
+        {
+            user = await context.Users.Include(u => u.Roles)
+                .FirstOrDefaultAsync(u => u.Email == legacyEmail);
+            if (user != null)
+            {
+                user.Email = email;
+                user.FullName = fullName;
+                user.PhoneNumber = phone;
+                user.PasswordHash = passwordHash;
+                user.IsActive = true;
+                user.UpdatedAt = now;
+            }
+        }
+
+        if (user == null)
+        {
+            user = new User
+            {
+                Email = email,
+                PasswordHash = passwordHash,
+                FullName = fullName,
+                PhoneNumber = phone,
+                IsActive = true,
+                CreatedAt = now
+            };
+            user.Roles.Add(role);
+            await context.Users.AddAsync(user);
+            await context.SaveChangesAsync();
+            return user;
+        }
+
+        if (!user.Roles.Any(r => r.RoleId == role.RoleId || r.RoleName == role.RoleName))
+            user.Roles.Add(role);
+        user.IsActive = true;
+        user.FullName = fullName;
+        user.PasswordHash = passwordHash;
+        await context.SaveChangesAsync();
+        return user;
     }
 }

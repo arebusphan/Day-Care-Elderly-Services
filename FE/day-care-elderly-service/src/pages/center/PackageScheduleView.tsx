@@ -124,18 +124,18 @@ const PackageScheduleView: React.FC = () => {
         {loading ? <p className="p-6 text-sm text-slate-500">Đang tải lịch...</p> : visible.length === 0 ? <p className="p-6 text-center text-sm text-slate-500">Chưa có hoạt động nào.</p> :
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>
-              <th className="px-3 py-2">Giờ</th><th className="px-3 py-2">Thứ</th><th className="px-3 py-2">Hoạt động</th><th className="px-3 py-2">Loại</th><th className="px-3 py-2">Người làm</th><th className="px-3 py-2">Áp dụng</th><th className="px-3 py-2">Nguồn</th><th className="px-3 py-2" />
+              <th className="px-3 py-2">Giờ</th><th className="px-3 py-2">Thứ</th><th className="min-w-[18rem] px-3 py-2">Hoạt động</th><th className="px-3 py-2">Loại</th><th className="px-3 py-2">Người làm</th><th className="px-3 py-2">Áp dụng</th><th className="px-3 py-2">Nguồn</th><th className="px-3 py-2" />
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {visible.map((a) => (
                 <tr key={a.packageActivityId} className={a.isActive ? "" : "bg-slate-50 text-slate-400"}>
                   <td className="whitespace-nowrap px-3 py-2 font-medium">{a.startTime}–{a.endTime}</td>
-                  <td className="px-3 py-2">{a.dayOfWeek === null ? "Mọi ngày" : DAY_LABELS[a.dayOfWeek]}</td>
+                  <td className="whitespace-nowrap px-3 py-2">{a.dayOfWeek === null ? "Mọi ngày" : DAY_LABELS[a.dayOfWeek]}</td>
                   <td className="px-3 py-2"><p className="font-medium text-slate-800">{a.activityName}{!a.isRequired && <span className="ml-1 text-xs font-normal text-slate-400">(tùy chọn)</span>}</p>{a.purpose && <p className="text-xs text-slate-500">{a.purpose}</p>}</td>
                   <td className="whitespace-nowrap px-3 py-2">{careTypeLabels[a.careType] ?? a.careType}{a.targetMinutes ? ` · ${a.targetMinutes}′` : ""}</td>
                   <td className="whitespace-nowrap px-3 py-2">{ROLE_LABELS[a.performerRole] ?? a.performerRole}</td>
                   <td className="whitespace-nowrap px-3 py-2">{a.conditionCode ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800">Chỉ cụ {CONDITION_LABELS[a.conditionCode] ?? a.conditionCode}</span> : "Mọi cụ"}</td>
-                  <td className="max-w-48 px-3 py-2 text-xs text-slate-500">{a.source}</td>
+                  <td className="w-40 px-3 py-2 text-xs text-slate-500">{a.source}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <button type="button" disabled={saving} onClick={() => { setNotice(""); setEditing({ id: a.packageActivityId, form: { dayOfWeek: a.dayOfWeek, startTime: a.startTime, endTime: a.endTime, activityName: a.activityName, purpose: a.purpose ?? "", careType: a.careType, targetMinutes: a.targetMinutes, performerRole: a.performerRole, isRequired: a.isRequired, conditionCode: a.conditionCode, source: a.source ?? "" } }); }} className="rounded-lg border px-2.5 py-1 text-xs">Sửa</button>
                     <button type="button" disabled={saving} onClick={() => void toggle(a)} className="ml-2 rounded-lg border px-2.5 py-1 text-xs">{a.isActive ? "Ẩn" : "Hiện"}</button>

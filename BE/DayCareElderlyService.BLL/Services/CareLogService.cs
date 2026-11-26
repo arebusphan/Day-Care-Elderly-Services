@@ -213,6 +213,55 @@ public class CareLogService : ICareLogService
         return ApiResponse<CareLogEntryDto>.Ok(CareLogShared.ToEntryDto(log), "Ghi care log thành công.");
     }
 
+    /// <summary>
+    /// Staff sửa nội dung mục nhật ký do chính mình ghi trong hôm nay (trước khi chốt ngày).
+    /// Không sửa loại mục, chỉ số, thuốc hay mục xác nhận / chốt ngày.
+    /// </summary>
+    public async Task<ApiResponse<CareLogEntryDto>> UpdateEntryAsync(int userId, int careLogId, UpdateCareLogEntryDto dto)
+    {
+        var log = await CareLogShared.CareLogQuery(_context).FirstOrDefaultAsync(c => c.CareLogId == careLogId);
+        if (log == null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Không tìm thấy mục care log.");
+        }
+
+        if (log.StaffId != userId)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Chỉ sửa được mục nhật ký do chính bạn ghi.");
+        }
+
+        if (!CareLogTypes.Manual.Contains(log.CareType) && log.CareType != CareLogTypes.Skip)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Không sửa được mục chỉ số, thuốc hoặc xác nhận / chốt ngày.");
+        }
+
+        if (DateOnly.FromDateTime(log.RecordedAt) != VietnamTime.Today)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Chỉ sửa được mục care log của hôm nay.");
+        }
+
+        // Cùng điều kiện như khi ghi: được phân công, đã check-in, chưa chốt ngày
+        var (_, _, error) = await GetWritableAsync(userId, log.ElderlyId);
+        if (error != null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail(error);
+        }
+
+        var before = new { log.Description, log.Notes, log.IsInternal };
+        log.Description = dto.Description.Trim();
+        log.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+        log.IsInternal = dto.IsInternal;
+        await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "UPDATE_CARE_LOG", nameof(CareLog), log.CareLogId.ToString(), new
+        {
+            log.ElderlyId,
+            Before = before,
+            After = new { log.Description, log.Notes, log.IsInternal }
+        });
+
+        return ApiResponse<CareLogEntryDto>.Ok(CareLogShared.ToEntryDto(log), "Đã cập nhật mục nhật ký.");
+    }
+
     // ===== Ảnh =====
 
     public async Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files)
@@ -503,7 +552,7 @@ public class CareLogService : ICareLogService
         record.RecordedAt = now;
         record.StaffId = staff!.UserId;
         record.Staff = staff;
-        record.Notes = dto.Notes?.Trim();
+        record.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
 
         var plan = record.MedicationPlan;
         var data = JsonSerializer.Serialize(new
@@ -518,7 +567,7 @@ public class CareLogService : ICareLogService
             $"{plan.MedicationName} {plan.Dosage}: {DoseStatuses.Label(status)}", record.Notes, data, false);
         await _context.CareLogs.AddAsync(log);
 
-        // F-12 / WF-06: gia đình nhận thông báo mọi kết quả liều thuốc (CL-13: kèm lý do nếu từ chối/bỏ lỡ)
+        // Hướng A: Given / Refused / Missed đều notify Family (Given = đã cho uống; Refused/Missed kèm lý do).
         await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
             $"{elderly.FullName}: {DoseStatuses.Label(status).ToLowerInvariant()}",
             $"{plan.MedicationName} {plan.Dosage} lúc {record.ScheduledAt:HH:mm}."
