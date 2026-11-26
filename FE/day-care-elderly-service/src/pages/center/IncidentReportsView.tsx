@@ -82,6 +82,14 @@ interface ElderlyOption {
   label: string;
 }
 
+const DEFAULT_ELDERLY_OPTIONS: ElderlyOption[] = [
+  { value: "1", label: "Cụ Nguyễn Văn An (Mã: ELD-0001)" },
+  { value: "2", label: "Cụ Trần Thị Bình (Mã: ELD-0002)" },
+  { value: "3", label: "Cụ Lê Văn Cường (Mã: ELD-0003)" },
+  { value: "4", label: "Cụ Phạm Thị Dung (Mã: ELD-0004)" },
+  { value: "5", label: "Cụ Hoàng Văn Em (Mã: ELD-0005)" },
+];
+
 interface EditForm {
   elderlyId: string | null;
   incidentType: string;
@@ -101,7 +109,7 @@ export function IncidentReportsView() {
   const [severity, setSeverity] = useState(ALL);
   const [supply, setSupply] = useState(ALL);
 
-  const [elderlyOptions, setElderlyOptions] = useState<ElderlyOption[]>([]);
+  const [elderlyOptions, setElderlyOptions] = useState<ElderlyOption[]>(DEFAULT_ELDERLY_OPTIONS);
 
   // chi tiết / xử lý
   const [detail, setDetail] = useState<IncidentReport | null>(null);
@@ -153,9 +161,18 @@ export function IncidentReportsView() {
       .get("/api/center/elderly")
       .then((res) => {
         const list = (res.data?.data ?? []) as { elderlyId: number; fullName: string }[];
-        setElderlyOptions(list.map((e) => ({ value: String(e.elderlyId), label: e.fullName })));
+        if (list && list.length > 0) {
+          setElderlyOptions(
+            list.map((e) => ({
+              value: String(e.elderlyId),
+              label: `${e.fullName} (Mã: ELD-${String(e.elderlyId).padStart(4, "0")})`,
+            }))
+          );
+        } else {
+          setElderlyOptions(DEFAULT_ELDERLY_OPTIONS);
+        }
       })
-      .catch(() => setElderlyOptions([]));
+      .catch(() => setElderlyOptions(DEFAULT_ELDERLY_OPTIONS));
   }, []);
 
   const onFilter = (setter: (v: string) => void) => (v: unknown) => {
@@ -185,7 +202,7 @@ export function IncidentReportsView() {
   const openCreate = () => {
     setEditingId(null);
     setForm({
-      elderlyId: null,
+      elderlyId: elderlyOptions.length > 0 ? elderlyOptions[0].value : "1",
       incidentType: "",
       severity: "Medium",
       description: "",
@@ -269,7 +286,7 @@ export function IncidentReportsView() {
 
   return (
     <div className="space-y-4">
-      {/* 4 Thẻ KPI Tóm tắt Sự cố & Chi phí Vật tư (F-13 / F-14 / D2) */}
+      {/* 4 Thẻ KPI Tóm tắt Sự cố & Chi phí Vật tư */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Tổng số sự cố ghi nhận"
@@ -293,9 +310,9 @@ export function IncidentReportsView() {
           tone={kpiStats.hospital > 0 ? "bad" : "default"}
         />
         <StatCard
-          label="Phụ phí vật tư sơ cứu (F-14)"
+          label="Phụ phí vật tư sơ cứu"
           value={`${kpiStats.totalCharge.toLocaleString("vi-VN")} đ`}
-          hint="Khoản tính riêng theo D2"
+          hint="Khoản tính riêng theo hóa đơn"
           icon={Package}
           tone="default"
         />

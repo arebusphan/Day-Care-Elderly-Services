@@ -74,7 +74,7 @@ export function CheckoutDialog({ person, onClose, onDone }: Props) {
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="size-4 text-emerald-600" /> Check-out · {person.fullName}
           </DialogTitle>
-          <DialogDescription>Chỉ giao cụ cho người trong danh sách được đón (BR-30).</DialogDescription>
+          <DialogDescription>Chỉ giao cụ cho người trong danh sách được đón.</DialogDescription>
         </DialogHeader>
 
         {loading ? (

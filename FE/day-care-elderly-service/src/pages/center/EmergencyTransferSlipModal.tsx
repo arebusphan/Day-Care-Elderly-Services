@@ -77,7 +77,7 @@ export function EmergencyTransferSlipModal({ incident, open, onClose }: Props) {
               </div>
             </div>
             <DialogDescription>
-              Hồ sơ bàn giao y tế ban đầu dùng khi điều chuyển người cao tuổi sang bệnh viện cấp cứu (SRS 3.9.1 / WF-05).
+              Hồ sơ bàn giao y tế ban đầu dùng khi điều chuyển người cao tuổi sang bệnh viện cấp cứu.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -179,7 +179,7 @@ export function EmergencyTransferSlipModal({ incident, open, onClose }: Props) {
                 </p>
               </div>
 
-              {/* Danh sách vật tư (F-14 / D2) */}
+              {/* Danh sách vật tư y tế đã sử dụng */}
               <div className="mt-2">
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
                   Danh mục thuốc & vật tư y tế đã dùng:

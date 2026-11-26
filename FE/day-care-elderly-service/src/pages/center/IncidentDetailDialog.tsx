@@ -115,6 +115,17 @@ export function IncidentDetailDialog({ incident, onClose, onChanged, onEdit }: P
     const qty = Number(pickQty);
     if (!pickSupply || !(qty > 0)) return toast.error("Chọn vật tư và nhập số lượng > 0.");
     const id = Number(pickSupply);
+    const targetSupply = supplies.find((s) => s.supplyId === id);
+    if (!targetSupply) return toast.error("Không tìm thấy thông tin vật tư.");
+
+    const existingQty = pending.find((p) => p.supplyId === id)?.quantity ?? 0;
+    const totalDesired = existingQty + qty;
+    if (totalDesired > targetSupply.quantityInStock) {
+      return toast.error(
+        `Không đủ tồn kho: "${targetSupply.supplyName}" chỉ còn ${targetSupply.quantityInStock} ${targetSupply.unit} (yêu cầu: ${totalDesired} ${targetSupply.unit}).`
+      );
+    }
+
     setPending((prev) => {
       const found = prev.find((p) => p.supplyId === id);
       return found ? prev.map((p) => (p.supplyId === id ? { ...p, quantity: p.quantity + qty } : p)) : [...prev, { supplyId: id, quantity: qty }];

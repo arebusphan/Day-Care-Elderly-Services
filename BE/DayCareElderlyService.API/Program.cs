@@ -151,7 +151,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Run DB Initializer to seed default Roles and Admin user
-//await DbInitializer.SeedDefaultDataAsync(app.Services);
+await DbInitializer.SeedDefaultDataAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

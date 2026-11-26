@@ -96,7 +96,7 @@ export function FamilyIncidentDetailModal({ incident, open, onClose }: Props) {
             </Badge>
           </div>
           <DialogDescription>
-            Hồ sơ can thiệp và minh bạch chi phí vật tư sơ cứu cho người cao tuổi {incident.elderlyName} (F-14 / D2).
+            Hồ sơ can thiệp và minh bạch chi phí vật tư sơ cứu cho người cao tuổi {incident.elderlyName}.
           </DialogDescription>
         </DialogHeader>
 
@@ -172,7 +172,7 @@ export function FamilyIncidentDetailModal({ incident, open, onClose }: Props) {
               </div>
             )}
 
-            {/* BẢNG KÊ PHỤ PHÍ VẬT TƯ Y TẾ SƠ CỨU (F-14 / D2) */}
+            {/* BẢNG KÊ PHỤ PHÍ VẬT TƯ Y TẾ SƠ CỨU */}
             <div className="rounded-lg border p-3.5 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="flex items-center gap-1.5 font-semibold text-emerald-800 dark:text-emerald-400">
@@ -229,7 +229,7 @@ export function FamilyIncidentDetailModal({ incident, open, onClose }: Props) {
               )}
 
               <p className="text-[11px] text-muted-foreground leading-normal">
-                * Lưu ý: Theo quyết định phân loại chi phí dịch vụ (D2 / F-14), các loại vật tư sơ cấp cứu (băng gạc vô trùng, thuốc sát khuẩn, nẹp cố định...) được tính riêng theo thực tế sử dụng để đảm bảo tính minh bạch và chất lượng chăm sóc tốt nhất cho người cao tuổi.
+                * Lưu ý: Các loại vật tư sơ cấp cứu (băng gạc vô trùng, thuốc sát khuẩn, nẹp cố định...) được tính riêng theo thực tế sử dụng để đảm bảo tính minh bạch và chất lượng chăm sóc tốt nhất cho người cao tuổi.
               </p>
             </div>
 

@@ -475,6 +475,279 @@ public static class DbInitializer
             }
             await context.SaveChangesAsync();
             logger?.LogInformation("Đã seed 5 gói dịch vụ thực tế.");
+
+            // 7. Seed 5 người cao tuổi mặc định nếu bảng đang rỗng
+            if (!await context.ElderlyMembers.AnyAsync())
+            {
+                var elderlyToSeed = new List<ElderlyMember>
+                {
+                    new()
+                    {
+                        FullName = "Nguyễn Văn An",
+                        DateOfBirth = new DateOnly(1948, 5, 12),
+                        Gender = "Male",
+                        Address = "Quận 9, TP. Thủ Đức",
+                        EmergencyContactName = "Nguyễn Văn Thử Nghiệm",
+                        EmergencyContactPhone = "0987654321",
+                        MobilityStatus = "Normal",
+                        Allergies = "Dị ứng Penicillin",
+                        MedicalHistory = "Tăng huyết áp độ 1",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        FullName = "Trần Thị Bình",
+                        DateOfBirth = new DateOnly(1942, 8, 20),
+                        Gender = "Female",
+                        Address = "Quận 2, TP. Thủ Đức",
+                        EmergencyContactName = "Trần Tuấn Kiệt",
+                        EmergencyContactPhone = "0912345678",
+                        MobilityStatus = "Support",
+                        Allergies = "Không có",
+                        MedicalHistory = "Thoái hóa khớp gối, loãng xương",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        FullName = "Lê Văn Cường",
+                        DateOfBirth = new DateOnly(1945, 11, 3),
+                        Gender = "Male",
+                        Address = "Bình Thạnh, TP.HCM",
+                        EmergencyContactName = "Lê Hoàng Phúc",
+                        EmergencyContactPhone = "0933221100",
+                        MobilityStatus = "Normal",
+                        Allergies = "Dị ứng Aspirin",
+                        MedicalHistory = "Tiểu đường tuýp 2",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        FullName = "Phạm Thị Dung",
+                        DateOfBirth = new DateOnly(1951, 3, 15),
+                        Gender = "Female",
+                        Address = "Thủ Đức, TP.HCM",
+                        EmergencyContactName = "Phạm Thị Thảo",
+                        EmergencyContactPhone = "0977889900",
+                        MobilityStatus = "Support",
+                        Allergies = "Không có",
+                        MedicalHistory = "Tiền đình, hay chóng mặt",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        FullName = "Hoàng Văn Em",
+                        DateOfBirth = new DateOnly(1946, 9, 28),
+                        Gender = "Male",
+                        Address = "Quận 9, TP.HCM",
+                        EmergencyContactName = "Hoàng Quốc Bảo",
+                        EmergencyContactPhone = "0909876543",
+                        MobilityStatus = "Normal",
+                        Allergies = "Không có",
+                        MedicalHistory = "Sức khỏe ổn định",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                };
+
+                await context.ElderlyMembers.AddRangeAsync(elderlyToSeed);
+                await context.SaveChangesAsync();
+                logger?.LogInformation("Đã seed 5 người cao tuổi mặc định vào bảng ElderlyMembers.");
+            }
+
+            // 8. Seed Vật tư y tế (MedicalSupplies) nếu bảng đang rỗng
+            if (!await context.MedicalSupplies.AnyAsync())
+            {
+                var suppliesToSeed = new List<MedicalSupply>
+                {
+                    new()
+                    {
+                        SupplyName = "Băng cuộn y tế tiệt trùng 10cm x 2m",
+                        Unit = "Cuộn",
+                        MinimumStock = 10,
+                        QuantityInStock = 45,
+                        UnitPrice = 15000,
+                        ExpiryDate = new DateOnly(2027, 12, 31),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Gạc vô trùng đắp vết thương 10x10cm",
+                        Unit = "Miếng",
+                        MinimumStock = 20,
+                        QuantityInStock = 80,
+                        UnitPrice = 5000,
+                        ExpiryDate = new DateOnly(2028, 1, 1),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Cồn đỏ sát trùng Povidine 10% (20ml)",
+                        Unit = "Chai",
+                        MinimumStock = 5,
+                        QuantityInStock = 18,
+                        UnitPrice = 25000,
+                        ExpiryDate = new DateOnly(2026, 12, 15),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Nước muối sinh lý NaCl 0.9% (500ml)",
+                        Unit = "Chai",
+                        MinimumStock = 8,
+                        QuantityInStock = 25,
+                        UnitPrice = 10000,
+                        ExpiryDate = new DateOnly(2027, 10, 20),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Bông gòn y tế Bạch Tuyết (50g)",
+                        Unit = "Gói",
+                        MinimumStock = 5,
+                        QuantityInStock = 30,
+                        UnitPrice = 12000,
+                        ExpiryDate = new DateOnly(2027, 6, 30),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Băng dán cá nhân thông khí Urgo",
+                        Unit = "Hộp",
+                        MinimumStock = 3,
+                        QuantityInStock = 12,
+                        UnitPrice = 35000,
+                        ExpiryDate = new DateOnly(2027, 8, 15),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Cồn y tế sát khuẩn 70 độ (500ml)",
+                        Unit = "Chai",
+                        MinimumStock = 5,
+                        QuantityInStock = 15,
+                        UnitPrice = 28000,
+                        ExpiryDate = new DateOnly(2026, 11, 30),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new()
+                    {
+                        SupplyName = "Nẹp cố định chấn thương tay chân",
+                        Unit = "Cái",
+                        MinimumStock = 2,
+                        QuantityInStock = 8,
+                        UnitPrice = 65000,
+                        ExpiryDate = new DateOnly(2029, 12, 31),
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                };
+
+                await context.MedicalSupplies.AddRangeAsync(suppliesToSeed);
+                await context.SaveChangesAsync();
+                logger?.LogInformation("Đã seed 8 mặt hàng vật tư y tế thực tế vào bảng MedicalSupplies.");
+            }
+
+            // 9. Seed Sự cố mẫu (IncidentReports) nếu bảng đang rỗng
+            if (!await context.IncidentReports.AnyAsync())
+            {
+                var elderly1 = await context.ElderlyMembers.FirstOrDefaultAsync();
+                var elderly2 = await context.ElderlyMembers.Skip(1).FirstOrDefaultAsync();
+                var adminUser = await context.Users.FirstOrDefaultAsync();
+
+                if (elderly1 != null && adminUser != null)
+                {
+                    var sampleIncidents = new List<IncidentReport>
+                    {
+                        new()
+                        {
+                            ElderlyId = elderly1.ElderlyId,
+                            ReportedBy = adminUser.UserId,
+                            IncidentType = "Té ngã nhẹ tại hành lang",
+                            Severity = "Medium",
+                            Description = "Cụ bị hụt chân ngã nhẹ ở hành lang phòng sinh hoạt chung, xây xát nhẹ ở đầu gối phải. Đã tiến hành sát trùng bằng Povidine và băng gạc vô trùng.",
+                            OccurredAt = DateTime.UtcNow.AddDays(-2),
+                            ReportedAt = DateTime.UtcNow.AddDays(-2),
+                            Status = "Resolved",
+                            HandlingActions = "Đỡ cụ ngồi dậy an toàn, kiểm tra xương khớp không gãy, rửa vết thương bằng nước muối sinh lý, sát khuẩn Povidine và đắp gạc vô trùng.",
+                            ResolutionNotes = "Cụ tỉnh táo hoàn toàn, đi lại bình thường, vết xước khô ráo.",
+                            ResolvedAt = DateTime.UtcNow.AddDays(-2).AddHours(1),
+                            IsSupplyConfirmed = true,
+                            SupplyChargeAmount = 35000
+                        }
+                    };
+
+                    if (elderly2 != null)
+                    {
+                        sampleIncidents.Add(new()
+                        {
+                            ElderlyId = elderly2.ElderlyId,
+                            ReportedBy = adminUser.UserId,
+                            IncidentType = "Tụt huyết áp & Khó thở cấp",
+                            Severity = "Critical",
+                            Description = "Cụ có biểu hiện chóng mặt dữ dội, vã mồ hôi, huyết áp đo được 85/50 mmHg kèm thở dốc. Đã cho thở oxy hỗ trợ và lập tức điều xe chuyển viện cấp cứu.",
+                            OccurredAt = DateTime.UtcNow.AddHours(-5),
+                            ReportedAt = DateTime.UtcNow.AddHours(-5),
+                            Status = "InProgress",
+                            HandlingActions = "Đặt cụ nằm đầu thấp, nới lỏng quần áo, hỗ trợ thở oxy mask 3L/phút, liên hệ khẩn cấp thân nhân và gọi xe cứu thương chuyển viện.",
+                            HospitalName = "Bệnh viện Đa khoa Khu vực Thủ Đức",
+                            HospitalTransferAt = DateTime.UtcNow.AddHours(-4),
+                            HospitalEscort = "Y tá Trần Thị Thảo (Khoa Y tế)",
+                            ResolutionNotes = "Đang được các bác sĩ khoa Cấp cứu bệnh viện theo dõi và truyền dịch.",
+                            IsSupplyConfirmed = false,
+                            SupplyChargeAmount = 0
+                        });
+                    }
+
+                    await context.IncidentReports.AddRangeAsync(sampleIncidents);
+                    await context.SaveChangesAsync();
+                    logger?.LogInformation("Đã seed 2 sự cố thực tế mẫu vào bảng IncidentReports.");
+                }
+            }
+
+            // 10. Gắn người cao tuổi với tài khoản gia đình (nếu có tài khoản family_test)
+            var familyUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "family_test@daycare.com");
+            if (familyUser != null)
+            {
+                var familyMember = await context.FamilyMembers.FirstOrDefaultAsync(f => f.UserId == familyUser.UserId);
+                if (familyMember == null)
+                {
+                    familyMember = new FamilyMember
+                    {
+                        UserId = familyUser.UserId,
+                        Address = "TP. Thủ Đức, TP. Hồ Chí Minh",
+                        EmergencyContact = "0900000003"
+                    };
+                    await context.FamilyMembers.AddAsync(familyMember);
+                    await context.SaveChangesAsync();
+                }
+
+                var firstElderly = await context.ElderlyMembers.FirstOrDefaultAsync();
+                if (firstElderly != null && !await context.ElderlyFamilyRelationships.AnyAsync(r => r.FamilyMemberId == familyMember.FamilyMemberId))
+                {
+                    await context.ElderlyFamilyRelationships.AddAsync(new ElderlyFamilyRelationship
+                    {
+                        FamilyMemberId = familyMember.FamilyMemberId,
+                        ElderlyId = firstElderly.ElderlyId,
+                        Relationship = "Con trai",
+                        IsPrimaryContact = true,
+                        CanViewCareLogs = true,
+                        CanReceiveNotifications = true
+                    });
+                    await context.SaveChangesAsync();
+                    logger?.LogInformation("Đã liên kết tài khoản family_test@daycare.com với người cao tuổi đầu tiên.");
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -102,7 +102,7 @@ export function MedicalSupplyAnalyticsPanel() {
         </Button>
       </div>
 
-      {/* 4 Thẻ KPI Chỉ Số Kho (SRS 3.9 & WF-05 / D2 / F-14) */}
+      {/* 4 Thẻ KPI Chỉ Số Kho */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Mặt hàng hoạt động"
@@ -151,7 +151,7 @@ export function MedicalSupplyAnalyticsPanel() {
         />
 
         <StatCard
-          label="Phí vật tư do sự cố (F-14)"
+          label="Phí vật tư do sự cố"
           value={summary ? formatVND(summary.totalIncidentSupplyCost) : "--"}
           hint="Phụ phí vật tư phát sinh ngoài gói"
           icon={Activity}
@@ -270,7 +270,7 @@ export function MedicalSupplyAnalyticsPanel() {
             </div>
           )}
 
-          {/* SubTab 2: Cảnh báo hạn dùng (SR-04) */}
+          {/* SubTab 2: Cảnh báo hạn dùng */}
           {!loading && activeSubTab === "expiring" && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
