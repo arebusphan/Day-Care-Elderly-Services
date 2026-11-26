@@ -8,6 +8,7 @@ import CareLogDataDetails from "../../components/CareLogDataDetails";
 import { careTypeLabels as typeLabels, incidentStatusLabels, incidentTypeLabels, severityLabels } from "../../lib/careLogLabels";
 import scheduleService, { STATUS_LABELS } from "../../services/scheduleService";
 import type { ScheduleDay, ScheduleStatus } from "../../services/scheduleService";
+import FamilyIncidentDetailModal from "./FamilyIncidentDetailModal";
 
 const scheduleStatusClass: Record<ScheduleStatus, string> = {
   Done: "bg-teal-50 text-teal-700",
@@ -40,6 +41,7 @@ const FamilyHealthTrackingView: React.FC = () => {
   const [health, setHealth] = useState<HealthHistory | null>(null);
   const [incidents, setIncidents] = useState<FamilyIncident[]>([]);
   const [schedule, setSchedule] = useState<ScheduleDay | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<FamilyIncident | null>(null);
   const [activeSection, setActiveSection] = useState<TrackingSection>("activities");
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
@@ -207,9 +209,16 @@ const FamilyHealthTrackingView: React.FC = () => {
             {activeSection === "incidents" && <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
               <SectionHeader title="Sự cố và cảnh báo" subtitle="Các sự cố được báo cho gia đình" />
               {loadingTimeline ? <LoadingMessage /> : !selectedIncidents.length ? <EmptyMessage text="Không có sự cố hoặc cảnh báo trong khoảng thời gian này." />
-                : <div className="space-y-3">{selectedIncidents.map((incident) => <IncidentCard key={incident.incidentId} incident={incident} />)}</div>}
+                : <div className="space-y-3">{selectedIncidents.map((incident) => <IncidentCard key={incident.incidentId} incident={incident} onViewDetail={setSelectedIncident} />)}</div>}
             </section>}
           </>}
+
+      {/* Modal Bảng kê phụ phí vật tư & Chi tiết can thiệp cho gia đình */}
+      <FamilyIncidentDetailModal
+        incident={selectedIncident}
+        open={!!selectedIncident}
+        onClose={() => setSelectedIncident(null)}
+      />
     </div>
   );
 };
@@ -261,11 +270,21 @@ const DoseCard: React.FC<{ dose: DoseRecord }> = ({ dose }) => (
   </article>
 );
 
-const IncidentCard: React.FC<{ incident: FamilyIncident }> = ({ incident }) => (
-  <article className="rounded-xl border border-rose-100 bg-rose-50/50 p-4">
+const IncidentCard: React.FC<{ incident: FamilyIncident; onViewDetail: (i: FamilyIncident) => void }> = ({
+  incident,
+  onViewDetail,
+}) => (
+  <article className="rounded-xl border border-rose-100 bg-rose-50/50 p-4 transition hover:shadow-xs">
     <div className="flex flex-wrap items-start justify-between gap-2">
-      <div><h4 className="font-semibold text-slate-900">{incidentTypeLabels[incident.incidentType] ?? incident.incidentType}</h4><p className="mt-1 text-sm text-slate-700">{incident.description}</p></div>
-      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(incident.severity)}`}>Mức: {severityLabels[incident.severity] ?? incident.severity}</span>
+      <div>
+        <h4 className="font-semibold text-slate-900">
+          {incidentTypeLabels[incident.incidentType] ?? incident.incidentType}
+        </h4>
+        <p className="mt-1 text-sm text-slate-700">{incident.description}</p>
+      </div>
+      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(incident.severity)}`}>
+        Mức: {severityLabels[incident.severity] ?? incident.severity}
+      </span>
     </div>
     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
       <span>{new Date(incident.occurredAt).toLocaleString("vi-VN")}</span>
@@ -273,11 +292,37 @@ const IncidentCard: React.FC<{ incident: FamilyIncident }> = ({ incident }) => (
       <span>Trạng thái: {incidentStatusLabels[incident.status] ?? incident.status}</span>
       {incident.reportedByName && <span>Báo bởi: {incident.reportedByName}</span>}
     </div>
-    {incident.resolutionNotes && <p className="mt-3 rounded-lg bg-white p-3 text-sm text-slate-600">Xử lý: {incident.resolutionNotes}</p>}
-    {incident.handlingActions && <p className="mt-2 text-sm text-slate-600">Đã xử lý: {incident.handlingActions}</p>}
-    {incident.hospitalName && <p className="mt-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">Chuyển viện: {incident.hospitalName}{incident.hospitalTransferAt ? ` lúc ${new Date(incident.hospitalTransferAt).toLocaleString("vi-VN")}` : ""}</p>}
-    {(incident.supplyChargeAmount ?? 0) > 0 && <p className="mt-2 text-sm font-medium text-slate-800">Phí vật tư y tế tính riêng: {(incident.supplyChargeAmount ?? 0).toLocaleString("vi-VN")} đ</p>}
-    {incident.resolvedAt && <p className="mt-2 text-xs text-slate-400">Đã giải quyết {new Date(incident.resolvedAt).toLocaleString("vi-VN")}</p>}
+    {incident.resolutionNotes && (
+      <p className="mt-3 rounded-lg bg-white p-3 text-sm text-slate-600">Xử lý: {incident.resolutionNotes}</p>
+    )}
+    {incident.handlingActions && (
+      <p className="mt-2 text-sm text-slate-600">Đã xử lý: {incident.handlingActions}</p>
+    )}
+    {incident.hospitalName && (
+      <p className="mt-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
+        Chuyển viện: {incident.hospitalName}
+        {incident.hospitalTransferAt ? ` lúc ${new Date(incident.hospitalTransferAt).toLocaleString("vi-VN")}` : ""}
+      </p>
+    )}
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rose-100/80 pt-3">
+      {(incident.supplyChargeAmount ?? 0) > 0 ? (
+        <span className="text-xs font-semibold text-emerald-800">
+          Phí vật tư tính riêng: {(incident.supplyChargeAmount ?? 0).toLocaleString("vi-VN")} đ
+        </span>
+      ) : (
+        <span className="text-xs text-slate-400">Không có phụ phí vật tư</span>
+      )}
+      <button
+        type="button"
+        onClick={() => onViewDetail(incident)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 shadow-2xs transition"
+      >
+        <span>Xem chi tiết can thiệp & bảng kê vật tư</span>
+      </button>
+    </div>
+    {incident.resolvedAt && (
+      <p className="mt-2 text-xs text-slate-400">Đã giải quyết {new Date(incident.resolvedAt).toLocaleString("vi-VN")}</p>
+    )}
   </article>
 );
 
