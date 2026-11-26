@@ -5,7 +5,7 @@ import { roleOf, useAuth, type MobileRole } from "@/lib/auth";
 import { colors, Loading } from "./ui";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
-export type TabDef = { name: string; title: string; icon: IconName; headerTitle?: string };
+export type TabDef = { name: string; title: string; icon: IconName; headerTitle?: string; headerShown?: boolean };
 
 /** Thanh tab dưới dùng chung cho Staff và Gia đình; sai vai trò thì về màn điều hướng. */
 export function RoleTabs({ role, tabs }: { role: MobileRole; tabs: TabDef[] }) {
@@ -18,7 +18,11 @@ export function RoleTabs({ role, tabs }: { role: MobileRole; tabs: TabDef[] }) {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: "#94a3b8",
-        headerTitleStyle: { fontWeight: "700" },
+        headerTitleStyle: { fontWeight: "800", fontSize: 20 },
+        headerTitleAlign: "left",
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: colors.bg },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -29,6 +33,7 @@ export function RoleTabs({ role, tabs }: { role: MobileRole; tabs: TabDef[] }) {
           options={{
             title: t.title,
             headerTitle: t.headerTitle ?? t.title,
+            headerShown: t.headerShown ?? true,
             tabBarIcon: ({ color, size }) => <Ionicons name={t.icon} color={String(color)} size={size} />,
           }}
         />

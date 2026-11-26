@@ -5,7 +5,7 @@ export default function StaffTabs() {
     <RoleTabs
       role="staff"
       tabs={[
-        { name: "index", title: "Tổng quan", icon: "home-outline", headerTitle: "Ca trực hôm nay" },
+        { name: "index", title: "Tổng quan", icon: "home-outline", headerTitle: "Ca trực hôm nay", headerShown: false },
         { name: "elderly", title: "Cụ hôm nay", icon: "people-outline" },
         { name: "medication", title: "Thuốc", icon: "medkit-outline", headerTitle: "Kế hoạch thuốc" },
         { name: "messages", title: "Tin nhắn", icon: "chatbubbles-outline" },

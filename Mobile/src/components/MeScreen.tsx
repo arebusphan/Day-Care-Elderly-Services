@@ -3,9 +3,8 @@ import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useAuth } from "@/lib/auth";
-import { API_URL } from "@/lib/config";
 import { accountApi } from "@/lib/services2";
-import { Badge, Button, Card, colors, s } from "./ui";
+import { Avatar, Badge, Card, colors, MenuRow, s } from "./ui";
 
 type Item = { label: string; icon: React.ComponentProps<typeof Ionicons>["name"]; href: string; badge?: string };
 
@@ -27,9 +26,7 @@ export function MeScreen({ extra }: { extra: Item[] }) {
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <Card>
         <View style={s.row}>
-          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: colors.primaryDark, fontSize: 20, fontWeight: "800" }}>{user?.fullName?.slice(0, 1) ?? "?"}</Text>
-          </View>
+          <Avatar name={user?.fullName ?? "?"} size={52} />
           <View style={{ flex: 1 }}>
             <Text style={s.title}>{user?.fullName}</Text>
             <Text style={s.muted}>{user?.email}</Text>
@@ -47,8 +44,9 @@ export function MeScreen({ extra }: { extra: Item[] }) {
           </Pressable>
         ))}
       </Card>
-      <Button title="Đăng xuất" variant="outline" onPress={() => void logout().then(() => router.replace("/login"))} />
-      <Text style={[s.muted, { textAlign: "center", marginTop: 16, fontSize: 12 }]}>Máy chủ: {API_URL}</Text>
+      <Card style={{ paddingVertical: 0 }}>
+        <MenuRow icon="log-out-outline" label="Đăng xuất" danger last onPress={() => void logout().then(() => router.replace("/login"))} />
+      </Card>
     </ScrollView>
   );
 }

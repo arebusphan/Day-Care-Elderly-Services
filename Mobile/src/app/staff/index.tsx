@@ -1,18 +1,14 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { Badge, Card, colors, Empty, Loading, Notice, s } from "@/components/ui";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Avatar, Badge, Card, colors, Empty, Greeting, ListRow, Loading, Notice, Section, StatTile } from "@/components/ui";
 import { timeLabel } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { staffMoreApi } from "@/lib/services2";
 import { memberStatusLabels, type StaffOverview } from "@/lib/types2";
 
-const Stat = ({ label, value, tone = colors.text }: { label: string; value: number | string; tone?: string }) => (
-  <View style={[s.card, { flex: 1, minWidth: "45%", marginBottom: 0 }]}>
-    <Text style={s.muted}>{label}</Text>
-    <Text style={{ fontSize: 24, fontWeight: "800", color: tone, marginTop: 2 }}>{value}</Text>
-  </View>
-);
+const lastName = (n?: string) => n?.trim().split(/\s+/).pop() ?? "";
 
 /** Staff › Tổng quan ca trực hôm nay */
 export default function StaffOverviewScreen() {
@@ -30,39 +26,43 @@ export default function StaffOverviewScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}>
-      <Text style={s.muted}>Xin chào {user?.fullName}</Text>
-      <Text style={[s.title, { marginBottom: 12 }]}>{new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" })}</Text>
+      <Greeting name={lastName(user?.fullName)} unread={data?.unreadNotifications} onBell={() => router.push("/notifications")} />
       {!!error && <Notice text={error} tone="error" />}
-      {!data ? <Loading /> : !data.hasPublishedPlan ? <Notice text="Hôm nay chưa có kế hoạch được công bố." tone="warn" /> : (
+      {!data ? (error ? null : <Loading />) : !data.hasPublishedPlan || !data.group ? <Empty text="Hôm nay chưa có phân công." /> : (
         <>
-          <Card><Text style={s.title}>{data.group?.groupName ?? "Chưa được phân nhóm"}</Text>{data.group && <Text style={s.muted}>Loại nhóm: {data.group.groupType === "Support" ? "Cần hỗ trợ" : "Bình thường"}</Text>}</Card>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
-            <Stat label="Cụ phụ trách" value={data.members.length} />
-            <Stat label="Đang có mặt" value={present} tone={colors.ok} />
-            <Stat label="Care log đã chốt" value={`${closed}/${data.members.length}`} />
-            <Stat label="Thuốc chờ / trễ" value={`${data.doses.pending}/${data.doses.overdue}`} tone={data.doses.overdue ? colors.danger : colors.text} />
-            <Stat label="Sự cố đang mở" value={data.openIncidents} tone={data.openIncidents ? colors.danger : colors.text} />
-            <Stat label="Thông báo chưa đọc" value={data.unreadNotifications} />
+          <View style={{ backgroundColor: colors.primary, borderRadius: 16, padding: 16, marginBottom: 12 }}>
+            <Text style={{ color: "#ccfbf1", fontSize: 13 }}>{data.group.groupType === "Support" ? "Nhóm cần hỗ trợ" : "Nhóm bình thường"}</Text>
+            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>{data.group.groupName}</Text>
+            <Text style={{ color: "#fff", marginTop: 6 }}>{present}/{data.members.length} cụ có mặt</Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+            <StatTile icon="medkit-outline" value={data.doses.pending} label={data.doses.overdue ? `${data.doses.overdue} trễ` : "Liều chờ"} tone={data.doses.overdue ? colors.danger : colors.text} onPress={() => router.push("/staff/medication")} />
+            <StatTile icon="warning-outline" value={data.openIncidents} label="Sự cố" tone={data.openIncidents ? colors.danger : colors.text} />
+            <StatTile icon="checkmark-done-outline" value={`${closed}/${data.members.length}`} label="Đã chốt" />
           </View>
           {data.doses.next.length > 0 && (
-            <Card>
-              <Text style={[s.title, { fontSize: 15, marginBottom: 6 }]}>Liều thuốc sắp tới</Text>
-              {data.doses.next.map((d) => <Text key={d.medicationRecordId} style={{ color: colors.text, marginBottom: 2 }}>{timeLabel(d.scheduledAt)} · {d.elderlyName} · {d.medicationName}</Text>)}
-            </Card>
-          )}
-          <Text style={[s.title, { fontSize: 15, marginBottom: 8 }]}>Cụ trong nhóm</Text>
-          {data.members.length === 0 ? <Empty text="Chưa có cụ nào." /> : data.members.map((m) => (
-            <Pressable key={m.elderlyId} disabled={m.status !== "Present"} onPress={() => router.push({ pathname: "/care/[id]", params: { id: String(m.elderlyId), name: m.fullName } })}>
-              <Card style={{ padding: 12 }}>
-                <View style={[s.row, { justifyContent: "space-between" }]}>
-                  <Text style={{ fontWeight: "700", color: colors.text, flex: 1 }}>{m.fullName}</Text>
-                  <Badge text={memberStatusLabels[m.status]} tone={m.status === "Present" ? "green" : m.status === "Left" ? "orange" : "gray"} />
-                </View>
-                <Text style={s.muted}>{m.entries} ghi nhận{m.hasVitals ? " · đã đo chỉ số" : ""}{m.medicalDone ? " · y tế xong" : ""}{m.closed ? " · đã chốt" : ""}</Text>
-                {!!m.allergies && <Text style={{ color: colors.warn, fontSize: 13 }}>Dị ứng: {m.allergies}</Text>}
+            <>
+              <Section title="Liều thuốc sắp tới" />
+              <Card style={{ paddingVertical: 4 }}>
+                {data.doses.next.slice(0, 4).map((d, i, arr) => (
+                  <ListRow key={d.medicationRecordId} last={i === arr.length - 1}
+                    left={<Ionicons name="time-outline" size={20} color={colors.primary} />}
+                    title={`${timeLabel(d.scheduledAt)} · ${d.medicationName}`} sub={d.elderlyName} />
+                ))}
               </Card>
-            </Pressable>
-          ))}
+            </>
+          )}
+          <Section title="Cụ trong nhóm" />
+          <Card style={{ paddingVertical: 4 }}>
+            {data.members.map((m, i) => (
+              <ListRow key={m.elderlyId} last={i === data.members.length - 1}
+                left={<Avatar name={m.fullName} active={m.status === "Present"} />}
+                title={m.fullName}
+                sub={m.allergies ? `Dị ứng: ${m.allergies}` : `${m.entries} ghi nhận`} subTone={m.allergies ? colors.danger : undefined}
+                right={<Badge text={memberStatusLabels[m.status]} tone={m.status === "Present" ? "green" : "gray"} />}
+                onPress={m.status === "Present" ? () => router.push({ pathname: "/care/[id]", params: { id: String(m.elderlyId), name: m.fullName } }) : undefined} />
+            ))}
+          </Card>
         </>
       )}
     </ScrollView>

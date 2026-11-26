@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { Card, colors, Empty, Loading, Notice, s } from "@/components/ui";
+import { RefreshControl, ScrollView } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Avatar, Card, Empty, ListRow, Loading, Notice } from "@/components/ui";
 import { staffApi } from "@/lib/services";
 import type { ElderlyInGroup } from "@/lib/types";
 
@@ -17,18 +18,16 @@ export default function StaffMedication() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}>
-      <Text style={[s.muted, { marginBottom: 12 }]}>Kế hoạch thuốc do gia đình gửi kèm. Chọn cụ để xem, thêm hoặc sửa, và sinh lịch liều.</Text>
       {!!error && <Notice text={error} tone="error" />}
-      {people === null ? <Loading /> : people.length === 0 ? <Empty text="Hôm nay bạn chưa được phân công cụ nào." /> : people.map((p) => (
-        <Pressable key={p.elderlyId} onPress={() => router.push({ pathname: "/medication/[id]", params: { id: String(p.elderlyId), name: p.fullName } })}>
-          <Card style={{ padding: 14 }}>
-            <View style={[s.row, { justifyContent: "space-between" }]}>
-              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 15 }}>{p.fullName}</Text>
-              <Text style={{ color: colors.primary, fontSize: 20 }}>›</Text>
-            </View>
-          </Card>
-        </Pressable>
-      ))}
+      {people === null ? <Loading /> : people.length === 0 ? <Empty text="Hôm nay chưa có phân công." /> : (
+        <Card style={{ paddingVertical: 4 }}>
+          {people.map((p, i) => (
+            <ListRow key={p.elderlyId} last={i === people.length - 1} left={<Avatar name={p.fullName} />} title={p.fullName}
+              right={<Ionicons name="chevron-forward" size={18} color="#94a3b8" />}
+              onPress={() => router.push({ pathname: "/medication/[id]", params: { id: String(p.elderlyId), name: p.fullName } })} />
+          ))}
+        </Card>
+      )}
     </ScrollView>
   );
 }

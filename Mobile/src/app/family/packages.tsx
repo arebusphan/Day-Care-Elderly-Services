@@ -25,18 +25,16 @@ export default function Packages() {
         return (
           <Card key={key}>
             <View style={[s.row, { justifyContent: "space-between" }]}>
-              <Text style={[s.title, { fontSize: 16, flex: 1 }]}>{p.packageName}</Text>
-              <Badge text={full ? "Hết chỗ" : `Còn ${p.availableSlots}/${p.totalSlots} chỗ`} tone={full ? "red" : "green"} />
+              <Text style={[s.title, { fontSize: 17, flex: 1 }]}>{p.packageName}</Text>
+              <Badge text={full ? "Hết chỗ" : `Còn ${p.availableSlots} chỗ`} tone={full ? "red" : "green"} />
             </View>
-            {!!p.targetAudience && <Text style={s.muted}>Dành cho: {p.targetAudience}</Text>}
-            {!!p.description && <Text style={{ color: colors.text, marginTop: 6 }}>{p.description}</Text>}
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ color: colors.text }}>Theo ngày: <Text style={{ fontWeight: "700" }}>{money(p.pricePerDay)}</Text></Text>
-              <Text style={{ color: colors.text }}>Tháng 3 buổi/tuần: <Text style={{ fontWeight: "700" }}>{money(p.priceMonth3Days)}</Text></Text>
-              <Text style={{ color: colors.text }}>Tháng cả tuần (T2–T7): <Text style={{ fontWeight: "700" }}>{money(p.priceMonthFullWeek)}</Text></Text>
-            </View>
+            {!!p.targetAudience && <Text style={s.muted} numberOfLines={open === key ? undefined : 1}>{p.targetAudience}</Text>}
+            <Text style={{ marginTop: 8, color: colors.primary, fontSize: 20, fontWeight: "800" }}>{money(p.pricePerDay)}<Text style={{ fontSize: 13, color: colors.muted, fontWeight: "400" }}> / ngày</Text></Text>
             {open === key && (
               <View style={{ marginTop: 8 }}>
+                <Text style={{ color: colors.text }}>Tháng 3 buổi/tuần: <Text style={{ fontWeight: "700" }}>{money(p.priceMonth3Days)}</Text></Text>
+                <Text style={{ color: colors.text, marginBottom: 6 }}>Tháng cả tuần: <Text style={{ fontWeight: "700" }}>{money(p.priceMonthFullWeek)}</Text></Text>
+                {!!p.description && <Text style={{ color: colors.text, marginBottom: 6 }}>{p.description}</Text>}
                 {p.highlights.map((h) => <Text key={h} style={{ color: colors.text }}>• {h}</Text>)}
                 {p.includedServices.length > 0 && <Text style={[s.label, { marginTop: 6 }]}>Dịch vụ bao gồm</Text>}
                 {p.includedServices.map((h) => <Text key={h} style={s.muted}>✓ {h}</Text>)}
@@ -44,8 +42,8 @@ export default function Packages() {
               </View>
             )}
             <View style={[s.row, { marginTop: 10 }]}>
-              <Button small variant="outline" title={open === key ? "Thu gọn" : "Chi tiết"} onPress={() => setOpen(open === key ? null : key)} />
-              <Button small title="Đăng ký" disabled={full} onPress={() => router.push({ pathname: "/register", params: { packageId: key } })} />
+              <Button small variant="outline" title={open === key ? "Thu gọn" : "Chi tiết"} onPress={() => setOpen(open === key ? null : key)} style={{ flex: 1 }} />
+              <Button small title="Đăng ký" disabled={full} onPress={() => router.push({ pathname: "/register", params: { packageId: key } })} style={{ flex: 1 }} />
             </View>
           </Card>
         );
