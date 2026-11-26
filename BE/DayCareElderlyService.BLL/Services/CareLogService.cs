@@ -213,6 +213,55 @@ public class CareLogService : ICareLogService
         return ApiResponse<CareLogEntryDto>.Ok(CareLogShared.ToEntryDto(log), "Ghi care log thành công.");
     }
 
+    /// <summary>
+    /// Staff sửa nội dung mục nhật ký do chính mình ghi trong hôm nay (trước khi chốt ngày).
+    /// Không sửa loại mục, chỉ số, thuốc hay mục xác nhận / chốt ngày.
+    /// </summary>
+    public async Task<ApiResponse<CareLogEntryDto>> UpdateEntryAsync(int userId, int careLogId, UpdateCareLogEntryDto dto)
+    {
+        var log = await CareLogShared.CareLogQuery(_context).FirstOrDefaultAsync(c => c.CareLogId == careLogId);
+        if (log == null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Không tìm thấy mục care log.");
+        }
+
+        if (log.StaffId != userId)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Chỉ sửa được mục nhật ký do chính bạn ghi.");
+        }
+
+        if (!CareLogTypes.Manual.Contains(log.CareType) && log.CareType != CareLogTypes.Skip)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Không sửa được mục chỉ số, thuốc hoặc xác nhận / chốt ngày.");
+        }
+
+        if (DateOnly.FromDateTime(log.RecordedAt) != VietnamTime.Today)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Chỉ sửa được mục care log của hôm nay.");
+        }
+
+        // Cùng điều kiện như khi ghi: được phân công, đã check-in, chưa chốt ngày
+        var (_, _, error) = await GetWritableAsync(userId, log.ElderlyId);
+        if (error != null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail(error);
+        }
+
+        var before = new { log.Description, log.Notes, log.IsInternal };
+        log.Description = dto.Description.Trim();
+        log.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+        log.IsInternal = dto.IsInternal;
+        await _context.SaveChangesAsync();
+        await AuditLogWriter.WriteAsync(_context, userId, "UPDATE_CARE_LOG", nameof(CareLog), log.CareLogId.ToString(), new
+        {
+            log.ElderlyId,
+            Before = before,
+            After = new { log.Description, log.Notes, log.IsInternal }
+        });
+
+        return ApiResponse<CareLogEntryDto>.Ok(CareLogShared.ToEntryDto(log), "Đã cập nhật mục nhật ký.");
+    }
+
     // ===== Ảnh =====
 
     public async Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files)

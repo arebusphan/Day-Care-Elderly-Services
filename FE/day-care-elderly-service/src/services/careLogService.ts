@@ -131,6 +131,11 @@ const careLogService = {
     const response = await api.post<ApiResponse<CareLogEntry>>(`/api/staff/care-logs/${elderlyId}`, entry);
     return response.data.data;
   },
+  /** Sửa nội dung mục nhật ký do chính mình ghi hôm nay (trước khi chốt ngày) */
+  async updateEntry(careLogId: number, input: { description: string; notes?: string; isInternal: boolean }): Promise<CareLogEntry> {
+    const response = await api.put<ApiResponse<CareLogEntry>>(`/api/staff/care-logs/entries/${careLogId}`, input);
+    return response.data.data;
+  },
   async uploadPhotos(careLogId: number, files: File[]): Promise<CareLogPhoto[]> {
     const form = new FormData();
     files.forEach((file) => form.append("files", file));
