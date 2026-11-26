@@ -16,6 +16,8 @@ public interface ICareLogService
     /// <summary>Tổng kết tuần (T2–T7): số buổi, số phút theo hoạt động</summary>
     Task<ApiResponse<ScheduleWeekDto>> GetScheduleWeekAsync(int userId, int elderlyId, DateOnly? date);
     Task<ApiResponse<CareLogEntryDto>> AddEntryAsync(int userId, int elderlyId, CreateCareLogEntryDto dto);
+    /// <summary>Sửa nội dung mục nhật ký do chính mình ghi hôm nay (trước khi chốt ngày)</summary>
+    Task<ApiResponse<CareLogEntryDto>> UpdateEntryAsync(int userId, int careLogId, UpdateCareLogEntryDto dto);
     Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files);
     Task<ApiResponse<bool>> DeletePhotoAsync(int userId, int photoId);
     Task<ApiResponse<VitalsResultDto>> RecordVitalsAsync(int userId, int elderlyId, RecordVitalsDto dto);

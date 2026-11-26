@@ -72,6 +72,15 @@ public class StaffCareLogController : ControllerBase
         RunAsync(userId => _careLogService.AddEntryAsync(userId, elderlyId, dto), "ghi care log");
 
     /// <summary>
+    /// Sửa nội dung mục nhật ký do chính mình ghi hôm nay (trước khi chốt ngày); không đổi loại mục
+    /// </summary>
+    [HttpPut("care-logs/entries/{careLogId:int}")]
+    [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<CareLogEntryDto>), StatusCodes.Status400BadRequest)]
+    public Task<IActionResult> UpdateEntry(int careLogId, [FromBody] UpdateCareLogEntryDto dto) =>
+        RunAsync(userId => _careLogService.UpdateEntryAsync(userId, careLogId, dto), "sửa care log");
+
+    /// <summary>
     /// Đính kèm ảnh cho 1 mục care log hôm nay (jpg/png/webp, tối đa 5MB/ảnh, 5 ảnh/mục). Ảnh lưu trên Cloudinary.
     /// </summary>
     [HttpPost("care-logs/entries/{careLogId:int}/photos")]

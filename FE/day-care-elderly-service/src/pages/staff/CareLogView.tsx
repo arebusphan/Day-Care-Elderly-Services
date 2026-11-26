@@ -5,6 +5,11 @@ import CareLogDataDetails from "../../components/CareLogDataDetails";
 import { careTypeLabels, incidentStatusLabels, incidentTypeLabels, severityLabels } from "../../lib/careLogLabels";
 import scheduleService, { CONDITION_LABELS, ROLE_LABELS, STATUS_LABELS } from "../../services/scheduleService";
 import type { ScheduleDay, ScheduleItem, ScheduleStatus, ScheduleWeek } from "../../services/scheduleService";
+import { useAuth } from "../../context/AuthContext";
+
+/** Mục staff sửa được: các loại ghi tay + bỏ qua (không sửa chỉ số, thuốc, xác nhận / chốt ngày) */
+const EDITABLE_TYPES = ["MEAL", "HYGIENE", "NAP", "MOOD", "ACTIVITY", "NOTE", "SKIP"];
+const MAX_PHOTOS = 5;
 
 const statusClass: Record<ScheduleStatus, string> = {
   Done: "bg-emerald-50 text-emerald-700",
@@ -68,6 +73,33 @@ const CareLogView: React.FC = () => {
   const [week, setWeek] = useState<ScheduleWeek | null>(null);
   /** Hoạt động trong lịch đang được ghi (form Nhật ký / Chỉ số sẽ gắn PackageActivityId) */
   const [linkActivity, setLinkActivity] = useState<ScheduleItem | null>(null);
+  const { user } = useAuth();
+  /** Ảnh chọn / chụp ngay trong form "Thêm ghi nhận", tải lên sau khi lưu mục */
+  const [pendingPhotos, setPendingPhotos] = useState<File[]>([]);
+  const photoPreviews = useMemo(() => pendingPhotos.map((file) => URL.createObjectURL(file)), [pendingPhotos]);
+  useEffect(() => () => photoPreviews.forEach((url) => URL.revokeObjectURL(url)), [photoPreviews]);
+  /** Mục nhật ký đang sửa tại chỗ */
+  const [editing, setEditing] = useState<{ id: number; description: string; notes: string; internal: boolean } | null>(null);
+
+  const addPendingPhotos = (files: FileList | null) => {
+    if (!files?.length) return;
+    const valid = Array.from(files).filter((f) => ["image/jpeg", "image/png", "image/webp"].includes(f.type) && f.size <= 5 * 1024 * 1024);
+    if (valid.length < files.length) setError("Chỉ nhận ảnh jpg, png, webp, tối đa 5MB/ảnh.");
+    setPendingPhotos((current) => [...current, ...valid].slice(0, MAX_PHOTOS));
+  };
+
+  const saveEdit = async () => {
+    if (!editing || !editing.description.trim()) return;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const updated = await careLogService.updateEntry(editing.id, { description: editing.description.trim(), notes: editing.notes.trim() || undefined, isInternal: editing.internal });
+      setDay((current) => current ? { ...current, entries: current.entries.map((e) => e.careLogId === updated.careLogId ? { ...e, ...updated } : e) } : current);
+      setEditing(null);
+      setNotice("Đã cập nhật mục nhật ký.");
+      await loadSchedule(selectedId);
+    } catch (err: any) { setError(errorMessage(err, "Không sửa được mục nhật ký.")); }
+    finally { setSaving(false); }
+  };
 
   const refreshExtras = async () => {
     const [doseRows, incidentRows] = await Promise.all([careLogService.getTodayDoses(), careLogService.getIncidents(undefined, 30)]);
@@ -147,7 +179,7 @@ const CareLogView: React.FC = () => {
     return () => { cancelled = true; };
   }, [selectedId, date]);
 
-  useEffect(() => { setLinkActivity(null); void loadSchedule(selectedId); }, [selectedId, date]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setLinkActivity(null); setEditing(null); setPendingPhotos([]); void loadSchedule(selectedId); }, [selectedId, date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selected = useMemo(() => elderly.find((person) => person.elderlyId === selectedId) ?? null, [elderly, selectedId]);
 
@@ -186,16 +218,36 @@ const CareLogView: React.FC = () => {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedId || !description.trim()) return;
+    const linked = linkActivity;
+    // Ghi từ lịch: chữ điền sẵn "Tên hoạt động: " chưa phải nội dung
+    if (linked && description.trim() === `${linked.activityName}:`) {
+      setError("Vui lòng ghi thêm nội dung sau tên hoạt động (ví dụ: ăn hết 80%, cụ hợp tác tốt).");
+      return;
+    }
     setSaving(true); setError(""); setNotice("");
+    let entry: CareLogEntry | null = null;
     try {
-      const linked = linkActivity;
-      const entry: CareLogEntry = await careLogService.addEntry(selectedId, {
+      entry = await careLogService.addEntry(selectedId, {
         careType, description: description.trim(), notes: notes.trim() || undefined, isInternal: internal,
         packageActivityId: linked && linked.careType !== "VITALS" ? linked.packageActivityId : undefined,
       });
-      setDay((current) => current ? { ...current, entries: [...current.entries, entry].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt)) } : current);
       setDescription(""); setNotes(""); setLinkActivity(null);
-      setNotice(linked ? `Đã ghi "${linked.activityName}".` : "Đã lưu ghi nhận chăm sóc.");
+      let photoNote = "";
+      if (pendingPhotos.length) {
+        try {
+          const photos = await careLogService.uploadPhotos(entry.careLogId, pendingPhotos);
+          entry = { ...entry, photos };
+          photoNote = ` kèm ${photos.length} ảnh`;
+          setPendingPhotos([]);
+        } catch (err: any) {
+          // Mục đã lưu; ảnh lỗi thì giữ lại để staff thử "+ Thêm ảnh" ở mục đó
+          setError(errorMessage(err, "Đã lưu ghi nhận nhưng tải ảnh lỗi, hãy thử lại bằng nút \"+ Thêm ảnh\"."));
+          setPendingPhotos([]);
+        }
+      }
+      const saved = entry;
+      setDay((current) => current ? { ...current, entries: [...current.entries, saved].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt)) } : current);
+      setNotice(`${linked ? `Đã ghi "${linked.activityName}"` : "Đã lưu ghi nhận chăm sóc"}${photoNote}.`);
       const people = await careLogService.getTodayElderly(); setElderly(people);
       await loadSchedule(selectedId);
       if (linked) setActiveSection("schedule");
@@ -322,6 +374,15 @@ const CareLogView: React.FC = () => {
               <div className="hidden md:block" />
               <label className="text-sm font-medium text-slate-700 md:col-span-2">Nội dung<textarea required maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} rows={3} placeholder="Ví dụ: Ăn hết 80% khẩu phần, tinh thần vui vẻ..." className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>
               <label className="text-sm font-medium text-slate-700 md:col-span-2">Ghi chú thêm<textarea maxLength={1000} value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} placeholder="Thông tin bổ sung (không bắt buộc)" className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>
+              <div className="md:col-span-2">
+                <p className="text-sm font-medium text-slate-700">Ảnh (không bắt buộc, tối đa {MAX_PHOTOS} ảnh)</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">📷 Chụp ảnh<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" disabled={saving || pendingPhotos.length >= MAX_PHOTOS} onChange={(event) => { addPendingPhotos(event.target.files); event.currentTarget.value = ""; }} /></label>
+                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">🖼 Chọn ảnh<input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" disabled={saving || pendingPhotos.length >= MAX_PHOTOS} onChange={(event) => { addPendingPhotos(event.target.files); event.currentTarget.value = ""; }} /></label>
+                  {pendingPhotos.length > 0 && <span className="text-xs text-slate-500">{pendingPhotos.length} ảnh sẽ tải lên khi lưu</span>}
+                </div>
+                {pendingPhotos.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{photoPreviews.map((url, i) => <div key={url} className="relative"><img src={url} alt={`Ảnh chọn ${i + 1}`} className="h-20 w-20 rounded-lg object-cover ring-1 ring-slate-200" /><button type="button" onClick={() => setPendingPhotos((current) => current.filter((_, j) => j !== i))} disabled={saving} className="absolute -right-2 -top-2 rounded-full bg-rose-600 px-1.5 py-0.5 text-xs text-white" aria-label="Bỏ ảnh">×</button></div>)}</div>}
+              </div>
               <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2"><input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} className="rounded border-slate-300 text-teal-600" />Ghi chú nội bộ, gia đình không xem được</label>
               <div className="md:col-span-2"><button type="submit" disabled={!selectedId || !description.trim() || saving || loadingDay} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu ghi nhận"}</button></div>
             </form>}
@@ -330,7 +391,12 @@ const CareLogView: React.FC = () => {
           <section className={`rounded-xl border border-slate-200 bg-white ${activeSection === "journal" ? "" : "hidden"}`}>
             <div className="border-b border-slate-200 px-4 py-3"><h3 className="font-semibold text-slate-800">Lịch sử trong ngày</h3></div>
             {loadingDay ? <p className="p-4 text-sm text-slate-500">Đang tải carelog...</p> : !selected ? <p className="p-4 text-sm text-slate-500">Chọn người cao tuổi để xem nhật ký.</p> : (day?.entries ?? []).length === 0 ? <p className="p-6 text-center text-sm text-slate-500">Chưa có ghi nhận cho ngày này.</p> :
-              <ol className="divide-y divide-slate-100">{[...(day?.entries ?? [])].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)).map((entry: CareLogEntry) => <li key={entry.careLogId} className="px-4 py-4"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">{typeLabels[entry.careType] ?? entry.careType}</span>{entry.isInternal && <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">Nội bộ</span>}</div><time className="text-xs text-slate-500">{timeLabel(entry.recordedAt)}</time></div><p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{entry.description}</p>{entry.notes && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{entry.notes}</p>}<CareLogDataDetails data={entry.data} /><p className="mt-2 text-xs text-slate-400">Ghi bởi {entry.staffName || "Nhân viên"}</p>{entry.photos?.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{entry.photos.map((photo) => <div key={photo.photoId} className="relative"><a href={photo.url} target="_blank" rel="noreferrer"><img src={photo.url} alt="Ảnh ghi nhận chăm sóc" className="h-20 w-20 rounded-lg object-cover" /></a>{date === localDate() && <button type="button" onClick={() => void removePhoto(photo.photoId)} disabled={saving} className="absolute -right-2 -top-2 rounded-full bg-rose-600 px-1.5 py-0.5 text-xs text-white" aria-label="Xóa ảnh">×</button>}</div>)}</div>}{date === localDate() && <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">+ Thêm ảnh<input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" disabled={saving} onChange={(event) => { void uploadEntryPhotos(entry, event.target.files); event.currentTarget.value = ""; }} /></label>}</li>)}</ol>}
+              <ol className="divide-y divide-slate-100">{[...(day?.entries ?? [])].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)).map((entry: CareLogEntry) => <li key={entry.careLogId} className="px-4 py-4"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">{typeLabels[entry.careType] ?? entry.careType}</span>{entry.isInternal && <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">Nội bộ</span>}</div><div className="flex items-center gap-2"><time className="text-xs text-slate-500">{timeLabel(entry.recordedAt)}</time>{isToday && !selected.isClosed && entry.staffId === user?.userId && EDITABLE_TYPES.includes(entry.careType) && editing?.id !== entry.careLogId && <button type="button" disabled={saving} onClick={() => setEditing({ id: entry.careLogId, description: entry.description, notes: entry.notes ?? "", internal: entry.isInternal })} className="rounded-lg border px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Sửa</button>}</div></div>{editing?.id === entry.careLogId ? <form onSubmit={(event) => { event.preventDefault(); void saveEdit(); }} className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3">
+                <label className="block text-xs font-medium text-slate-600">Nội dung<textarea autoFocus required maxLength={1000} rows={3} value={editing.description} onChange={(event) => setEditing({ ...editing, description: event.target.value })} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label>
+                <label className="block text-xs font-medium text-slate-600">Ghi chú thêm<textarea maxLength={1000} rows={2} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label>
+                <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={editing.internal} onChange={(event) => setEditing({ ...editing, internal: event.target.checked })} />Ghi chú nội bộ, gia đình không xem được</label>
+                <div className="flex gap-2"><button type="submit" disabled={saving || !editing.description.trim()} className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu sửa"}</button><button type="button" disabled={saving} onClick={() => setEditing(null)} className="rounded-lg border px-3 py-1.5 text-xs">Hủy</button></div>
+              </form> : <><p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{entry.description}</p>{entry.notes && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{entry.notes}</p>}</>}<CareLogDataDetails data={entry.data} /><p className="mt-2 text-xs text-slate-400">Ghi bởi {entry.staffName || "Nhân viên"}</p>{entry.photos?.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{entry.photos.map((photo) => <div key={photo.photoId} className="relative"><a href={photo.url} target="_blank" rel="noreferrer"><img src={photo.url} alt="Ảnh ghi nhận chăm sóc" className="h-20 w-20 rounded-lg object-cover" /></a>{date === localDate() && <button type="button" onClick={() => void removePhoto(photo.photoId)} disabled={saving} className="absolute -right-2 -top-2 rounded-full bg-rose-600 px-1.5 py-0.5 text-xs text-white" aria-label="Xóa ảnh">×</button>}</div>)}</div>}{date === localDate() && <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">+ Thêm ảnh<input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" disabled={saving} onChange={(event) => { void uploadEntryPhotos(entry, event.target.files); event.currentTarget.value = ""; }} /></label>}</li>)}</ol>}
           </section>
 
           <section className={`rounded-xl border border-slate-200 bg-white p-4 ${activeSection === "health" ? "" : "hidden"}`}>
