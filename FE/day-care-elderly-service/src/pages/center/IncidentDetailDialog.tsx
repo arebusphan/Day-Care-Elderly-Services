@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Loader2, Package, Plus, Trash2 } from "lucide-react";
+import { Camera, FileText, Loader2, Package, Plus, Printer, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import type { IncidentReport, IncidentStatus, IncidentSupplyUsage } from "../../
 import medicalSupplyService from "../../services/medicalSupplyService";
 import type { MedicalSupply } from "../../services/medicalSupplyService";
 import { formatDateTimeVN } from "../../lib/date";
+import EmergencyTransferSlipModal from "./EmergencyTransferSlipModal";
 
 interface Props {
   incident: IncidentReport | null;
@@ -52,6 +53,7 @@ export function IncidentDetailDialog({ incident, onClose, onChanged, onEdit }: P
   const [pickQty, setPickQty] = useState("1");
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [slipOpen, setSlipOpen] = useState(false);
 
   useEffect(() => {
     if (!incident) return;
@@ -219,14 +221,25 @@ export function IncidentDetailDialog({ incident, onClose, onChanged, onEdit }: P
               <Label htmlFor="inc-resolution">Kết quả xử lý</Label>
               <Textarea id="inc-resolution" rows={2} value={resolution} onChange={(e) => setResolution(e.target.value)} />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => onEdit(incident)}>
-                Sửa thông tin chung
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSlipOpen(true)}
+                className="gap-1.5 text-sky-700 hover:text-sky-800 dark:text-sky-400"
+              >
+                <Printer className="size-4" /> In phiếu chuyển viện
               </Button>
-              <Button onClick={saveHandling} disabled={saving}>
-                {saving && <Loader2 className="animate-spin" />}
-                Lưu xử lý
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onEdit(incident)}>
+                  Sửa thông tin chung
+                </Button>
+                <Button onClick={saveHandling} disabled={saving}>
+                  {saving && <Loader2 className="animate-spin" />}
+                  Lưu xử lý
+                </Button>
+              </div>
             </div>
           </TabsContent>
 
@@ -331,6 +344,13 @@ export function IncidentDetailDialog({ incident, onClose, onChanged, onEdit }: P
             Đóng
           </Button>
         </DialogFooter>
+
+        {/* Modal Phiếu bàn giao y tế khi chuyển viện */}
+        <EmergencyTransferSlipModal
+          incident={incident}
+          open={slipOpen}
+          onClose={() => setSlipOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

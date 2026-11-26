@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Eye, Loader2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Activity, AlertTriangle, Building2, Eye, FileText, Loader2, Package, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,8 @@ import type { IncidentReport, IncidentSeverity, IncidentStatus } from "../../ser
 import type { PagedResult } from "../../types/common";
 import TablePagination from "../../components/TablePagination";
 import IncidentDetailDialog from "./IncidentDetailDialog";
+import EmergencyTransferSlipModal from "./EmergencyTransferSlipModal";
+import { StatCard } from "../../components/StatCard";
 import { formatDateTimeVN } from "../../lib/date";
 
 const PAGE_SIZE = 10;
@@ -103,6 +105,7 @@ export function IncidentReportsView() {
 
   // chi tiết / xử lý
   const [detail, setDetail] = useState<IncidentReport | null>(null);
+  const [slipIncident, setSlipIncident] = useState<IncidentReport | null>(null);
 
   // tạo / sửa
   const [formOpen, setFormOpen] = useState(false);
@@ -255,8 +258,49 @@ export function IncidentReportsView() {
 
   const openCount = useMemo(() => data?.items.filter((i) => i.status !== "Resolved").length ?? 0, [data]);
 
+  const kpiStats = useMemo(() => {
+    const items = data?.items ?? [];
+    const totalItems = data?.totalItems ?? 0;
+    const open = items.filter((i) => i.status !== "Resolved").length;
+    const hospital = items.filter((i) => !!i.hospitalName).length;
+    const totalCharge = items.reduce((sum, i) => sum + (i.supplyChargeAmount || 0), 0);
+    return { totalItems, open, hospital, totalCharge };
+  }, [data]);
+
   return (
     <div className="space-y-4">
+      {/* 4 Thẻ KPI Tóm tắt Sự cố & Chi phí Vật tư (F-13 / F-14 / D2) */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Tổng số sự cố ghi nhận"
+          value={kpiStats.totalItems}
+          hint="Hồ sơ quản lý bán trú"
+          icon={AlertTriangle}
+          tone="default"
+        />
+        <StatCard
+          label="Sự cố đang xử lý"
+          value={kpiStats.open}
+          hint={kpiStats.open > 0 ? "Cần theo dõi sát diễn biến" : "Không có ca tồn đọng"}
+          icon={Activity}
+          tone={kpiStats.open > 0 ? "warn" : "good"}
+        />
+        <StatCard
+          label="Chuyển viện khẩn cấp"
+          value={kpiStats.hospital}
+          hint="Đã điều chuyển bệnh viện"
+          icon={Building2}
+          tone={kpiStats.hospital > 0 ? "bad" : "default"}
+        />
+        <StatCard
+          label="Phụ phí vật tư sơ cứu (F-14)"
+          value={`${kpiStats.totalCharge.toLocaleString("vi-VN")} đ`}
+          hint="Khoản tính riêng theo D2"
+          icon={Package}
+          tone="default"
+        />
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -374,6 +418,16 @@ export function IncidentReportsView() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex gap-1">
+                        {i.hospitalName && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="In phiếu bàn giao chuyển viện"
+                            onClick={() => setSlipIncident(i)}
+                          >
+                            <FileText className="size-4 text-sky-600" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" title="Chi tiết & xử lý" onClick={() => openDetail(i)}>
                           <Eye />
                         </Button>
@@ -533,6 +587,13 @@ export function IncidentReportsView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal In phiếu bàn giao chuyển viện khẩn cấp */}
+      <EmergencyTransferSlipModal
+        incident={slipIncident}
+        open={!!slipIncident}
+        onClose={() => setSlipIncident(null)}
+      />
     </div>
   );
 }
