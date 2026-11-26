@@ -7,6 +7,7 @@ import AssignedElderlyView from "./AssignedElderlyView";
 import CareLogView from "./CareLogView";
 import AttendanceView from "./AttendanceView";
 import MedicationPlanView from "./MedicationPlanView";
+import MedicationDoseHistoryView from "./MedicationDoseHistoryView";
 import StaffOverviewView from "./StaffOverviewView";
 import MessagesView from "../../components/MessagesView";
 import MyScheduleView from "./MyScheduleView";
@@ -21,6 +22,7 @@ export const StaffDashboard: React.FC = () => {
     { id: "attendance", label: "Điểm Danh" },
     { id: "carelog", label: "Carelog" },
     { id: "medication", label: "Kế Hoạch Thuốc" },
+    { id: "dose_history", label: "Lịch Sử Cho Uống" },
     { id: "messages", label: "Tin Nhắn" },
     { id: "my_schedule", label: "Lịch & Đơn Nghỉ" },
   ];
@@ -113,6 +115,8 @@ export const StaffDashboard: React.FC = () => {
                       <MessagesView mode="center" />
                   ) : activeTab === "medication" ? (
                       <MedicationPlanView />
+                  ) : activeTab === "dose_history" ? (
+                      <MedicationDoseHistoryView />
                   ) : activeTab === "attendance" ? (
                       <AttendanceView />
                   ) : (

@@ -137,7 +137,11 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Database migrations and seeders are intentionally not run during API startup.
+// Idempotent schema sync + demo seed (Development only; không xóa data thật)
+if (app.Environment.IsDevelopment())
+{
+    await DbInitializer.SeedDefaultDataAsync(app.Services);
+}
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,4 +1,5 @@
 using DayCareElderlyService.BLL.Common;
+using DayCareElderlyService.BLL.DTOs.CareLog;
 using DayCareElderlyService.BLL.DTOs.Medication;
 using DayCareElderlyService.BLL.Services.Interfaces;
 using DayCareElderlyService.Models.Data;
@@ -270,6 +271,9 @@ public class MedicationService : IMedicationService
                 {
                     MedicationPlanId = plan.MedicationPlanId,
                     ScheduledAt = scheduledAt,
+                    // DB live còn AdministeredDate/Time NOT NULL — đồng bộ từ ScheduledAt (như seed).
+                    AdministeredDate = DateOnly.FromDateTime(scheduledAt),
+                    AdministeredTime = TimeOnly.FromDateTime(scheduledAt),
                     Status = DoseStatuses.Pending
                 });
                 existingSet.Add(scheduledAt);
@@ -283,6 +287,63 @@ public class MedicationService : IMedicationService
         }
 
         return (toAdd.Count, skipped);
+    }
+
+    public async Task<ApiResponse<List<DoseDto>>> GetDoseHistoryAsync(int userId, DoseHistoryFilterDto filter)
+    {
+        await CareLogSchema.EnsureColumnsAsync(_context);
+
+        var staff = await _context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.UserId == userId && u.Roles.Any(r => r.RoleName == "Staff" || r.RoleName == "Admin"));
+        if (staff == null)
+        {
+            return ApiResponse<List<DoseDto>>.Fail("Tài khoản chưa có hồ sơ nhân viên.");
+        }
+
+        var toDate = filter.To ?? VietnamTime.Today;
+        var fromDate = filter.From ?? toDate.AddDays(-6);
+        if (toDate < fromDate)
+        {
+            return ApiResponse<List<DoseDto>>.Fail("Khoảng ngày không hợp lệ.");
+        }
+
+        if ((toDate.DayNumber - fromDate.DayNumber + 1) > 92)
+        {
+            return ApiResponse<List<DoseDto>>.Fail("Chỉ xem tối đa 92 ngày một lần.");
+        }
+
+        var rangeFrom = VietnamTime.DayRange(fromDate).From;
+        var rangeTo = VietnamTime.DayRange(toDate).To;
+        var take = Math.Clamp(filter.Take <= 0 ? 100 : filter.Take, 1, 500);
+
+        var query = CareLogShared.DoseQuery(_context)
+            .Where(r => r.ScheduledAt >= rangeFrom && r.ScheduledAt < rangeTo);
+
+        if (filter.ElderlyId is int elderlyId)
+        {
+            query = query.Where(r => r.MedicationPlan.ElderlyId == elderlyId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            var normalized = new[] { DoseStatuses.Pending, DoseStatuses.Given, DoseStatuses.Refused, DoseStatuses.Missed }
+                .FirstOrDefault(s => string.Equals(s, filter.Status.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (normalized == null)
+            {
+                return ApiResponse<List<DoseDto>>.Fail("Trạng thái không hợp lệ. Chọn Pending, Given, Refused hoặc Missed.");
+            }
+            query = query.Where(r => r.Status == normalized);
+        }
+
+        var records = await query
+            .OrderByDescending(r => r.ScheduledAt)
+            .Take(take)
+            .ToListAsync();
+
+        return ApiResponse<List<DoseDto>>.Ok(
+            records.Select(CareLogShared.ToDoseDto).ToList(),
+            "Lấy lịch sử cho uống thuốc thành công.");
     }
 
     /// <summary>

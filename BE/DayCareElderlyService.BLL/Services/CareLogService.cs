@@ -552,7 +552,7 @@ public class CareLogService : ICareLogService
         record.RecordedAt = now;
         record.StaffId = staff!.UserId;
         record.Staff = staff;
-        record.Notes = dto.Notes?.Trim();
+        record.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
 
         var plan = record.MedicationPlan;
         var data = JsonSerializer.Serialize(new
@@ -567,7 +567,7 @@ public class CareLogService : ICareLogService
             $"{plan.MedicationName} {plan.Dosage}: {DoseStatuses.Label(status)}", record.Notes, data, false);
         await _context.CareLogs.AddAsync(log);
 
-        // F-12 / WF-06: gia đình nhận thông báo mọi kết quả liều thuốc (CL-13: kèm lý do nếu từ chối/bỏ lỡ)
+        // Hướng A: Given / Refused / Missed đều notify Family (Given = đã cho uống; Refused/Missed kèm lý do).
         await CareLogShared.NotifyFamilyAsync(_context, elderly.ElderlyId,
             $"{elderly.FullName}: {DoseStatuses.Label(status).ToLowerInvariant()}",
             $"{plan.MedicationName} {plan.Dosage} lúc {record.ScheduledAt:HH:mm}."

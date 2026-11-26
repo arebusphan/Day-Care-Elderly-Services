@@ -92,3 +92,14 @@ public class GenerateDosesResultDto
     public int CreatedCount { get; set; }
     public int SkippedExistingCount { get; set; }
 }
+
+/// <summary>Lọc lịch sử cho uống trên MedicationRecords (không bảng mới).</summary>
+public class DoseHistoryFilterDto
+{
+    public int? ElderlyId { get; set; }
+    public DateOnly? From { get; set; }
+    public DateOnly? To { get; set; }
+    /// <summary>Pending | Given | Refused | Missed</summary>
+    public string? Status { get; set; }
+    public int Take { get; set; } = 100;
+}

@@ -6,16 +6,18 @@ import AccountMenu from "../../components/AccountMenu";
 import UserManagementView from "./UserManagementView";
 import CenterStaffView from "../center/CenterStaffView";
 import PackageScheduleView from "../center/PackageScheduleView";
+import MedicationDoseHistoryView from "../staff/MedicationDoseHistoryView";
 
 export const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Đã có API: Người dùng, Nhân viên. Các tab còn lại giữ chỗ, chờ BE bổ sung API.
+  // Đã có API: Người dùng, Nhân viên, lịch sử cho uống. Các tab còn lại giữ chỗ.
   const menuItems = [
     { id: "overview", label: "Tổng Quan Hệ Thống" },
     { id: "users", label: "Quản Lý Người Dùng" },
     { id: "staff", label: "Quản Lý Nhân Viên" },
+    { id: "dose_history", label: "Lịch Sử Cho Uống" },
     { id: "elderly", label: "Hồ Sơ Người Cao Tuổi" },
     { id: "services", label: "Gói Dịch Vụ" },
     { id: "rooms", label: "Phòng & Khu Chức Năng" },
@@ -105,6 +107,8 @@ export const AdminDashboard: React.FC = () => {
             <UserManagementView />
           ) : activeTab === "staff" ? (
             <CenterStaffView />
+          ) : activeTab === "dose_history" ? (
+            <MedicationDoseHistoryView />
           ) : activeTab === "schedules" ? (
             <PackageScheduleView />
           ) : (

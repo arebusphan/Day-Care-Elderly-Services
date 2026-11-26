@@ -13,6 +13,16 @@ public partial class MedicationRecord
 
     public DateTime ScheduledAt { get; set; }
 
+    /// <summary>
+    /// Cột legacy (DB live thường NOT NULL). Đồng bộ = ngày của ScheduledAt khi tạo liều.
+    /// </summary>
+    public DateOnly AdministeredDate { get; set; }
+
+    /// <summary>
+    /// Cột legacy (DB live thường NOT NULL). Đồng bộ = giờ của ScheduledAt khi tạo liều.
+    /// </summary>
+    public TimeOnly AdministeredTime { get; set; }
+
     public DateTime? RecordedAt { get; set; }
 
     public string Status { get; set; } = null!;

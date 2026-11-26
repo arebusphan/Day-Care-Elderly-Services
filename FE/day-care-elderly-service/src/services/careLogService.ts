@@ -159,8 +159,10 @@ const careLogService = {
     const response = await api.post<ApiResponse<CareLogEntry>>(`/api/staff/care-logs/${elderlyId}/close`, { notes });
     return response.data.data;
   },
-  async getTodayDoses(): Promise<DoseRecord[]> {
-    const response = await api.get<ApiResponse<DoseRecord[]>>("/api/staff/doses/today");
+  async getTodayDoses(status?: string): Promise<DoseRecord[]> {
+    const response = await api.get<ApiResponse<DoseRecord[]>>("/api/staff/doses/today", {
+      params: status ? { status } : undefined,
+    });
     return response.data.data ?? [];
   },
   async updateDose(id: number, status: "Given" | "Refused" | "Missed", notes?: string): Promise<DoseRecord> {

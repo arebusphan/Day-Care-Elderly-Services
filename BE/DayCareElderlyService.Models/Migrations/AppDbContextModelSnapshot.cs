@@ -802,6 +802,12 @@ namespace DayCareElderlyService.Models.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MedicationRecordId"));
 
+                    b.Property<DateOnly>("AdministeredDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly>("AdministeredTime")
+                        .HasColumnType("time");
+
                     b.Property<int>("MedicationPlanId")
                         .HasColumnType("int");
 

@@ -13,7 +13,7 @@ namespace DayCareElderlyService.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/staff")]
-[Authorize(Roles = "Staff")]
+[Authorize(Roles = "Staff,Admin")]
 public class StaffCareLogController : ControllerBase
 {
     private readonly ICareLogService _careLogService;

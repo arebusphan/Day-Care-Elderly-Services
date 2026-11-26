@@ -90,6 +90,15 @@ public static class CareLogSchema
                         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'CreatedAt')
                             EXEC('UPDATE MedicationRecords SET RecordedAt = CreatedAt WHERE RecordedAt IS NULL');
                     END;
+
+                    -- Đồng bộ cột legacy AdministeredDate/Time từ ScheduledAt (khi cột còn trên DB).
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'AdministeredDate')
+                       AND EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'ScheduledAt')
+                        EXEC('UPDATE MedicationRecords SET AdministeredDate = CAST(ScheduledAt AS date) WHERE AdministeredDate IS NULL OR AdministeredDate <> CAST(ScheduledAt AS date)');
+
+                    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'AdministeredTime')
+                       AND EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'ScheduledAt')
+                        EXEC('UPDATE MedicationRecords SET AdministeredTime = CAST(ScheduledAt AS time) WHERE AdministeredTime IS NULL');
                 END
 
                 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'IncidentReports')
