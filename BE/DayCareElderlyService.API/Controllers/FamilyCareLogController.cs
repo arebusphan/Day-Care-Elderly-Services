@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.DTOs.CareLog;
+using DayCareElderlyService.BLL.DTOs.Schedule;
 using DayCareElderlyService.BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -56,6 +57,14 @@ public class FamilyCareLogController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<HealthHistoryDto>), StatusCodes.Status200OK)]
     public Task<IActionResult> GetHealth(int elderlyId, [FromQuery] int days = 30) =>
         RunAsync(userId => _familyCareLogService.GetHealthAsync(userId, elderlyId, days), "lấy lịch sử sức khỏe");
+
+    /// <summary>
+    /// Lịch hoạt động theo gói của cụ trong ngày (mặc định hôm nay) và việc nào đã làm
+    /// </summary>
+    [HttpGet("care-logs/{elderlyId:int}/schedule")]
+    [ProducesResponseType(typeof(ApiResponse<ScheduleDayDto>), StatusCodes.Status200OK)]
+    public Task<IActionResult> GetSchedule(int elderlyId, [FromQuery] DateOnly? date) =>
+        RunAsync(userId => _familyCareLogService.GetScheduleAsync(userId, elderlyId, date), "lấy lịch hoạt động");
 
     /// <summary>
     /// Sự cố và cảnh báo của các cụ nhà mình trong N ngày gần nhất (mặc định 30)

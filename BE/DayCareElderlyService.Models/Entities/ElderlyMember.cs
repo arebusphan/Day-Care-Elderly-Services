@@ -31,6 +31,9 @@ public partial class ElderlyMember
     // Thông tin chăm sóc & vận động ("Normal" hoặc "Support")
     public string? MobilityStatus { get; set; } = "Normal";
 
+    /// <summary>Mã bệnh nền phân cách dấu phẩy: DIABETES, HYPERTENSION, HEART — dùng để lọc lịch hoạt động</summary>
+    public string? ChronicConditions { get; set; }
+
     public string? CareNotes { get; set; }
 
     public string? EmergencyNotes { get; set; }

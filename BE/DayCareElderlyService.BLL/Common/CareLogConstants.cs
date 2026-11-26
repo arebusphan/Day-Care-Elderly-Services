@@ -15,9 +15,64 @@ public static class CareLogTypes
     public const string Medication = "MEDICATION";
     public const string MedicalDone = "MEDICAL_DONE";
     public const string Close = "CLOSE";
+    /// <summary>Bỏ qua 1 hoạt động trong lịch (bắt buộc kèm PackageActivityId + lý do)</summary>
+    public const string Skip = "SKIP";
 
     /// <summary>Các loại staff ghi tay qua POST /api/staff/care-logs/{elderlyId}</summary>
     public static readonly string[] Manual = { Meal, Hygiene, Nap, Mood, Activity, Note };
+
+    /// <summary>Loại care log được dùng cho 1 hoạt động trong lịch của gói</summary>
+    public static readonly string[] Schedulable = { Meal, Hygiene, Nap, Mood, Activity, Note, Vitals };
+}
+
+/// <summary>
+/// Mã bệnh nền (ElderlyMembers.ChronicConditions, PackageActivities.ConditionCode)
+/// </summary>
+public static class ChronicConditionCodes
+{
+    public const string Diabetes = "DIABETES";
+    public const string Hypertension = "HYPERTENSION";
+    public const string Heart = "HEART";
+
+    public static readonly string[] All = { Diabetes, Hypertension, Heart };
+
+    public static HashSet<string> Parse(string? value) =>
+        (value ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(c => c.ToUpperInvariant())
+            .Where(c => All.Contains(c))
+            .ToHashSet();
+
+    /// <summary>Chuẩn hóa danh sách mã; trả về null nếu rỗng</summary>
+    public static string? Join(IEnumerable<string>? codes)
+    {
+        var list = (codes ?? Array.Empty<string>())
+            .Select(c => c.Trim().ToUpperInvariant())
+            .Where(c => All.Contains(c))
+            .Distinct()
+            .OrderBy(c => Array.IndexOf(All, c))
+            .ToList();
+        return list.Count == 0 ? null : string.Join(",", list);
+    }
+}
+
+/// <summary>Người thực hiện 1 hoạt động trong lịch</summary>
+public static class PerformerRoles
+{
+    public const string Nurse = "Nurse";
+    public const string Caregiver = "Caregiver";
+    public const string Any = "Any";
+
+    public static readonly string[] All = { Nurse, Caregiver, Any };
+}
+
+/// <summary>Trạng thái 1 hoạt động trong lịch ngày (tính từ CareLogs, không lưu)</summary>
+public static class ScheduleStatuses
+{
+    public const string Done = "Done";
+    public const string Skipped = "Skipped";
+    public const string Overdue = "Overdue";
+    public const string Pending = "Pending";
 }
 
 /// <summary>

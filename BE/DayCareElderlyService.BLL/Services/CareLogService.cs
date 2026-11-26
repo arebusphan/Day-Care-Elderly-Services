@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.DTOs.CareLog;
+using DayCareElderlyService.BLL.DTOs.Schedule;
 using DayCareElderlyService.BLL.Services.Interfaces;
 using DayCareElderlyService.Models.Data;
 using DayCareElderlyService.Models.Entities;
@@ -119,15 +120,67 @@ public class CareLogService : ICareLogService
         return ApiResponse<CareLogDayDto>.Ok(day, "Lấy care log thành công.");
     }
 
+    // ===== Lịch hoạt động theo gói =====
+
+    public async Task<ApiResponse<ScheduleDayDto>> GetScheduleAsync(int userId, int elderlyId, DateOnly? date)
+    {
+        var (elderly, error) = await GetViewableAsync(userId, elderlyId);
+        if (error != null)
+        {
+            return ApiResponse<ScheduleDayDto>.Fail(error);
+        }
+
+        var schedule = await CareLogSchedule.BuildDayAsync(_context, elderly!, date ?? VietnamTime.Today, includeInternal: true);
+        return ApiResponse<ScheduleDayDto>.Ok(schedule, schedule.PackageId == null
+            ? "Cụ chưa có gói dịch vụ còn hiệu lực trong ngày này."
+            : "Lấy lịch hoạt động thành công.");
+    }
+
+    public async Task<ApiResponse<ScheduleWeekDto>> GetScheduleWeekAsync(int userId, int elderlyId, DateOnly? date)
+    {
+        var (elderly, error) = await GetViewableAsync(userId, elderlyId);
+        if (error != null)
+        {
+            return ApiResponse<ScheduleWeekDto>.Fail(error);
+        }
+
+        var week = await CareLogSchedule.BuildWeekAsync(_context, elderly!, date ?? VietnamTime.Today);
+        return ApiResponse<ScheduleWeekDto>.Ok(week, "Lấy tổng kết tuần thành công.");
+    }
+
+    /// <summary>Staff xem được cụ: cùng trung tâm và (trừ Admin) được phân công hôm nay.</summary>
+    private async Task<(ElderlyMember? Elderly, string? Error)> GetViewableAsync(int userId, int elderlyId)
+    {
+        var staff = await GetStaffAsync(userId);
+        if (staff == null)
+        {
+            return (null, "Tài khoản chưa có hồ sơ nhân viên.");
+        }
+
+        var elderly = await GetElderlyInCenterAsync(staff, elderlyId);
+        if (elderly == null)
+        {
+            return (null, "Không tìm thấy người cao tuổi trong trung tâm của bạn.");
+        }
+
+        var assigned = await GetAssignedElderlyIdsAsync(staff);
+        return assigned != null && !assigned.Contains(elderlyId) ? (null, NotAssignedMessage) : (elderly, null);
+    }
+
     // ===== Ghi care log =====
 
     public async Task<ApiResponse<CareLogEntryDto>> AddEntryAsync(int userId, int elderlyId, CreateCareLogEntryDto dto)
     {
         var careType = dto.CareType.Trim().ToUpperInvariant();
-        if (!CareLogTypes.Manual.Contains(careType))
+        var isSkip = careType == CareLogTypes.Skip;
+        if (!CareLogTypes.Manual.Contains(careType) && !isSkip)
         {
             return ApiResponse<CareLogEntryDto>.Fail(
                 $"Loại mục không hợp lệ. Chọn một trong: {string.Join(", ", CareLogTypes.Manual)}.");
+        }
+        if (isSkip && dto.PackageActivityId == null)
+        {
+            return ApiResponse<CareLogEntryDto>.Fail("Bỏ qua hoạt động cần chọn hoạt động trong lịch.");
         }
 
         var (staff, elderly, error) = await GetWritableAsync(userId, elderlyId);
@@ -136,13 +189,24 @@ public class CareLogService : ICareLogService
             return ApiResponse<CareLogEntryDto>.Fail(error);
         }
 
+        if (dto.PackageActivityId != null)
+        {
+            var linkError = await CareLogSchedule.ValidateLinkAsync(_context, elderly!, dto.PackageActivityId.Value, careType);
+            if (linkError != null)
+            {
+                return ApiResponse<CareLogEntryDto>.Fail(linkError);
+            }
+        }
+
         var log = NewLog(staff!, elderly!.ElderlyId, careType, dto.Description.Trim(), dto.Notes, ToJson(dto.Data), dto.IsInternal);
+        log.PackageActivityId = dto.PackageActivityId;
         await _context.CareLogs.AddAsync(log);
         await _context.SaveChangesAsync();
-        await AuditLogWriter.WriteAsync(_context, userId, "CREATE_CARE_LOG", nameof(CareLog), log.CareLogId.ToString(), new
+        await AuditLogWriter.WriteAsync(_context, userId, isSkip ? "SKIP_SCHEDULED_ACTIVITY" : "CREATE_CARE_LOG", nameof(CareLog), log.CareLogId.ToString(), new
         {
             ElderlyId = elderlyId,
             CareType = careType,
+            dto.PackageActivityId,
             dto.IsInternal
         });
 
@@ -289,6 +353,15 @@ public class CareLogService : ICareLogService
             return ApiResponse<VitalsResultDto>.Fail(error);
         }
 
+        if (dto.PackageActivityId != null)
+        {
+            var linkError = await CareLogSchedule.ValidateLinkAsync(_context, elderly!, dto.PackageActivityId.Value, CareLogTypes.Vitals);
+            if (linkError != null)
+            {
+                return ApiResponse<VitalsResultDto>.Fail(linkError);
+            }
+        }
+
         var (warnings, severity) = CheckVitals(dto);
         var data = JsonSerializer.Serialize(new
         {
@@ -303,6 +376,7 @@ public class CareLogService : ICareLogService
         }, JsonOptions);
 
         var log = NewLog(staff!, elderly!.ElderlyId, CareLogTypes.Vitals, DescribeVitals(dto), dto.Notes, data, false);
+        log.PackageActivityId = dto.PackageActivityId;
         if (dto.SystolicBp.HasValue || dto.DiastolicBp.HasValue)
         {
             log.BloodPressure = $"{dto.SystolicBp?.ToString() ?? "?"}/{dto.DiastolicBp?.ToString() ?? "?"}";
@@ -860,6 +934,12 @@ public class CareLogService : ICareLogService
         Check(dto.SpO2, "SpO2", "%", 95, 101, 90, 101);
         Check(dto.Temperature, "Nhiệt độ", "°C", 35.5m, 37.5m, 35m, 39m);
         Check(dto.BloodGlucose, "Đường huyết", "mmol/L", 3.9m, 11.1m, 3m, 16.7m);
+
+        // IHS: đường huyết > 16,7 mmol/L (300 mg/dL) thì tránh vận động vừa / nặng
+        if (dto.BloodGlucose is > 16.7m)
+        {
+            warnings.Add("Không cho cụ tập vận động hôm nay (đường huyết > 16,7 mmol/L)");
+        }
 
         return (warnings, severity);
     }

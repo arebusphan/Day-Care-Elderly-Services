@@ -14,6 +14,7 @@ public class CareLogEntryDto
     public string? Notes { get; set; }
     public JsonElement? Data { get; set; }
     public bool IsInternal { get; set; }
+    public int? PackageActivityId { get; set; }
     public DateTime RecordedAt { get; set; }
     public int StaffId { get; set; }
     public string StaffName { get; set; } = string.Empty;

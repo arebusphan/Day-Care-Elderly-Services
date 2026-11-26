@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.DTOs.CareLog;
+using DayCareElderlyService.BLL.DTOs.Schedule;
 using DayCareElderlyService.BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,8 +39,21 @@ public class StaffCareLogController : ControllerBase
         RunAsync(userId => _careLogService.GetTodayElderlyAsync(userId), "lấy danh sách người cao tuổi hôm nay");
 
     /// <summary>
-    /// Lịch hoạt động hôm nay của trung tâm, đánh dấu hoạt động nhân viên được phân công
+    /// Lịch hoạt động theo gói của cụ trong ngày (mặc định hôm nay) + trạng thái từng hoạt động
     /// </summary>
+    [HttpGet("care-logs/{elderlyId:int}/schedule")]
+    [ProducesResponseType(typeof(ApiResponse<ScheduleDayDto>), StatusCodes.Status200OK)]
+    public Task<IActionResult> GetSchedule(int elderlyId, [FromQuery] DateOnly? date) =>
+        RunAsync(userId => _careLogService.GetScheduleAsync(userId, elderlyId, date), "lấy lịch hoạt động");
+
+    /// <summary>
+    /// Tổng kết tuần T2–T7 chứa ngày đã chọn: số buổi, số phút theo hoạt động
+    /// </summary>
+    [HttpGet("care-logs/{elderlyId:int}/schedule/week")]
+    [ProducesResponseType(typeof(ApiResponse<ScheduleWeekDto>), StatusCodes.Status200OK)]
+    public Task<IActionResult> GetScheduleWeek(int elderlyId, [FromQuery] DateOnly? date) =>
+        RunAsync(userId => _careLogService.GetScheduleWeekAsync(userId, elderlyId, date), "lấy tổng kết tuần");
+
     /// <summary>
     /// Care log 1 ngày của 1 cụ (mặc định hôm nay), gồm cả mục nội bộ
     /// </summary>

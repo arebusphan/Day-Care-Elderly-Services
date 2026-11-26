@@ -10,6 +10,7 @@
     [MedicalHistory] nvarchar(1000) NULL,
     [MedicalNotes] nvarchar(max) NULL,
     [MobilityStatus] nvarchar(50) NULL DEFAULT N'Bình thường',
+    [ChronicConditions] nvarchar(200) NULL,
     [CareNotes] nvarchar(1000) NULL,
     [EmergencyNotes] nvarchar(max) NULL,
     [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
@@ -120,6 +121,14 @@ CREATE TABLE [PackageActivities] (
     [EndTime] time(0) NOT NULL,
     [DisplayOrder] int NOT NULL,
     [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+    [ActivityName] nvarchar(150) NOT NULL DEFAULT N'',
+    [Purpose] nvarchar(500) NULL,
+    [CareType] nvarchar(30) NOT NULL DEFAULT N'ACTIVITY',
+    [TargetMinutes] int NULL,
+    [PerformerRole] nvarchar(20) NOT NULL DEFAULT N'Any',
+    [IsRequired] bit NOT NULL DEFAULT CAST(1 AS bit),
+    [ConditionCode] nvarchar(30) NULL,
+    [Source] nvarchar(200) NULL,
     CONSTRAINT [PK_PackageActivities] PRIMARY KEY ([PackageActivityId]),
     CONSTRAINT [FK_PackageActivities_Packages] FOREIGN KEY ([PackageId]) REFERENCES [ServicePackages] ([PackageId])
 );
@@ -191,8 +200,10 @@ CREATE TABLE [CareLogs] (
     [BloodPressure] nvarchar(20) NULL,
     [BloodGlucose] decimal(5,2) NULL,
     [IsInternal] bit NOT NULL,
+    [PackageActivityId] int NULL,
     CONSTRAINT [PK_CareLogs] PRIMARY KEY ([CareLogId]),
     CONSTRAINT [FK_CareLogs_Elderly] FOREIGN KEY ([ElderlyId]) REFERENCES [ElderlyMembers] ([ElderlyId]),
+    CONSTRAINT [FK_CareLogs_PackageActivities] FOREIGN KEY ([PackageActivityId]) REFERENCES [PackageActivities] ([PackageActivityId]),
     CONSTRAINT [FK_CareLogs_Users] FOREIGN KEY ([StaffId]) REFERENCES [Users] ([UserId])
 );
 GO
@@ -602,6 +613,10 @@ GO
 
 
 CREATE INDEX [IX_CareLogs_StaffId] ON [CareLogs] ([StaffId]);
+GO
+
+
+CREATE INDEX [IX_CareLogs_PackageActivityId] ON [CareLogs] ([PackageActivityId]);
 GO
 
 

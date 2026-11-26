@@ -1,5 +1,6 @@
 using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.DTOs.CareLog;
+using DayCareElderlyService.BLL.DTOs.Schedule;
 
 namespace DayCareElderlyService.BLL.Services.Interfaces;
 
@@ -10,6 +11,10 @@ public interface ICareLogService
 {
     Task<ApiResponse<List<StaffElderlyTodayDto>>> GetTodayElderlyAsync(int userId);
     Task<ApiResponse<CareLogDayDto>> GetDayAsync(int userId, int elderlyId, DateOnly? date);
+    /// <summary>Lịch hoạt động theo gói của cụ trong ngày + trạng thái từng hoạt động</summary>
+    Task<ApiResponse<ScheduleDayDto>> GetScheduleAsync(int userId, int elderlyId, DateOnly? date);
+    /// <summary>Tổng kết tuần (T2–T7): số buổi, số phút theo hoạt động</summary>
+    Task<ApiResponse<ScheduleWeekDto>> GetScheduleWeekAsync(int userId, int elderlyId, DateOnly? date);
     Task<ApiResponse<CareLogEntryDto>> AddEntryAsync(int userId, int elderlyId, CreateCareLogEntryDto dto);
     Task<ApiResponse<List<CareLogPhotoDto>>> AddPhotosAsync(int userId, int careLogId, List<PhotoUploadFile> files);
     Task<ApiResponse<bool>> DeletePhotoAsync(int userId, int photoId);

@@ -129,6 +129,8 @@ public class CenterProfilesController : ControllerBase
         public string? MedicalHistory { get; set; }
         public string? MedicalNotes { get; set; }
         public string MobilityStatus { get; set; } = "Normal";
+        /// <summary>Mã bệnh nền: DIABETES, HYPERTENSION, HEART — dùng để lọc lịch hoạt động</summary>
+        public List<string> ChronicConditions { get; set; } = new();
         public string? CareNotes { get; set; }
         public string? EmergencyNotes { get; set; }
         public bool IsActive { get; set; }
@@ -151,6 +153,8 @@ public class CenterProfilesController : ControllerBase
         [StringLength(2000)] public string? MedicalNotes { get; set; }
         /// <summary>"Normal" | "Support" — nhóm đối tượng do nhân viên xác nhận (BR-79)</summary>
         [Required] public string MobilityStatus { get; set; } = "Normal";
+        /// <summary>Mã bệnh nền: DIABETES, HYPERTENSION, HEART. null = giữ nguyên (FE cũ không gửi).</summary>
+        public List<string>? ChronicConditions { get; set; }
         [StringLength(2000)] public string? CareNotes { get; set; }
         [StringLength(2000)] public string? EmergencyNotes { get; set; }
     }
@@ -186,13 +190,20 @@ public class CenterProfilesController : ControllerBase
         e.MedicalHistory = Clean(dto.MedicalHistory);
         e.MedicalNotes = Clean(dto.MedicalNotes);
         e.MobilityStatus = dto.MobilityStatus;
+        if (dto.ChronicConditions != null)
+        {
+            var invalid = dto.ChronicConditions.Where(c => !ChronicConditionCodes.All.Contains(c.Trim().ToUpperInvariant())).ToList();
+            if (invalid.Count > 0)
+                return BadRequest(ApiResponse<ElderlyDetailDto>.Fail($"Bệnh nền chỉ nhận: {string.Join(", ", ChronicConditionCodes.All)}."));
+            e.ChronicConditions = ChronicConditionCodes.Join(dto.ChronicConditions);
+        }
         e.CareNotes = Clean(dto.CareNotes);
         e.EmergencyNotes = Clean(dto.EmergencyNotes);
         e.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
         await AuditLogWriter.WriteAsync(_context, CurrentUserId(), "MANAGER_UPDATE_ELDERLY", nameof(ElderlyMember), id.ToString(),
-            new { dto.FullName, dto.MobilityStatus });
+            new { dto.FullName, dto.MobilityStatus, e.ChronicConditions });
 
         return Ok(ApiResponse<ElderlyDetailDto>.Ok((await LoadElderlyAsync(id))!, "Đã cập nhật hồ sơ người cao tuổi."));
     }
@@ -267,6 +278,7 @@ public class CenterProfilesController : ControllerBase
             MedicalHistory = e.MedicalHistory,
             MedicalNotes = e.MedicalNotes,
             MobilityStatus = e.MobilityStatus is "Support" or "Cần hỗ trợ" ? "Support" : "Normal",
+            ChronicConditions = ChronicConditionCodes.Parse(e.ChronicConditions).OrderBy(c => Array.IndexOf(ChronicConditionCodes.All, c)).ToList(),
             CareNotes = e.CareNotes,
             EmergencyNotes = e.EmergencyNotes,
             IsActive = e.IsActive,

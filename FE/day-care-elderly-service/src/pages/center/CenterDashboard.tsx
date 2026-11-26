@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../../components/NotificationBell";
 import AccountMenu from "../../components/AccountMenu";
-import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package, ClipboardCheck, LayoutDashboard, BarChart3, MessageSquare, FileText } from "lucide-react";
+import { CalendarCheck, CalendarDays, Users2, UserCheck, LogOut, Home, History, AlertTriangle, Package, ClipboardCheck, LayoutDashboard, BarChart3, MessageSquare, FileText, ListChecks } from "lucide-react";
+import PackageScheduleView from "./PackageScheduleView";
 import ShiftCalendarView from "./ShiftCalendarView";
 import CenterStaffView from "./CenterStaffView";
 import DailyPlanningWizard from "./DailyPlanningWizard";
@@ -63,6 +64,12 @@ export const CenterDashboard: React.FC = () => {
       label: "Điểm Danh",
       subLabel: "Theo dõi đến / về theo ngày",
       icon: ClipboardCheck,
+    },
+    {
+      id: "package-schedules",
+      label: "Lịch Hoạt Động Theo Gói",
+      subLabel: "Lịch mẫu cho từng đối tượng bệnh",
+      icon: ListChecks,
     },
     {
       id: "incidents",
@@ -222,6 +229,8 @@ export const CenterDashboard: React.FC = () => {
             <IncidentReportsView />
           ) : activeTab === "supplies" ? (
             <MedicalSuppliesView />
+          ) : activeTab === "package-schedules" ? (
+            <PackageScheduleView />
           ) : null}
         </div>
       </main>

@@ -1,6 +1,6 @@
 # Thiết kế: Lịch hoạt động theo từng gói (đối tượng bệnh) + gắn vào Care log
 
-> Bản nháp 26/11/2026 — CHƯA code. Áp dụng cho `D:\SEP1` (BE ASP.NET + FE React).
+> 26/11/2026 — **đã code** (nhánh feat/package-activity-schedule). Lịch mẫu seed bằng `PackageActivitySeeder` khi BE khởi động, chỉ cho gói chưa có hoạt động.
 > Ký hiệu **(\*)** = thực hành chăm sóc thường quy, chưa có nghiên cứu chống lưng trong lượt tìm trước.
 
 ## 0. Hiện trạng
@@ -116,7 +116,7 @@ Khung giờ trung tâm 07:00–16:30, T2–T7. **Khung chung** chèn cho cả 5 
 | HYPERTENSION | Mọi ngày | 13:30–14:00 | Đo huyết áp chiều | VITALS | ĐD | So sánh với buổi sáng (\*) | |
 | HYPERTENSION | Mọi ngày | 11:00–12:00 | Ăn trưa ít muối | MEAL | HL | Giữ huyết áp ổn định (\*) | |
 
-- BE thêm quy tắc: khi ghi đường huyết **trước tập** > 16,7 mmol/L → trả cảnh báo "Không cho cụ tập hôm nay" và đánh dấu buổi tập trong ngày là *Bỏ qua — đường huyết cao* (staff vẫn xác nhận).
+- BE thêm quy tắc (đã làm): đường huyết > 16,7 mmol/L → cảnh báo "Không cho cụ tập vận động hôm nay". Staff bấm **Bỏ qua** buổi tập và ghi lý do (BE không tự bỏ qua, để staff quyết định).
 - Ngưỡng cảnh báo chỉ số hiện vẫn chung cho mọi cụ (ngoài phạm vi thiết kế này).
 
 Mục tiêu tuần: ≥150 phút ACTIVITY vận động, ≥3 buổi sức mạnh/thăng bằng.

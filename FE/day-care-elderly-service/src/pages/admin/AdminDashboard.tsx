@@ -5,6 +5,7 @@ import NotificationBell from "../../components/NotificationBell";
 import AccountMenu from "../../components/AccountMenu";
 import UserManagementView from "./UserManagementView";
 import CenterStaffView from "../center/CenterStaffView";
+import PackageScheduleView from "../center/PackageScheduleView";
 
 export const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -104,6 +105,8 @@ export const AdminDashboard: React.FC = () => {
             <UserManagementView />
           ) : activeTab === "staff" ? (
             <CenterStaffView />
+          ) : activeTab === "schedules" ? (
+            <PackageScheduleView />
           ) : (
             <div className="w-full h-full min-h-[300px] border-2 border-dashed border-slate-300 rounded-xl bg-white/50 flex items-center justify-center">
               <p className="text-slate-400 text-sm">

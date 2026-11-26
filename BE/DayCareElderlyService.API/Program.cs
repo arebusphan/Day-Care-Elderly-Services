@@ -63,6 +63,7 @@ builder.Services.AddScoped<IElderlyService, ElderlyService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ICareLogService, CareLogService>();
 builder.Services.AddScoped<IFamilyCareLogService, FamilyCareLogService>();
+builder.Services.AddScoped<IPackageActivityService, PackageActivityService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IMedicationService, MedicationService>();
 builder.Services.AddScoped<IMedicationReminderService, MedicationReminderService>();

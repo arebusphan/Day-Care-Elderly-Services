@@ -67,6 +67,7 @@ public static class CareLogShared
         Description = log.Description,
         Notes = log.Notes,
         Data = ParseJson(log.Data),
+        PackageActivityId = log.PackageActivityId,
         IsInternal = log.IsInternal,
         RecordedAt = log.RecordedAt,
         StaffId = log.StaffId,

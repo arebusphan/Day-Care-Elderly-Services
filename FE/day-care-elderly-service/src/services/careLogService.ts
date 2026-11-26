@@ -17,6 +17,8 @@ export interface CareLogEntry {
   isInternal: boolean;
   centerActivityId: number | null;
   activityName: string | null;
+  /** Hoạt động trong lịch của gói mà mục này hoàn thành */
+  packageActivityId?: number | null;
   recordedAt: string;
   staffId: number;
   staffName: string;
@@ -57,6 +59,8 @@ export interface CreateCareLogEntry {
   notes?: string;
   data?: Record<string, unknown>;
   isInternal: boolean;
+  /** Gắn với hoạt động trong lịch; bắt buộc khi careType = "SKIP" */
+  packageActivityId?: number;
 }
 
 export interface DoseRecord {
@@ -97,6 +101,7 @@ export interface RecordVitalsInput {
   spO2?: number;
   temperature?: number;
   bloodGlucose?: number;
+  packageActivityId?: number;
   notes?: string;
 }
 

@@ -25,4 +25,7 @@ public class CreateCareLogEntryDto
     /// <summary>true = mục nội bộ, gia đình không xem được</summary>
     public bool IsInternal { get; set; }
 
+    /// <summary>Hoạt động trong lịch của gói mà mục này hoàn thành. Bắt buộc khi CareType = SKIP (bỏ qua, ghi lý do vào Description).</summary>
+    public int? PackageActivityId { get; set; }
+
 }

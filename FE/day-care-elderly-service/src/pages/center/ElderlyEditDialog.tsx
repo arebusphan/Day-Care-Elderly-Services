@@ -32,7 +32,14 @@ const genderItems = [
   { value: "Other", label: "Khác" },
 ];
 
-type Form = Required<{ [K in keyof UpdateElderlyDto]: string }>;
+type Form = Required<{ [K in Exclude<keyof UpdateElderlyDto, "chronicConditions">]: string }>;
+
+/** Bệnh nền có mã: dùng để hiện thêm hoạt động riêng (đo đường huyết, huyết áp…) trong lịch của gói */
+const CHRONIC_OPTIONS = [
+  { code: "DIABETES", label: "Tiểu đường" },
+  { code: "HYPERTENSION", label: "Tăng huyết áp" },
+  { code: "HEART", label: "Bệnh tim mạch" },
+];
 const toForm = (d: ElderlyDetail): Form => ({
   fullName: d.fullName,
   dateOfBirth: d.dateOfBirth ?? "",
@@ -52,6 +59,7 @@ const toForm = (d: ElderlyDetail): Form => ({
 export function ElderlyEditDialog({ elderlyId, onClose, onChanged }: Props) {
   const [detail, setDetail] = useState<ElderlyDetail | null>(null);
   const [form, setForm] = useState<Form | null>(null);
+  const [conditions, setConditions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
 
@@ -65,6 +73,7 @@ export function ElderlyEditDialog({ elderlyId, onClose, onChanged }: Props) {
         if (res.data) {
           setDetail(res.data);
           setForm(toForm(res.data));
+          setConditions(res.data.chronicConditions ?? []);
         }
       })
       .catch((err) => toast.error(errMsg(err, "Không tải được hồ sơ.")));
@@ -78,7 +87,10 @@ export function ElderlyEditDialog({ elderlyId, onClose, onChanged }: Props) {
     if (!form.fullName.trim()) return toast.error("Nhập họ tên.");
     setSaving(true);
     try {
-      const payload = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim() === "" ? null : v.trim()])) as unknown as UpdateElderlyDto;
+      const payload = {
+        ...(Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim() === "" ? null : v.trim()])) as unknown as UpdateElderlyDto),
+        chronicConditions: conditions,
+      };
       const res = await centerProfileService.updateElderly(elderlyId, payload);
       if (!res.success || !res.data) throw new Error(res.message);
       setDetail(res.data);
@@ -190,6 +202,22 @@ export function ElderlyEditDialog({ elderlyId, onClose, onChanged }: Props) {
                   <Label htmlFor="el-history">Tiền sử bệnh</Label>
                   <Textarea id="el-history" rows={2} value={form.medicalHistory} onChange={(e) => set("medicalHistory")(e.target.value)} />
                 </div>
+                <fieldset className="space-y-1.5 sm:col-span-2">
+                  <legend className="text-sm font-medium">Bệnh nền (dùng cho lịch hoạt động)</legend>
+                  <div className="flex flex-wrap gap-4">
+                    {CHRONIC_OPTIONS.map((option) => (
+                      <label key={option.code} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={conditions.includes(option.code)}
+                          onChange={(e) => setConditions((current) => e.target.checked ? [...current, option.code] : current.filter((c) => c !== option.code))}
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Ví dụ: cụ tiểu đường sẽ có thêm việc đo đường huyết lúc đói, trước và sau tập.</p>
+                </fieldset>
                 <div className="space-y-1.5">
                   <Label htmlFor="el-care">Ghi chú chăm sóc</Label>
                   <Textarea id="el-care" rows={2} value={form.careNotes} onChange={(e) => set("careNotes")(e.target.value)} />

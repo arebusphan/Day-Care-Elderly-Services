@@ -34,6 +34,8 @@ export interface ElderlyDetail {
   medicalHistory: string | null;
   medicalNotes: string | null;
   mobilityStatus: "Normal" | "Support";
+  /** Mã bệnh nền: DIABETES, HYPERTENSION, HEART — lọc lịch hoạt động trong gói */
+  chronicConditions: string[];
   careNotes: string | null;
   emergencyNotes: string | null;
   isActive: boolean;
@@ -42,7 +44,8 @@ export interface ElderlyDetail {
   assignedStaffToday: string[];
 }
 
-export type UpdateElderlyDto = Omit<ElderlyDetail, "elderlyId" | "isActive" | "familyContacts" | "activePackages" | "assignedStaffToday">;
+export type UpdateElderlyDto = Omit<ElderlyDetail, "elderlyId" | "isActive" | "familyContacts" | "activePackages" | "assignedStaffToday" | "chronicConditions">
+  & { chronicConditions?: string[] };
 
 export interface InactiveElderly {
   elderlyId: number;

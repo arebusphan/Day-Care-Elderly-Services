@@ -11,6 +11,7 @@ export const careTypeLabels: Record<string, string> = {
   MEDICATION: "Thuốc",
   MEDICAL_DONE: "Hoàn tất y tế",
   CLOSE: "Chốt ngày",
+  SKIP: "Bỏ qua hoạt động",
 };
 
 /** Trường trong CareLog.Data: nhãn + đơn vị. Trường không có ở đây và không nằm trong HIDDEN_FIELDS thì hiện tên gốc. */

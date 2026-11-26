@@ -153,6 +153,11 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CareLogs_Users");
+
+            entity.HasOne(d => d.PackageActivity).WithMany(p => p.CareLogs)
+                .HasForeignKey(d => d.PackageActivityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CareLogs_PackageActivities");
         });
 
         modelBuilder.Entity<CareLogPhoto>(entity =>
@@ -319,6 +324,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Gender).HasMaxLength(20);
             entity.Property(e => e.EmergencyContactName).HasMaxLength(100);
             entity.Property(e => e.EmergencyContactPhone).HasMaxLength(20);
+            entity.Property(e => e.ChronicConditions).HasMaxLength(200);
             entity.Property(e => e.Allergies).HasMaxLength(1000);
             entity.Property(e => e.MedicalHistory).HasMaxLength(1000);
             entity.Property(e => e.MobilityStatus).HasMaxLength(50).HasDefaultValue("Bình thường");
@@ -494,6 +500,12 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.EndTime).HasPrecision(0);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.StartTime).HasPrecision(0);
+            entity.Property(e => e.ActivityName).HasMaxLength(150);
+            entity.Property(e => e.Purpose).HasMaxLength(500);
+            entity.Property(e => e.CareType).HasMaxLength(30);
+            entity.Property(e => e.PerformerRole).HasMaxLength(20);
+            entity.Property(e => e.ConditionCode).HasMaxLength(30);
+            entity.Property(e => e.Source).HasMaxLength(200);
 
             entity.HasOne(d => d.Package).WithMany(p => p.PackageActivities)
                 .HasForeignKey(d => d.PackageId)

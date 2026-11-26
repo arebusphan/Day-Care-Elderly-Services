@@ -6,6 +6,15 @@ import type { DoseRecord, FamilyIncident, HealthHistory } from "../../services/f
 import type { ElderlyProfileDto } from "../../types/elderly";
 import CareLogDataDetails from "../../components/CareLogDataDetails";
 import { careTypeLabels as typeLabels, incidentStatusLabels, incidentTypeLabels, severityLabels } from "../../lib/careLogLabels";
+import scheduleService, { STATUS_LABELS } from "../../services/scheduleService";
+import type { ScheduleDay, ScheduleStatus } from "../../services/scheduleService";
+
+const scheduleStatusClass: Record<ScheduleStatus, string> = {
+  Done: "bg-teal-50 text-teal-700",
+  Skipped: "bg-slate-100 text-slate-600",
+  Overdue: "bg-amber-50 text-amber-800",
+  Pending: "bg-slate-50 text-slate-500",
+};
 
 const formatDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("vi-VN", {
   weekday: "long",
@@ -19,7 +28,7 @@ const formatTime = (value: string) => new Date(value).toLocaleTimeString("vi-VN"
   minute: "2-digit",
 });
 
-type TrackingSection = "timeline" | "health" | "incidents";
+type TrackingSection = "activities" | "timeline" | "health" | "incidents";
 
 const FamilyHealthTrackingView: React.FC = () => {
   const [profiles, setProfiles] = useState<ElderlyProfileDto[]>([]);
@@ -30,7 +39,8 @@ const FamilyHealthTrackingView: React.FC = () => {
   const [timeline, setTimeline] = useState<CareLogDay[]>([]);
   const [health, setHealth] = useState<HealthHistory | null>(null);
   const [incidents, setIncidents] = useState<FamilyIncident[]>([]);
-  const [activeSection, setActiveSection] = useState<TrackingSection>("timeline");
+  const [schedule, setSchedule] = useState<ScheduleDay | null>(null);
+  const [activeSection, setActiveSection] = useState<TrackingSection>("activities");
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [error, setError] = useState("");
@@ -68,9 +78,12 @@ const FamilyHealthTrackingView: React.FC = () => {
       familyCareLogService.getDay(selectedId),
       familyCareLogService.getHealth(selectedId, days),
       familyCareLogService.getIncidents(days),
+      // Lịch hoạt động lỗi thì vẫn hiện các phần còn lại
+      scheduleService.getFamilyDay(selectedId).catch(() => null),
     ])
-      .then(([timelineResult, todayResult, healthResult, incidentResult]) => {
+      .then(([timelineResult, todayResult, healthResult, incidentResult, scheduleResult]) => {
         if (cancelled) return;
+        setSchedule(scheduleResult);
         setTimeline(timelineResult);
         setToday(todayResult);
         setHealth(healthResult);
@@ -80,6 +93,7 @@ const FamilyHealthTrackingView: React.FC = () => {
         if (!cancelled) {
           setTimeline([]);
           setToday(null);
+          setSchedule(null);
           setHealth(null);
           setIncidents([]);
           setError(err?.response?.data?.message || "Không tải được dòng thời gian chăm sóc.");
@@ -136,7 +150,8 @@ const FamilyHealthTrackingView: React.FC = () => {
               {selected && <p className="mt-3 text-xs text-slate-500">Hiển thị dữ liệu {days} ngày gần nhất. Ghi chú nội bộ của nhân viên được ẩn.</p>}
             </section>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+              <SummaryCard label="Hoạt động hôm nay" value={schedule?.doneCount ?? 0} detail={schedule?.packageId ? `/ ${schedule.requiredCount} việc đã làm` : "chưa có lịch"} />
               <SummaryCard label="Ghi nhận hôm nay" value={today?.entries.length ?? 0} detail="trong ngày" />
               <SummaryCard label="Ngày có ghi nhận" value={timeline.length} detail={`${entryCount} ghi nhận`} />
               <SummaryCard label="Chỉ số sức khỏe" value={health?.vitals.length ?? 0} detail="lần đo" />
@@ -145,10 +160,29 @@ const FamilyHealthTrackingView: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2">
+              <SectionButton active={activeSection === "activities"} onClick={() => setActiveSection("activities")}>Hoạt động hôm nay ({schedule?.doneCount ?? 0}/{schedule?.requiredCount ?? 0})</SectionButton>
               <SectionButton active={activeSection === "timeline"} onClick={() => setActiveSection("timeline")}>Nhật ký ({entryCount})</SectionButton>
               <SectionButton active={activeSection === "health"} onClick={() => setActiveSection("health")}>Chỉ số & thuốc ({(health?.vitals.length ?? 0) + (health?.doses.length ?? 0)})</SectionButton>
               <SectionButton active={activeSection === "incidents"} onClick={() => setActiveSection("incidents")}>Sự cố ({selectedIncidents.length})</SectionButton>
             </div>
+
+            {activeSection === "activities" && <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+              <SectionHeader title="Hoạt động hôm nay theo lịch" subtitle={schedule?.packageName ? `${selected?.fullName} · gói ${schedule.packageName}` : selected?.fullName} />
+              {loadingTimeline && !schedule ? <LoadingMessage />
+                : !schedule?.packageId ? <EmptyMessage text="Cụ chưa có gói dịch vụ còn hiệu lực hôm nay nên chưa có lịch hoạt động." />
+                  : schedule.items.length === 0 ? <EmptyMessage text="Hôm nay không có hoạt động theo lịch." />
+                    : <ol className="space-y-2">{schedule.items.map((item) => (
+                      <li key={item.packageActivityId} className="flex flex-wrap items-start gap-3 rounded-lg border border-slate-100 p-3">
+                        <span className="w-24 shrink-0 text-xs font-semibold text-slate-600">{item.startTime}–{item.endTime}</span>
+                        <div className="min-w-[12rem] flex-1">
+                          <p className="text-sm font-medium text-slate-800">{item.activityName}</p>
+                          {item.purpose && <p className="mt-0.5 text-xs text-slate-500">Để: {item.purpose}</p>}
+                          {item.note && item.status !== "Pending" && <p className="mt-1 text-xs text-slate-600">{item.status === "Skipped" ? "Lý do bỏ qua: " : ""}{item.note}</p>}
+                        </div>
+                        <span className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${scheduleStatusClass[item.status]}`}>{item.status === "Overdue" ? "Chưa ghi nhận" : STATUS_LABELS[item.status]}</span>
+                      </li>
+                    ))}</ol>}
+            </section>}
 
             {activeSection === "timeline" && <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
               <SectionHeader title="Dòng thời gian chăm sóc" subtitle={selected?.fullName} />

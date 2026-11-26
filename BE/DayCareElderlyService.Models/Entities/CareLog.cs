@@ -28,6 +28,11 @@ public partial class CareLog
 
     public bool IsInternal { get; set; }
 
+    /// <summary>Hoạt động trong lịch của gói mà mục này hoàn thành (hoặc bỏ qua khi CareType = SKIP)</summary>
+    public int? PackageActivityId { get; set; }
+
+    public virtual PackageActivity? PackageActivity { get; set; }
+
     public virtual ICollection<CareLogPhoto> CareLogPhotos { get; set; } = new List<CareLogPhoto>();
 
     public virtual ElderlyMember Elderly { get; set; } = null!;

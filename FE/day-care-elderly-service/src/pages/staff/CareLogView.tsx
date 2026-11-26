@@ -3,6 +3,15 @@ import careLogService from "../../services/careLogService";
 import type { CareLogDay, CareLogEntry, DoseRecord, StaffElderlyToday, StaffIncident } from "../../services/careLogService";
 import CareLogDataDetails from "../../components/CareLogDataDetails";
 import { careTypeLabels, incidentStatusLabels, incidentTypeLabels, severityLabels } from "../../lib/careLogLabels";
+import scheduleService, { CONDITION_LABELS, ROLE_LABELS, STATUS_LABELS } from "../../services/scheduleService";
+import type { ScheduleDay, ScheduleItem, ScheduleStatus, ScheduleWeek } from "../../services/scheduleService";
+
+const statusClass: Record<ScheduleStatus, string> = {
+  Done: "bg-emerald-50 text-emerald-700",
+  Skipped: "bg-slate-100 text-slate-600",
+  Overdue: "bg-rose-50 text-rose-700",
+  Pending: "bg-amber-50 text-amber-800",
+};
 
 const localDate = () => {
   const now = new Date();
@@ -13,11 +22,11 @@ const typeLabels = careTypeLabels;
 /** Loại staff tự ghi được (CareLogTypes.Manual ở BE). */
 const MANUAL_TYPES = ["MEAL", "HYGIENE", "NAP", "MOOD", "ACTIVITY", "NOTE"];
 
-/** Hộp thoại đang mở: chốt ngày, hoặc đóng sự cố (cần nhập kết quả xử lý). */
-type PendingDialog = { kind: "close" } | { kind: "resolve"; incident: StaffIncident } | null;
+/** Hộp thoại đang mở: chốt ngày, đóng sự cố (cần kết quả xử lý), bỏ qua hoạt động trong lịch (cần lý do). */
+type PendingDialog = { kind: "close" } | { kind: "resolve"; incident: StaffIncident } | { kind: "skip"; item: ScheduleItem } | null;
 
 const timeLabel = (value: string) => new Date(value).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-type CareSection = "journal" | "health" | "medication" | "incidents";
+type CareSection = "schedule" | "journal" | "health" | "medication" | "incidents";
 
 const errorMessage = (error: any, fallback: string) => {
   const data = error?.response?.data;
@@ -52,9 +61,13 @@ const CareLogView: React.FC = () => {
   const [doseNotes, setDoseNotes] = useState<Record<number, string>>({});
   const [incidentType, setIncidentType] = useState("OTHER");
   const [incidentDescription, setIncidentDescription] = useState("");
-  const [activeSection, setActiveSection] = useState<CareSection>("journal");
+  const [activeSection, setActiveSection] = useState<CareSection>("schedule");
   const [dialog, setDialog] = useState<PendingDialog>(null);
   const [resolveNote, setResolveNote] = useState("");
+  const [schedule, setSchedule] = useState<ScheduleDay | null>(null);
+  const [week, setWeek] = useState<ScheduleWeek | null>(null);
+  /** Hoạt động trong lịch đang được ghi (form Nhật ký / Chỉ số sẽ gắn PackageActivityId) */
+  const [linkActivity, setLinkActivity] = useState<ScheduleItem | null>(null);
 
   const refreshExtras = async () => {
     const [doseRows, incidentRows] = await Promise.all([careLogService.getTodayDoses(), careLogService.getIncidents(undefined, 30)]);
@@ -62,9 +75,42 @@ const CareLogView: React.FC = () => {
     setIncidents(incidentRows);
   };
 
+  const loadSchedule = async (elderlyId = selectedId) => {
+    if (elderlyId === null) { setSchedule(null); setWeek(null); return; }
+    try {
+      const [dayRows, weekRows] = await Promise.all([scheduleService.getStaffDay(elderlyId, date), scheduleService.getStaffWeek(elderlyId, date)]);
+      setSchedule(dayRows); setWeek(weekRows);
+    } catch (err: any) {
+      setSchedule(null); setWeek(null);
+      setError((current) => current || errorMessage(err, "Không tải được lịch hoạt động."));
+    }
+  };
+
   const refreshDay = async (elderlyId = selectedId) => {
     if (elderlyId !== null) setDay(await careLogService.getDay(elderlyId, date));
-    await refreshExtras();
+    await Promise.all([refreshExtras(), loadSchedule(elderlyId)]);
+  };
+
+  /** Bấm "Ghi" trên 1 hoạt động: mở đúng form (Chỉ số hoặc Nhật ký) đã điền sẵn loại và tên hoạt động. */
+  const startRecording = (item: ScheduleItem) => {
+    setLinkActivity(item); setNotice(""); setError("");
+    if (item.careType === "VITALS") { setActiveSection("health"); return; }
+    setCareType(MANUAL_TYPES.includes(item.careType) ? item.careType : "NOTE");
+    setDescription(`${item.activityName}: `);
+    setActiveSection("journal");
+  };
+
+  const skipActivity = async () => {
+    if (dialog?.kind !== "skip" || !selectedId || !resolveNote.trim()) return;
+    const { item } = dialog;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      await careLogService.addEntry(selectedId, { careType: "SKIP", description: resolveNote.trim(), isInternal: false, packageActivityId: item.packageActivityId });
+      setDialog(null); setResolveNote("");
+      setNotice(`Đã bỏ qua "${item.activityName}".`);
+      await refreshDay(selectedId);
+    } catch (err: any) { setError(errorMessage(err, "Không bỏ qua được hoạt động.")); }
+    finally { setSaving(false); }
   };
 
   useEffect(() => {
@@ -100,6 +146,8 @@ const CareLogView: React.FC = () => {
       .finally(() => { if (!cancelled) setLoadingDay(false); });
     return () => { cancelled = true; };
   }, [selectedId, date]);
+
+  useEffect(() => { setLinkActivity(null); void loadSchedule(selectedId); }, [selectedId, date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selected = useMemo(() => elderly.find((person) => person.elderlyId === selectedId) ?? null, [elderly, selectedId]);
 
@@ -140,12 +188,17 @@ const CareLogView: React.FC = () => {
     if (!selectedId || !description.trim()) return;
     setSaving(true); setError(""); setNotice("");
     try {
+      const linked = linkActivity;
       const entry: CareLogEntry = await careLogService.addEntry(selectedId, {
         careType, description: description.trim(), notes: notes.trim() || undefined, isInternal: internal,
+        packageActivityId: linked && linked.careType !== "VITALS" ? linked.packageActivityId : undefined,
       });
       setDay((current) => current ? { ...current, entries: [...current.entries, entry].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt)) } : current);
-      setDescription(""); setNotes(""); setNotice("Đã lưu ghi nhận chăm sóc.");
+      setDescription(""); setNotes(""); setLinkActivity(null);
+      setNotice(linked ? `Đã ghi "${linked.activityName}".` : "Đã lưu ghi nhận chăm sóc.");
       const people = await careLogService.getTodayElderly(); setElderly(people);
+      await loadSchedule(selectedId);
+      if (linked) setActiveSection("schedule");
     } catch (err: any) {
       setError(err?.response?.data?.message || "Không thể lưu carelog. Vui lòng thử lại.");
     } finally { setSaving(false); }
@@ -163,9 +216,11 @@ const CareLogView: React.FC = () => {
         systolicBp: numeric("systolicBp"), diastolicBp: numeric("diastolicBp"), heartRate: numeric("heartRate"),
         spO2: numeric("spO2"), temperature: numeric("temperature"), bloodGlucose: numeric("bloodGlucose"),
         notes: String(form.get("notes") ?? "").trim() || undefined,
+        packageActivityId: linkActivity?.careType === "VITALS" ? linkActivity.packageActivityId : undefined,
       });
       setNotice(result.warnings.length ? `Đã lưu chỉ số. Cảnh báo: ${result.warnings.join("; ")}` : "Đã lưu chỉ số sức khỏe.");
       formElement.reset();
+      setLinkActivity(null);
       await refreshDay(selectedId);
     } catch (err: any) { setError(errorMessage(err, "Không ghi được chỉ số.")); }
     finally { setSaving(false); }
@@ -217,12 +272,51 @@ const CareLogView: React.FC = () => {
         <div className="space-y-5">
           {selected && <section className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-base font-bold text-slate-900">{selected.fullName}</h3><p className="mt-1 text-sm text-slate-500">{selected.mobilityStatus ? `Vận động: ${selected.mobilityStatus}` : ""}{selected.checkInAt ? ` · Check-in ${timeLabel(selected.checkInAt)}` : ""}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{day?.entries.length ?? 0} ghi nhận hôm nay</span>{selected.isMedicalDone && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Y tế: đã xác nhận</span>}{selected.isClosed && <span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs font-semibold text-white">Đã chốt</span>}{isToday && !selected.isClosed && (!selected.isMedicalDone ? <button type="button" disabled={saving} onClick={() => void runDayAction("medical")} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 disabled:opacity-40">Xác nhận y tế xong</button> : <button type="button" disabled={saving} onClick={() => setDialog({ kind: "close" })} className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Chốt care log</button>)}</div></div>{selected.isClosed && isToday && <p className="mt-2 text-xs text-slate-500">Care log hôm nay đã chốt — không ghi thêm được.</p>}</section>}
 
-          <nav aria-label="Mục care log" className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-2 sm:grid-cols-4">
-            {([["journal", "Nhật ký", day?.entries.length ?? 0], ["health", "Chỉ số", day?.entries.filter((entry) => entry.careType === "VITALS").length ?? 0], ["medication", "Thuốc", doses.filter((dose) => selectedId === null || dose.elderlyId === selectedId).length], ["incidents", "Sự cố", incidents.filter((incident) => selectedId === null || incident.elderlyId === selectedId).length]] as const).map(([key, label, count]) => <button key={key} type="button" onClick={() => setActiveSection(key)} aria-current={activeSection === key ? "page" : undefined} className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${activeSection === key ? "bg-teal-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}><span>{label}</span><span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${activeSection === key ? "bg-white/20" : "bg-slate-100"}`}>{count}</span></button>)}
+          <nav aria-label="Mục care log" className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-2 sm:grid-cols-5">
+            {([["schedule", "Lịch hôm nay", schedule ? `${schedule.doneCount}/${schedule.requiredCount}` : "–"], ["journal", "Nhật ký", day?.entries.length ?? 0], ["health", "Chỉ số", day?.entries.filter((entry) => entry.careType === "VITALS").length ?? 0], ["medication", "Thuốc", doses.filter((dose) => selectedId === null || dose.elderlyId === selectedId).length], ["incidents", "Sự cố", incidents.filter((incident) => selectedId === null || incident.elderlyId === selectedId).length]] as const).map(([key, label, count]) => <button key={key} type="button" onClick={() => setActiveSection(key)} aria-current={activeSection === key ? "page" : undefined} className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${activeSection === key ? "bg-teal-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}><span>{label}</span><span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${activeSection === key ? "bg-white/20" : "bg-slate-100"}`}>{count}</span></button>)}
           </nav>
+
+          <section className={`rounded-xl border border-slate-200 bg-white p-4 ${activeSection === "schedule" ? "" : "hidden"}`}>
+            {!selected ? <p className="text-sm text-slate-500">Chọn người cao tuổi để xem lịch.</p>
+              : !schedule ? <p className="text-sm text-slate-500">Đang tải lịch...</p>
+              : !schedule.packageId ? <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Cụ chưa có gói dịch vụ còn hiệu lực trong ngày này nên chưa có lịch hoạt động.</p>
+              : <>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-slate-800">Lịch hoạt động · gói {schedule.packageName}</h3>
+                    <p className="mt-1 text-xs text-slate-500">Đã làm {schedule.doneCount}/{schedule.requiredCount} việc bắt buộc{schedule.skippedCount ? ` · bỏ qua ${schedule.skippedCount}` : ""}{schedule.chronicConditions.length ? ` · bệnh nền: ${schedule.chronicConditions.map((c) => CONDITION_LABELS[c] ?? c).join(", ")}` : ""}</p>
+                  </div>
+                  {week && week.activityMinutesPlanned > 0 && <p className="rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-800">Tuần này: {week.activityMinutesDone}/{week.activityMinutesPlanned} phút hoạt động</p>}
+                </div>
+                {schedule.items.length === 0 ? <p className="py-5 text-center text-sm text-slate-500">Không có hoạt động trong ngày này (Chủ nhật hoặc lịch gói trống).</p> :
+                  <ol className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-100">{schedule.items.map((item) => (
+                    <li key={item.packageActivityId} className="flex flex-wrap items-start gap-3 px-3 py-3">
+                      <span className="w-24 shrink-0 text-xs font-semibold text-slate-600">{item.startTime}–{item.endTime}</span>
+                      <div className="min-w-[12rem] flex-1">
+                        <p className="text-sm font-medium text-slate-800">{item.activityName}{!item.isRequired && <span className="ml-1 text-xs font-normal text-slate-400">(tùy chọn)</span>}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{typeLabels[item.careType] ?? item.careType}{item.targetMinutes ? ` · ${item.targetMinutes} phút` : ""} · {ROLE_LABELS[item.performerRole] ?? item.performerRole}{item.conditionCode ? ` · cụ ${CONDITION_LABELS[item.conditionCode] ?? item.conditionCode}` : ""}</p>
+                        {item.purpose && <p className="mt-0.5 text-xs text-slate-500">Để: {item.purpose}</p>}
+                        {item.note && item.status !== "Pending" && <p className="mt-1 text-xs text-slate-600">{item.status === "Skipped" ? "Lý do bỏ qua: " : ""}{item.note}{item.staffName ? ` · ${item.staffName}` : ""}{item.recordedAt ? ` · ${timeLabel(item.recordedAt)}` : ""}</p>}
+                      </div>
+                      <div className="ml-auto flex shrink-0 items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass[item.status]}`}>{STATUS_LABELS[item.status]}</span>
+                        {isToday && !selected.isClosed && (item.status === "Pending" || item.status === "Overdue") && <>
+                          <button type="button" disabled={saving} onClick={() => startRecording(item)} className="rounded-lg bg-teal-600 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-40">Ghi</button>
+                          <button type="button" disabled={saving} onClick={() => { setResolveNote(""); setDialog({ kind: "skip", item }); }} className="rounded-lg border px-2.5 py-1 text-xs">Bỏ qua</button>
+                        </>}
+                      </div>
+                    </li>
+                  ))}</ol>}
+                {week && week.items.length > 0 && <details className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                  <summary className="cursor-pointer font-semibold text-slate-700">Tổng kết tuần {new Date(week.weekStart).toLocaleDateString("vi-VN")} – {new Date(week.weekEnd).toLocaleDateString("vi-VN")}</summary>
+                  <ul className="mt-2 space-y-1">{week.items.map((w) => <li key={w.activityName} className="flex justify-between gap-3"><span>{w.activityName}</span><span className="shrink-0 font-medium">{w.doneSessions}/{w.plannedSessions} buổi · {w.doneMinutes}/{w.plannedMinutes} phút{w.skippedSessions ? ` · bỏ ${w.skippedSessions}` : ""}</span></li>)}</ul>
+                </details>}
+              </>}
+          </section>
 
           <section className={`rounded-xl border border-slate-200 bg-white p-4 ${activeSection === "journal" ? "" : "hidden"}`}>
             <h3 className="font-semibold text-slate-800">Thêm ghi nhận</h3>
+            {linkActivity && linkActivity.careType !== "VITALS" && <p className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-800">Đang ghi cho hoạt động trong lịch: <b>{linkActivity.startTime} {linkActivity.activityName}</b><button type="button" onClick={() => setLinkActivity(null)} className="underline">Bỏ gắn</button></p>}
             {date !== localDate() ? <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Chỉ xem được lịch sử của ngày đã qua; thao tác ghi nhận dành cho hôm nay.</p> : <form onSubmit={submit} className="mt-3 grid gap-3 md:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">Loại chăm sóc<select value={careType} onChange={(event) => setCareType(event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2">{MANUAL_TYPES.map((key) => <option key={key} value={key}>{typeLabels[key]}</option>)}</select></label>
               <div className="hidden md:block" />
@@ -241,6 +335,7 @@ const CareLogView: React.FC = () => {
 
           <section className={`rounded-xl border border-slate-200 bg-white p-4 ${activeSection === "health" ? "" : "hidden"}`}>
             <h3 className="font-semibold text-slate-800">Đo chỉ số sức khỏe</h3><p className="mt-1 text-xs text-slate-500">Chỉ số vượt ngưỡng sẽ tự tạo cảnh báo và thông báo cho gia đình.</p>
+            {linkActivity?.careType === "VITALS" && <p className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-800">Đang ghi cho hoạt động trong lịch: <b>{linkActivity.startTime} {linkActivity.activityName}</b><button type="button" onClick={() => setLinkActivity(null)} className="underline">Bỏ gắn</button></p>}
             <form onSubmit={handleVitals} className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {[["systolicBp", "Huyết áp tâm thu (mmHg)"], ["diastolicBp", "Huyết áp tâm trương (mmHg)"], ["heartRate", "Nhịp tim (lần/phút)"], ["spO2", "SpO₂ (%)"], ["temperature", "Nhiệt độ (°C)"], ["bloodGlucose", "Đường huyết (mmol/L)"]].map(([name, label]) => <label key={name} className="text-sm font-medium text-slate-700">{label}<input name={name} type="number" min={name === "systolicBp" ? 40 : name === "diastolicBp" ? 20 : name === "heartRate" ? 20 : name === "spO2" ? 50 : name === "temperature" ? 30 : 0.5} max={name === "systolicBp" ? 300 : name === "diastolicBp" ? 200 : name === "heartRate" ? 250 : name === "spO2" ? 100 : name === "temperature" ? 45 : 40} step={name === "temperature" || name === "bloodGlucose" ? "0.1" : "1"} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>)}
               <label className="text-sm font-medium text-slate-700 sm:col-span-2 xl:col-span-3">Ghi chú<textarea name="notes" maxLength={1000} rows={2} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>
@@ -280,7 +375,15 @@ const CareLogView: React.FC = () => {
               <button type="button" disabled={saving} onClick={() => setDialog(null)} className="rounded-lg border px-4 py-2 text-sm font-medium text-slate-700">Hủy</button>
               <button type="button" disabled={saving} onClick={() => void runDayAction("close")} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang chốt..." : "Chốt care log"}</button>
             </div>
-          </> : <form onSubmit={(event) => { event.preventDefault(); void resolveIncident(); }}>
+          </> : dialog.kind === "skip" ? <form onSubmit={(event) => { event.preventDefault(); void skipActivity(); }}>
+            <h3 id="carelog-dialog-title" className="text-base font-bold text-slate-900">Bỏ qua hoạt động</h3>
+            <p className="mt-1 text-sm text-slate-600">{dialog.item.startTime} · {dialog.item.activityName}</p>
+            <label className="mt-4 block text-sm font-medium text-slate-700">Lý do (gia đình xem được)<textarea autoFocus required maxLength={1000} rows={3} value={resolveNote} onChange={(event) => setResolveNote(event.target.value)} placeholder="Ví dụ: Đường huyết 17,2 mmol/L nên không cho tập" className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" disabled={saving} onClick={() => setDialog(null)} className="rounded-lg border px-4 py-2 text-sm font-medium text-slate-700">Hủy</button>
+              <button type="submit" disabled={saving || !resolveNote.trim()} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang lưu..." : "Bỏ qua"}</button>
+            </div>
+          </form> : <form onSubmit={(event) => { event.preventDefault(); void resolveIncident(); }}>
             <h3 id="carelog-dialog-title" className="text-base font-bold text-slate-900">Đóng sự cố</h3>
             <p className="mt-1 text-sm text-slate-600">{incidentTypeLabels[dialog.incident.incidentType] ?? dialog.incident.incidentType} · {dialog.incident.elderlyName}</p>
             <label className="mt-4 block text-sm font-medium text-slate-700">Kết quả xử lý<textarea autoFocus required maxLength={1000} rows={3} value={resolveNote} onChange={(event) => setResolveNote(event.target.value)} placeholder="Ví dụ: Cho cụ nghỉ 15 phút, đo lại 140/88, đã báo gia đình" className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>

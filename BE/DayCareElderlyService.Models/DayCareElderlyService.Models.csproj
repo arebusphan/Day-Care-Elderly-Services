@@ -17,6 +17,7 @@
   <ItemGroup>
     <!-- Script schema chạy lặp lại được; BE tự áp dụng khi khởi động (Data/OperationsSchema.cs) -->
     <EmbeddedResource Include="Migrations\Apply_AddOperationsFeatures.sql" LogicalName="Apply_AddOperationsFeatures.sql" />
+    <EmbeddedResource Include="Migrations\Apply_AddPackageActivitySchedule.sql" LogicalName="Apply_AddPackageActivitySchedule.sql" />
   </ItemGroup>
 
 </Project>

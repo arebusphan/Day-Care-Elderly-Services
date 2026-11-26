@@ -28,4 +28,7 @@ public class RecordVitalsDto
 
     [StringLength(1000, ErrorMessage = "Ghi chú tối đa 1000 ký tự.")]
     public string? Notes { get; set; }
+
+    /// <summary>Hoạt động đo chỉ số trong lịch của gói (không bắt buộc)</summary>
+    public int? PackageActivityId { get; set; }
 }

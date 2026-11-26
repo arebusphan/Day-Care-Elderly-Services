@@ -1,5 +1,6 @@
 using DayCareElderlyService.BLL.Common;
 using DayCareElderlyService.BLL.DTOs.CareLog;
+using DayCareElderlyService.BLL.DTOs.Schedule;
 using DayCareElderlyService.BLL.Services.Interfaces;
 using DayCareElderlyService.Models.Data;
 using DayCareElderlyService.Models.Entities;
@@ -167,6 +168,21 @@ public class FamilyCareLogService : IFamilyCareLogService
             .ToListAsync();
 
         return ApiResponse<List<IncidentDto>>.Ok(incidents.Select(CareLogShared.ToIncidentDto).ToList(), "Lấy danh sách sự cố thành công.");
+    }
+
+    /// <summary>
+    /// Lịch hoạt động theo gói của cụ trong ngày (mặc định hôm nay), ẩn ghi chú nội bộ
+    /// </summary>
+    public async Task<ApiResponse<ScheduleDayDto>> GetScheduleAsync(int userId, int elderlyId, DateOnly? date)
+    {
+        var elderly = await GetViewableElderlyAsync(userId, elderlyId);
+        if (elderly == null)
+        {
+            return ApiResponse<ScheduleDayDto>.Fail(AccessDenied.ElderlyMessage, AccessDenied.Errors);
+        }
+
+        var schedule = await CareLogSchedule.BuildDayAsync(_context, elderly, date ?? VietnamTime.Today, includeInternal: false);
+        return ApiResponse<ScheduleDayDto>.Ok(schedule, "Lấy lịch hoạt động thành công.");
     }
 
     /// <summary>
