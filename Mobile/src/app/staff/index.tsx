@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Avatar, Badge, Card, colors, Empty, Greeting, ListRow, Loading, Notice, Section, StatTile } from "@/components/ui";
+import { Avatar, Badge, Card, colors, Empty, Greeting, ListRow, Loading, Notice, Section } from "@/components/ui";
 import { timeLabel } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { staffMoreApi } from "@/lib/services2";
@@ -22,7 +22,6 @@ export default function StaffOverviewScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const present = data?.members.filter((m) => m.status === "Present").length ?? 0;
-  const closed = data?.members.filter((m) => m.closed).length ?? 0;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}>
@@ -34,11 +33,6 @@ export default function StaffOverviewScreen() {
             <Text style={{ color: "#ccfbf1", fontSize: 13 }}>{data.group.groupType === "Support" ? "Nhóm cần hỗ trợ" : "Nhóm bình thường"}</Text>
             <Text style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>{data.group.groupName}</Text>
             <Text style={{ color: "#fff", marginTop: 6 }}>{present}/{data.members.length} cụ có mặt</Text>
-          </View>
-          <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
-            <StatTile icon="medkit-outline" value={data.doses.pending} label={data.doses.overdue ? `${data.doses.overdue} trễ` : "Liều chờ"} tone={data.doses.overdue ? colors.danger : colors.text} onPress={() => router.push("/staff/medication")} />
-            <StatTile icon="warning-outline" value={data.openIncidents} label="Sự cố" tone={data.openIncidents ? colors.danger : colors.text} />
-            <StatTile icon="checkmark-done-outline" value={`${closed}/${data.members.length}`} label="Đã chốt" />
           </View>
           {data.doses.next.length > 0 && (
             <>
