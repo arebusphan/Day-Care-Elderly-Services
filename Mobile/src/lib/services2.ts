@@ -15,7 +15,7 @@ export const accountApi = {
 
 export const messageApi = {
   conversations: () => api.get<Conversation[]>("/api/messages/conversations"),
-  start: (elderlyId: number) => api.post<Conversation>("/api/messages/conversations", { elderlyId }),
+  start: (elderlyId: number) => api.post<{ conversationId: number }>("/api/messages/conversations", { elderlyId }),
   messages: (conversationId: number) => api.get<ChatMessage[]>(`/api/messages/conversations/${conversationId}/messages`),
   send: (conversationId: number, content: string) => api.post<ChatMessage>(`/api/messages/conversations/${conversationId}/messages`, { content }),
 };

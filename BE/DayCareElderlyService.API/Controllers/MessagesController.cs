@@ -97,13 +97,17 @@ public class MessagesController : ControllerBase
         return Ok(ApiResponse<List<ConversationDto>>.Ok(list, "Lấy danh sách cuộc trò chuyện thành công."));
     }
 
-    /// <summary>Gia đình mở (hoặc lấy lại) cuộc trò chuyện về một người thân</summary>
+    /// <summary>
+    /// Mở (hoặc lấy lại) cuộc trò chuyện về một người cao tuổi.
+    /// Gia đình: với nhân viên phụ trách cụ hôm nay. Nhân viên: với gia đình của cụ mình phụ trách hôm nay
+    /// (quản lý: cụ bất kỳ) — ưu tiên người liên hệ chính.
+    /// </summary>
     [HttpPost("conversations")]
-    [Authorize(Roles = "FamilyMember")]
     public async Task<IActionResult> Start([FromBody] StartConversationDto dto)
     {
         var me = await CurrentUserAsync();
         if (me == null) return Unauthorized(ApiResponse<object>.Fail("Không xác thực được người dùng."));
+        if (!me.IsFamily) return await StartAsStaffAsync(me, dto.ElderlyId);
         var linked = await _context.ElderlyFamilyRelationships.AnyAsync(r => r.ElderlyId == dto.ElderlyId && r.FamilyMember.UserId == me.UserId);
         if (!linked) return StatusCode(403, ApiResponse<ConversationDto>.Fail(AccessDenied.ElderlyMessage, AccessDenied.Errors));
 
@@ -203,6 +207,49 @@ public class MessagesController : ControllerBase
     }
 
     // ───────── helpers ─────────
+
+    private async Task<IActionResult> StartAsStaffAsync(CurrentUser me, int elderlyId)
+    {
+        if (!me.IsManager && !(await AssignedTodayAsync(me.UserId)).Contains(elderlyId))
+            return StatusCode(403, ApiResponse<object>.Fail("Bạn chỉ nhắn được cho gia đình của cụ mình phụ trách hôm nay."));
+
+        // Gia đình đã có cuộc trò chuyện về cụ thì dùng lại (người liên hệ chính trước)
+        var existing = await _context.Conversations
+            .Where(c => c.ElderlyId == elderlyId && !c.IsClosed)
+            .OrderByDescending(c => _context.ElderlyFamilyRelationships.Any(r => r.ElderlyId == elderlyId && r.IsPrimaryContact && r.FamilyMember.UserId == c.FamilyUserId))
+            .ThenByDescending(c => c.LastMessageAt ?? c.CreatedAt)
+            .FirstOrDefaultAsync();
+        if (existing != null)
+        {
+            // Nhân viên phụ trách hôm nay nhận tin tiếp theo của gia đình
+            if (!me.IsManager && existing.StaffUserId != me.UserId)
+            {
+                existing.StaffUserId = me.UserId;
+                await _context.SaveChangesAsync();
+            }
+            return Ok(ApiResponse<object>.Ok(new { existing.ConversationId }, "Đã mở cuộc trò chuyện."));
+        }
+
+        var familyUserId = await _context.ElderlyFamilyRelationships
+            .Where(r => r.ElderlyId == elderlyId && r.FamilyMember.User.IsActive)
+            .OrderByDescending(r => r.IsPrimaryContact)
+            .Select(r => (int?)r.FamilyMember.UserId)
+            .FirstOrDefaultAsync();
+        if (familyUserId == null)
+            return BadRequest(ApiResponse<object>.Fail("Cụ chưa có tài khoản gia đình liên kết để nhắn tin."));
+
+        var conv = new Conversation
+        {
+            ElderlyId = elderlyId,
+            FamilyUserId = familyUserId.Value,
+            StaffUserId = me.UserId,
+            IsClosed = false,
+            CreatedAt = VietnamTime.Now
+        };
+        await _context.Conversations.AddAsync(conv);
+        await _context.SaveChangesAsync();
+        return Ok(ApiResponse<object>.Ok(new { conv.ConversationId }, "Đã mở cuộc trò chuyện."));
+    }
 
     private record CurrentUser(int UserId, string FullName, bool IsFamily, bool IsManager);
 

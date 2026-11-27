@@ -29,7 +29,17 @@ export function ConversationList({ me, startOptions }: { me: "staff" | "family";
 
   const open = (c: Conversation) => router.push({ pathname: "/chat/[id]", params: { id: String(c.conversationId), title: `${c.elderlyName} · ${me === "staff" ? c.familyName : c.staffName}` } });
   const start = async (elderlyId: number) => {
-    try { open(await messageApi.start(elderlyId)); }
+    setError("");
+    try {
+      // BE chỉ trả conversationId: tải lại danh sách để có tên gia đình / nhân viên rồi mở
+      const { conversationId } = await messageApi.start(elderlyId);
+      const list = await messageApi.conversations();
+      setItems(list);
+      setOptions((o) => o.filter((x) => x.elderlyId !== elderlyId));
+      const c = list.find((x) => x.conversationId === conversationId);
+      if (c) open(c);
+      else router.push({ pathname: "/chat/[id]", params: { id: String(conversationId), title: options.find((o) => o.elderlyId === elderlyId)?.fullName ?? "Tin nhắn" } });
+    }
     catch (err) { setError(err instanceof Error ? err.message : "Không mở được hội thoại."); }
   };
   const when = (v: string | null) => {
