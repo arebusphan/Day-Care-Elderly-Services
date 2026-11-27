@@ -1,0 +1,7 @@
+{
+  "name": "day-care-elderly-services",
+  "private": true,
+  "scripts": {
+    "dev": ".\\dev.cmd"
+  }
+}

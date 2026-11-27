@@ -71,9 +71,37 @@ export const api = {
       if (Platform.OS === "web" && p.file) form.append(field, p.file);
       else form.append(field, { uri: p.uri, name: p.fileName || `anh-${Date.now()}-${i}.jpg`, type: p.mimeType || "image/jpeg" } as unknown as Blob);
     });
-    return request<T>("POST", path, form, true);
+    if (Platform.OS === "web") return request<T>("POST", path, form, true);
+    return uploadNative<T>(path, form);
   },
 };
+
+/**
+ * Điện thoại: expo/fetch (mặc định từ Expo SDK 52+) không gửi được phần ảnh dạng { uri, name, type },
+ * nên gửi ảnh qua XMLHttpRequest của React Native (đọc file trực tiếp từ uri camera / thư viện).
+ */
+async function uploadNative<T>(path: string, form: FormData): Promise<T> {
+  await restored;
+  const { status, text } = await new Promise<{ status: number; text: string }>((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", API_URL + path);
+    xhr.setRequestHeader("Accept", "application/json");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.timeout = 120_000;
+    xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+    xhr.onerror = () => resolve({ status: 0, text: "" });
+    xhr.ontimeout = () => resolve({ status: 0, text: "" });
+    xhr.send(form);
+  });
+  let json: Envelope<T> | null = null;
+  try { json = JSON.parse(text) as Envelope<T>; } catch { json = null; }
+  if (status === 401) {
+    onUnauthorized();
+    throw new ApiError(json?.message || "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", 401);
+  }
+  if (status < 200 || status >= 300 || !json || json.success === false) throw new ApiError(messageOf(json, status), status);
+  return json.data;
+}
 
 /** Ngày hôm nay theo giờ máy, dạng YYYY-MM-DD */
 export const today = () => {

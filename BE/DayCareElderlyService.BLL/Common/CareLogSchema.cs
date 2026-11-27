@@ -91,6 +91,19 @@ public static class CareLogSchema
                             EXEC('UPDATE MedicationRecords SET RecordedAt = CreatedAt WHERE RecordedAt IS NULL');
                     END;
 
+                    -- EF model vẫn map AdministeredDate/Time: DB tạo mới (không có cột legacy) thì thêm vào, điền từ ScheduledAt.
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'AdministeredDate')
+                    BEGIN
+                        ALTER TABLE MedicationRecords ADD AdministeredDate DATE NOT NULL CONSTRAINT DF_MedicationRecords_AdministeredDate DEFAULT (CAST(GETDATE() AS date));
+                        EXEC('UPDATE MedicationRecords SET AdministeredDate = CAST(ScheduledAt AS date)');
+                    END;
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'AdministeredTime')
+                    BEGIN
+                        ALTER TABLE MedicationRecords ADD AdministeredTime TIME(7) NOT NULL CONSTRAINT DF_MedicationRecords_AdministeredTime DEFAULT ('00:00');
+                        EXEC('UPDATE MedicationRecords SET AdministeredTime = CAST(ScheduledAt AS time)');
+                    END;
+
                     -- Đồng bộ cột legacy AdministeredDate/Time từ ScheduledAt (khi cột còn trên DB).
                     IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'AdministeredDate')
                        AND EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MedicationRecords' AND COLUMN_NAME = 'ScheduledAt')

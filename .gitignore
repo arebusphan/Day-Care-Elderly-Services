@@ -24,3 +24,6 @@ dist/
 
 ## Test scripts chạy local, không đưa lên git
 tests/
+
+## Cau hinh chay dev rieng tung may
+dev.local.cmd

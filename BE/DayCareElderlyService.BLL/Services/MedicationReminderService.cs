@@ -164,7 +164,7 @@ public class MedicationReminderService : IMedicationReminderService
             .GroupBy(x => x.ElderlyId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.StaffId).ToList());
         var managerIds = await _context.Users
-            .Where(u => u.IsActive && u.Roles.Any(r => r.RoleName == "Center" || r.RoleName == "CenterManager"))
+            .Where(u => u.IsActive && u.Roles.Any(r => r.RoleName == "Center" || r.RoleName == "CenterManager" || r.RoleName == "Admin"))
             .Select(u => u.UserId)
             .ToListAsync(cancellationToken);
         List<int>? allStaff = null;

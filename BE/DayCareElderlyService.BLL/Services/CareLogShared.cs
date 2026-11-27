@@ -137,13 +137,13 @@ public static class CareLogShared
     }
 
     /// <summary>
-    /// Thêm thông báo cho Quản lý trung tâm (role Center / CenterManager đang hoạt động) — chưa SaveChanges
+    /// Thêm thông báo cho Quản lý trung tâm và Admin (role Center / CenterManager / Admin đang hoạt động) — chưa SaveChanges
     /// </summary>
     public static async Task NotifyManagersAsync(AppDbContext context, string title, string message,
         string notificationType, string? relatedEntityType, int? relatedEntityId)
     {
         var userIds = await context.Users
-            .Where(u => u.IsActive && u.Roles.Any(r => r.RoleName == "Center" || r.RoleName == "CenterManager"))
+            .Where(u => u.IsActive && u.Roles.Any(r => r.RoleName == "Center" || r.RoleName == "CenterManager" || r.RoleName == "Admin"))
             .Select(u => u.UserId)
             .ToListAsync();
 
